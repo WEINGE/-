@@ -288,6 +288,12 @@ void uart_at_sensor_rx_get(at_cmd_parse_t *p_cmd_param);
 /* 清除传感器UART0接收标志 AT:SENSOR_RX_CLR */
 void uart_at_sensor_rx_clr(at_cmd_parse_t *p_cmd_param);
 
+/* BLE协议查询命令 AT:BLE_QUERY=<type> */
+void uart_at_ble_query(at_cmd_parse_t *p_cmd_param);
+
+/* BLE协议数据上报 AT:BLE_REPORT */
+void uart_at_ble_report(at_cmd_parse_t *p_cmd_param);
+
 
 
 

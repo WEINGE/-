@@ -47,6 +47,7 @@
 #include "at_cmd_utils.h"
 #include "utility.h"
 #include "ring_buffer.h"
+#include "ble_protocol.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -189,6 +190,11 @@ static void gus_service_process_event(gus_evt_t *p_evt)
                 }
 
                 at_cmd_parse(AT_CMD_SRC_BLE, ble_rx_data, p_evt->length + 2);
+            }
+            else if (p_evt->p_data[0] == '{')
+            {
+                // 处理JSON格式的协议数据
+                ble_protocol_data_process(p_evt->p_data, p_evt->length);
             }
             else
             {
@@ -461,6 +467,9 @@ void ble_app_init(void)
     services_init();
     gus_client_init(gus_client_process_event);
     uart_at_init(BLE_GAP_ROLE_PERIPHERAL);
+    
+    // 初始化BLE协议处理模块
+    ble_protocol_init();
 
     ble_gap_adv_start(0, &g_gap_adv_time_param);
 }

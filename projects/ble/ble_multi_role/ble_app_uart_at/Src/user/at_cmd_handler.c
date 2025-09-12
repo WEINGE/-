@@ -43,11 +43,14 @@
 #include "at_cmd_utils.h"
 #include "user_periph_setup.h"
 #include "sensor_data_parser.h"
+#include "ble_protocol.h"
 #include "transport_scheduler.h"
 #include "ring_buffer.h"
 #include "gus_c.h"
 #include "app_timer.h"
 #include "grx_hal.h"
+#include <stdlib.h>
+#include "ble_protocol.h"
 #include "uart0_init.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -832,6 +835,54 @@ void uart_at_sensor_rx_clr(at_cmd_parse_t *p_cmd_param)
     AT_CMD_RSP_DEF(cmd_rsp);
     sensor_uart0_clear_flag();
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "OK");
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+void uart_at_ble_query(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    if (p_cmd_param->arg_count == 1)
+    {
+        uint8_t query_type = (uint8_t)atoi((char*)&p_cmd_param->p_buff[p_cmd_param->arg_idx[0]]);
+        
+        if (query_type >= 1 && query_type <= 4)
+        {
+            ble_protocol_handle_query(query_type);
+            cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "BLE_QUERY:SENT,TYPE=%d", query_type);
+        }
+        else
+        {
+            cmd_rsp.error_code = AT_CMD_ERR_INVALID_PARAM;
+        }
+    }
+    else
+    {
+        cmd_rsp.error_code = AT_CMD_ERR_INVALID_PARAM;
+    }
+    
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+void uart_at_ble_report(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    ble_sensor_data_t ble_sensor_data;
+    
+    if (ble_protocol_get_sensor_data(&ble_sensor_data))
+    {
+        ble_protocol_send_data_report(&ble_sensor_data);
+        cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
+            "BLE_REPORT:SENT,METHANE=%.2f%%vol/%.1f%%LEL,TEMP=%.1f°C", 
+            ble_sensor_data.methane_vol, 
+            ble_sensor_data.methane_lel, 
+            ble_sensor_data.temperature);
+    }
+    else
+    {
+        cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "BLE_REPORT:NO_DATA");
+    }
+    
     at_cmd_execute_cplt(&cmd_rsp);
 }
 

@@ -107,11 +107,13 @@
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\gr_includes.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
 .\objects\at_cmd_handler.o: ..\Src\user\sensor_data_parser.h
+.\objects\at_cmd_handler.o: ..\Src\user\ble_protocol.h
 .\objects\at_cmd_handler.o: ..\Src\user\transport_scheduler.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\profiles\common\ble_prf_types.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
+.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
 .\objects\at_cmd_handler.o: ..\Src\user\uart0_init.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\app_uart.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\app_io.h

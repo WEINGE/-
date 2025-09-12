@@ -29,12 +29,15 @@
 ".\objects\gus_c.o"
 ".\objects\segger_rtt.o"
 ".\objects\user_periph_setup.o"
+".\objects\cjson.o"
 ".\objects\main.o"
 ".\objects\user_app.o"
 ".\objects\at_cmd_handler.o"
 ".\objects\transport_scheduler.o"
 ".\objects\uart0_init.o"
 ".\objects\sensor_data_parser.o"
+".\objects\ble_protocol.o"
+".\objects\ble_protocol_test.o"
 --library_type=microlib --strict --scatter "..\..\..\..\..\platform\soc\linker\keil\flash_scatter_common.sct"
 ..\..\..\..\..\platform\soc\linker\keil\rom_symbol.txt --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

@@ -114,3 +114,4 @@
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\utility\utility.h
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
+.\objects\user_app.o: ..\Src\user\ble_protocol.h

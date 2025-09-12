@@ -579,6 +579,16 @@
               <FileType>1</FileType>
               <FilePath>..\Src\platform\user_periph_setup.c</FilePath>
             </File>
+            <File>
+              <FileName>cJSON.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\常用库\cJSON\cJSON.c</FilePath>
+            </File>
+            <File>
+              <FileName>cJSON.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\platform\cJSON.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -618,6 +628,16 @@
               <FileName>sensor_data_parser.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\user\sensor_data_parser.c</FilePath>
+            </File>
+            <File>
+              <FileName>ble_protocol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\ble_protocol.c</FilePath>
+            </File>
+            <File>
+              <FileName>ble_protocol_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\ble_protocol_test.c</FilePath>
             </File>
           </Files>
         </Group>
