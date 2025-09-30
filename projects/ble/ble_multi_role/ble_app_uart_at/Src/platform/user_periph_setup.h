@@ -85,4 +85,10 @@ bool sensor_uart0_has_data(void);
 uint16_t sensor_uart0_last_len(void);
 void sensor_uart0_clear_flag(void);
 
+// GPIO control functions for S_EN and P_M_EN
+void gpio_s_en_set(bool enable);
+void gpio_p_m_en_set(bool enable);
+bool gpio_s_en_get(void);
+bool gpio_p_m_en_get(void);
+
 #endif

@@ -109,6 +109,10 @@ typedef enum
     AT_CMD_CONN_PARAM_UPDATE,  /**< Connect parameters update AT CMD. */
     AT_CMD_ATTR_READ,          /**< Read attr AT CMD. */
     AT_CMD_ATTR_WRITE,         /**< Write attr AT CMD. */
+    AT_CMD_SENSOR_RX_GET,      /**< Sensor RX status get AT CMD. */
+    AT_CMD_SENSOR_RX_CLR,      /**< Sensor RX clear AT CMD. */
+    AT_CMD_BLE_QUERY,          /**< BLE query AT CMD. */
+    AT_CMD_BLE_REPORT,         /**< BLE report AT CMD. */
     AT_CMD_NB                  /**< Number of supported AT CMD. */
 } at_cmd_id_t;
 

@@ -111,6 +111,8 @@ static at_cmd_attr_t s_at_cmd_attr_table[] =
     {AT_CMD_GAP_NAME_GET,    "GAP_NAME?",   9,  uart_at_gap_name_get},
     {AT_CMD_GAP_NAME_SET,    "GAP_NAME=",   9,  uart_at_gap_name_set},
     {AT_CMD_ADV_PARAM_SET,   "ADV_PARAM=",  10, uart_at_adv_param_set},
+    {AT_CMD_ADV_DATA_SET,    "ADV_DATA=",   9,  NULL},
+    {AT_CMD_RSP_DATA_SET,    "RSP_DATA=",   9,  NULL},
     {AT_CMD_ADV_START,       "ADV_START",   9,  uart_at_adv_start},
     {AT_CMD_ADV_STOP,        "ADV_STOP",    8,  uart_at_adv_stop},
     {AT_CMD_SCAN_PARAM_SET,  "SCAN_PARAM=", 11, uart_at_scan_param_set},
@@ -121,8 +123,14 @@ static at_cmd_attr_t s_at_cmd_attr_table[] =
     {AT_CMD_CONN_CANCEL,     "CONN_CANCEL", 11, uart_at_conn_cancle},
     {AT_CMD_DISCONN,         "DISCONN",     7,  uart_at_disconnect},
     {AT_CMD_MTU_EXCHANGE,    "MTU_EXC",     7,  uart_at_mtu_exchange},
-    {AT_CMD_ATTR_READ,       "SENSOR_RX?",  10, uart_at_sensor_rx_get},
-    {AT_CMD_TEST,            "SENSOR_RX_CLR",  13, uart_at_sensor_rx_clr},
+    {AT_CMD_SRVC_DISC,       "SRVC_DISC",   9,  NULL},
+    {AT_CMD_CONN_PARAM_UPDATE, "CONN_UPD=", 9,  NULL},
+    {AT_CMD_ATTR_READ,       "ATTR_READ=",  10, NULL},
+    {AT_CMD_ATTR_WRITE,      "ATTR_WRITE=", 11, NULL},
+    {AT_CMD_SENSOR_RX_GET,   "SENSOR_RX?",     10, uart_at_sensor_rx_get},
+    {AT_CMD_SENSOR_RX_CLR,   "SENSOR_RX_CLR",  13, uart_at_sensor_rx_clr},
+    {AT_CMD_BLE_QUERY,       "BLE_QUERY",      9,  NULL},
+    {AT_CMD_BLE_REPORT,      "BLE_REPORT",     10, NULL},
 };
 
 /*
@@ -276,6 +284,7 @@ void uart_at_init(ble_gap_role_t gap_role)
     cmd_init.cmd_num            = sizeof(s_at_cmd_attr_table) / sizeof(at_cmd_attr_t);
     cmd_init.cmd_time_cb        = user_at_cmd_timing_start;
     cmd_init.cmd_cplt_cb        = user_at_cmd_callback;
+    
     at_cmd_init(&cmd_init);
 
     s_curr_gap_role  = gap_role;

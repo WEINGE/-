@@ -48,7 +48,7 @@
 #include "hal_flash.h"
 #include "app_uart.h"
 #include "app_uart_dma.h"
-#include "app_log.h"
+
 #include "app_assert.h"
 #include "sensor_data_parser.h"
 #include <stdbool.h>
@@ -81,24 +81,7 @@ static uint8_t s_uart_dma_rx_buf[UART_RX_BUFFER_SIZE];
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
-static void log_flush(void)
-{
-    app_uart_flush(APP_UART_ID);
-}
 
-static void app_log_assert_init(void)
-{
-    app_log_init_t log_init;
-
-    log_init.filter.level                 = APP_LOG_LVL_DEBUG;
-    log_init.fmt_set[APP_LOG_LVL_ERROR]   = APP_LOG_FMT_ALL & (~APP_LOG_FMT_TAG);
-    log_init.fmt_set[APP_LOG_LVL_WARNING] = APP_LOG_FMT_LVL;
-    log_init.fmt_set[APP_LOG_LVL_INFO]    = APP_LOG_FMT_LVL;
-    log_init.fmt_set[APP_LOG_LVL_DEBUG]   = APP_LOG_FMT_LVL;
-
-    app_log_init(&log_init, uart_tx_data_send,  log_flush);
-    app_assert_init();
-}
 
 /*
  * GLOBAL FUNCTION DEFINITIONS
@@ -219,7 +202,7 @@ void uart_init(uint32_t baud_rate)
     // 先反初始化，确保干净配置
     app_uart_deinit(APP_UART_ID);
 
-    APP_LOG_INFO("The baud rate update value=%d.", s_uart_param.init.baud_rate);
+
 
     // 初始化UART（中断/事件回调用于DMA接收完成通知）
     app_uart_init(&s_uart_param, app_uart_evt_handler, &s_uart_buffer);
@@ -255,27 +238,31 @@ void uart_polling_task(void)
 void app_periph_init(void)
 {
     SYS_SET_BD_ADDR(s_bd_addr);
-    app_log_assert_init();
+    app_assert_init();
     uart_init(APP_UART_BAUDRATE);
 
-    // Configure GPIO25 (S_EN) as input with pull-up
+    // Configure GPIO25 (S_EN) as output, initial state OFF (low)
     {
         app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
-        io_init.mode = APP_IO_MODE_INPUT;
-        io_init.pull = APP_IO_PULLUP;
-        io_init.mux  = APP_IO_MUX_0; // GPIO function
+        io_init.mode = APP_IO_MODE_OUTPUT;
+        io_init.pull = APP_IO_NOPULL;
+        io_init.mux  = APP_IO_MUX_7; // GPIO function
         io_init.pin  = APP_IO_PIN_25; // GPIO25
         app_io_init(APP_IO_TYPE_NORMAL, &io_init);
+        // Set initial state to OFF (low)
+        app_io_write_pin(APP_IO_TYPE_NORMAL, APP_IO_PIN_25, APP_IO_PIN_SET);
     }
 
-    // Configure AON_GPIO_6 (P_M_EN) as input with pull-up
+    // Configure AON_GPIO_6 (P_M_EN) as output, initial state OFF (low)
     {
         app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
-        io_init.mode = APP_IO_MODE_INPUT;
-        io_init.pull = APP_IO_PULLUP;
+        io_init.mode = APP_IO_MODE_OUTPUT;
+        io_init.pull = APP_IO_NOPULL;
         io_init.mux  = APP_IO_MUX_7; // AON GPIO function
-        io_init.pin  = APP_IO_PIN_6; // AON GPIO6
+        io_init.pin  = AON_GPIO_PIN_6; // AON GPIO6
         app_io_init(APP_IO_TYPE_AON, &io_init);
+        // Set initial state to OFF (low)
+        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6, APP_IO_PIN_SET);
     }
 
     pwr_mgmt_mode_set(PMR_MGMT_ACTIVE_MODE);
@@ -298,4 +285,33 @@ bool sensor_uart0_has_data(void)
 void sensor_uart0_clear_flag(void)
 {
     sensor_data_clear_flag();
+}
+
+// GPIO control functions for S_EN and P_M_EN
+void gpio_s_en_set(bool enable)
+{
+    if (enable) {
+        app_io_write_pin(APP_IO_TYPE_NORMAL, APP_IO_PIN_25, APP_IO_PIN_SET);
+    } else {
+        app_io_write_pin(APP_IO_TYPE_NORMAL, APP_IO_PIN_25, APP_IO_PIN_RESET);
+    }
+}
+
+void gpio_p_m_en_set(bool enable)
+{
+    if (enable) {
+        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6, APP_IO_PIN_SET);
+    } else {
+        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6, APP_IO_PIN_RESET);
+    }
+}
+
+bool gpio_s_en_get(void)
+{
+    return (app_io_read_pin(APP_IO_TYPE_NORMAL, APP_IO_PIN_25) == APP_IO_PIN_SET);
+}
+
+bool gpio_p_m_en_get(void)
+{
+    return (app_io_read_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6) == APP_IO_PIN_SET);
 }

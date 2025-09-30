@@ -104,8 +104,7 @@
 .\objects\ble_protocol.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
 .\objects\ble_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\ble_protocol.o: ..\..\..\..\..\components\profiles\gus\gus.h
-.\objects\ble_protocol.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
-.\objects\ble_protocol.o: ..\Src\user\transport_scheduler.h
 .\objects\ble_protocol.o: ..\Src\user\sensor_data_parser.h
 .\objects\ble_protocol.o: ..\Src\platform\cJSON.h
 .\objects\ble_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\ble_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\time.h

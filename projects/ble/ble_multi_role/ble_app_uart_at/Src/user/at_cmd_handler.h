@@ -296,7 +296,6 @@ void uart_at_ble_report(at_cmd_parse_t *p_cmd_param);
 
 
 
-
 /**
  *****************************************************************************************
  * @brief Process connection task.

@@ -44,6 +44,8 @@
 #include "uart0_init.h"
 #include "app_uart.h"
 #include "board_SK.h"
+#include "app_io.h"
+#include "grx_hal.h"
 
 /*
  * GLOBAL VARIABLE DEFINITIONS
@@ -128,6 +130,34 @@ uint16_t uart0_init(void)
 {
     uint16_t ret = 0;
     app_uart_tx_buf_t uart_buffer = {0};
+
+    // 初始化GPIO25并拉高
+    app_io_init_t gpio25_config = {
+        .pin = 25,
+        .mode = APP_IO_MODE_OUTPUT,
+        .pull = APP_IO_PULLUP,
+        .mux = APP_IO_MUX_7,
+    };
+    
+    ret = app_io_init(APP_IO_TYPE_NORMAL, &gpio25_config);
+    if (ret == APP_DRV_SUCCESS)
+    {
+        app_io_write_pin(APP_IO_TYPE_NORMAL, 25, APP_IO_PIN_SET);
+    }
+    
+    // 初始化AON_GPIO_6并拉高
+    app_io_init_t aon_gpio6_config = {
+        .pin = 6,
+        .mode = APP_IO_MODE_OUTPUT,
+        .pull = APP_IO_PULLUP,
+        .mux = APP_IO_MUX_7,
+    };
+    
+    ret = app_io_init(APP_IO_TYPE_AON, &aon_gpio6_config);
+    if (ret == APP_DRV_SUCCESS)
+    {
+        app_io_write_pin(APP_IO_TYPE_AON, 6, APP_IO_PIN_SET);
+    }
 
     // 配置环形缓冲区
     uart_buffer.tx_buf = g_uart0_ring_buffer;
