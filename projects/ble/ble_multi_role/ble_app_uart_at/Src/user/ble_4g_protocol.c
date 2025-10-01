@@ -885,18 +885,42 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
         case PROTOCOL_4G_CMD_COLLECT_TIME_SET:
             if (length >= 2)
             {
-                s_param_settings.device_collect_time = (p_data[0] << 8) | p_data[1];
-                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
+                uint16_t new_interval = (p_data[0] << 8) | p_data[1];
+                // 参数范围验证 (1-1440分钟)
+                if (new_interval >= 1 && new_interval <= 1440)
+                {
+                    s_param_settings.device_collect_time = new_interval;
+                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
+                    
+                    // 立即重启采集定时器
+                    ble_4g_protocol_restart_collect_timer();
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Invalid collect interval: %d (range: 1-1440)", DEBUG_TAG, new_interval);
+                }
             }
             break;
             
         case PROTOCOL_4G_CMD_UPDATE_TIME_SET:
             if (length >= 2)
             {
-                s_param_settings.device_updata_time = (p_data[0] << 8) | p_data[1];
-                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
+                uint16_t new_interval = (p_data[0] << 8) | p_data[1];
+                // 参数范围验证 (1-1440分钟)
+                if (new_interval >= 1 && new_interval <= 1440)
+                {
+                    s_param_settings.device_updata_time = new_interval;
+                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
+                    
+                    // 立即重启上报定时器
+                    ble_4g_protocol_restart_report_timer();
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Invalid report interval: %d (range: 1-1440)", DEBUG_TAG, new_interval);
+                }
             }
             break;
             
@@ -1039,6 +1063,59 @@ void ble_4g_protocol_stop_report_timer(void)
     
     APP_LOG_INFO("%s Stopped report timer", DEBUG_TAG);
 }
+
+/**
+ *****************************************************************************************
+ * @brief Restart collect timer with new interval.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_restart_collect_timer(void)
+{
+    if (!s_protocol_initialized)
+    {
+        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
+        return;
+    }
+    
+    // 停止当前定时器
+    app_timer_stop(m_sensor_collect_timer);
+    
+    // 计算新的超时时间
+    uint32_t timeout_ms = s_param_settings.device_collect_time * 60 * 1000; // 分钟转换为毫秒
+    
+    // 启动新定时器
+    sdk_err_t err_code = app_timer_start(m_sensor_collect_timer, timeout_ms, NULL);
+    APP_ERROR_CHECK(err_code);
+    
+    APP_LOG_INFO("%s Collect timer restarted: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
+}
+
+/**
+ *****************************************************************************************
+ * @brief Restart report timer with new interval.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_restart_report_timer(void)
+{
+    if (!s_protocol_initialized)
+    {
+        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
+        return;
+    }
+    
+    // 停止当前定时器
+    app_timer_stop(m_data_report_timer);
+    
+    // 计算新的超时时间
+    uint32_t timeout_ms = s_param_settings.device_updata_time * 60 * 1000; // 分钟转换为毫秒
+    
+    // 启动新定时器
+    sdk_err_t err_code = app_timer_start(m_data_report_timer, timeout_ms, NULL);
+    APP_ERROR_CHECK(err_code);
+    
+    APP_LOG_INFO("%s Report timer restarted: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
+}
+
 /**
  *****************************************************************************************
  * @brief Update sensor data from external source.

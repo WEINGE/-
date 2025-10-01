@@ -645,9 +645,9 @@
               <FilePath>..\Src\user\sensor_status_manager.c</FilePath>
             </File>
             <File>
-              <FileName>config_manager.c</FileName>
+              <FileName>test_timing_config.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Src\user\config_manager.c</FilePath>
+              <FilePath>..\Src\user\test_timing_config.c</FilePath>
             </File>
           </Files>
         </Group>

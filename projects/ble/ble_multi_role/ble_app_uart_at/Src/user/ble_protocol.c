@@ -17,6 +17,7 @@
  *****************************************************************************************
  */
 #include "ble_protocol.h"
+#include "ble_4g_protocol.h"
 #include "user_app.h"
 #include "sensor_data_parser.h"
 #include "cJSON.h"
@@ -28,6 +29,7 @@
 #include "gr55xx_delay.h"
 #include "gr55xx_sys.h"
 #include "user_periph_setup.h"  // 包含uart1_tx_data_send声明
+#include "hal_flash.h"  // Flash存储功能
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +60,10 @@ void ble_protocol_send_json_response(const char *p_json_str);
 #define JSON_BUFFER_SIZE            1024
 #define DEVICE_ID_SIZE              32
 
+// Flash存储相关定义
+#define PARAM_SETTINGS_FLASH_ADDR   0x01080000  // Flash存储地址
+#define PARAM_SETTINGS_MAGIC        0x12345678  // 魔数，用于验证数据有效性
+
 /*
  * LOCAL VARIABLE DEFINITIONS
  *****************************************************************************************
@@ -68,6 +74,20 @@ static status_info_t s_status_info = {0};
 static param_settings_t s_param_settings = {0};
 static bool s_protocol_initialized = false;
 static char s_device_id[DEVICE_ID_SIZE] = {0};
+
+// Flash存储的参数设置结构体
+typedef struct {
+    uint32_t magic;                    // 魔数，用于验证数据有效性
+    uint16_t collect_interval;         // 采集时间间隔（分钟）
+    uint16_t report_interval;          // 上报时间间隔（分钟）
+    float methane_threshold;           // 甲烷阈值
+    float temp_threshold;              // 温度阈值
+    float water_threshold;             // 水浸阈值
+    float location_lat;                // 纬度
+    float location_lon;                // 经度
+    char server_address[64];           // 服务器地址
+    uint32_t checksum;                 // 校验和
+} flash_param_settings_t;
 
 // 4G响应缓冲区
 static char g_4g_response_buffer[512];
@@ -80,6 +100,131 @@ at_response_collector_t g_at_collector = {0};
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
+
+/**
+ *****************************************************************************************
+ * @brief 计算校验和
+ *****************************************************************************************
+ */
+static uint32_t calculate_checksum(const flash_param_settings_t *p_settings)
+{
+    uint32_t checksum = 0;
+    const uint8_t *p_data = (const uint8_t *)p_settings;
+    
+    // 计算除checksum字段外的所有数据的校验和
+    for (uint32_t i = 0; i < sizeof(flash_param_settings_t) - sizeof(uint32_t); i++)
+    {
+        checksum += p_data[i];
+    }
+    
+    return checksum;
+}
+
+/**
+ *****************************************************************************************
+ * @brief 保存参数设置到Flash
+ *****************************************************************************************
+ */
+static bool save_param_settings_to_flash(void)
+{
+    flash_param_settings_t flash_settings = {0};
+    
+    // 填充Flash存储结构体
+    flash_settings.magic = PARAM_SETTINGS_MAGIC;
+    flash_settings.collect_interval = s_param_settings.collect_interval;
+    flash_settings.report_interval = s_param_settings.report_interval;
+    flash_settings.methane_threshold = s_param_settings.methane_threshold;
+    flash_settings.temp_threshold = s_param_settings.temp_threshold;
+    flash_settings.water_threshold = s_param_settings.water_threshold;
+    flash_settings.location_lat = s_param_settings.location_lat;
+    flash_settings.location_lon = s_param_settings.location_lon;
+    strncpy(flash_settings.server_address, s_param_settings.server_address, sizeof(flash_settings.server_address) - 1);
+    
+    // 计算校验和
+    flash_settings.checksum = calculate_checksum(&flash_settings);
+    
+    // 擦除Flash扇区
+    bool ret = hal_flash_erase(PARAM_SETTINGS_FLASH_ADDR, sizeof(flash_param_settings_t));
+    if (!ret)
+    {
+        APP_LOG_ERROR("%s Failed to erase flash", DEBUG_TAG);
+        return false;
+    }
+    
+    // 写入Flash
+    uint32_t written = hal_flash_write(PARAM_SETTINGS_FLASH_ADDR, (uint8_t *)&flash_settings, sizeof(flash_param_settings_t));
+    if (written != sizeof(flash_param_settings_t))
+    {
+        APP_LOG_ERROR("%s Failed to write flash: written=%d, expected=%d", DEBUG_TAG, written, sizeof(flash_param_settings_t));
+        return false;
+    }
+    
+    APP_LOG_INFO("%s Parameter settings saved to flash successfully", DEBUG_TAG);
+    APP_LOG_INFO("%s Collect interval: %d, Report interval: %d", DEBUG_TAG, 
+                flash_settings.collect_interval, flash_settings.report_interval);
+    
+    return true;
+}
+
+/**
+ *****************************************************************************************
+ * @brief 从Flash加载参数设置
+ *****************************************************************************************
+ */
+static bool load_param_settings_from_flash(void)
+{
+    flash_param_settings_t flash_settings = {0};
+    
+    // 从Flash读取数据
+    uint32_t read_bytes = hal_flash_read(PARAM_SETTINGS_FLASH_ADDR, (uint8_t *)&flash_settings, sizeof(flash_param_settings_t));
+    if (read_bytes != sizeof(flash_param_settings_t))
+    {
+        APP_LOG_ERROR("%s Failed to read flash: read=%d, expected=%d", DEBUG_TAG, read_bytes, sizeof(flash_param_settings_t));
+        return false;
+    }
+    
+    // 验证魔数
+    if (flash_settings.magic != PARAM_SETTINGS_MAGIC)
+    {
+        APP_LOG_WARNING("%s Invalid magic number in flash: 0x%08X (expected: 0x%08X)", 
+                       DEBUG_TAG, flash_settings.magic, PARAM_SETTINGS_MAGIC);
+        return false;
+    }
+    
+    // 验证校验和
+    uint32_t calculated_checksum = calculate_checksum(&flash_settings);
+    if (flash_settings.checksum != calculated_checksum)
+    {
+        APP_LOG_ERROR("%s Checksum mismatch: stored=0x%08X, calculated=0x%08X", 
+                     DEBUG_TAG, flash_settings.checksum, calculated_checksum);
+        return false;
+    }
+    
+    // 验证参数范围
+    if (flash_settings.collect_interval < 1 || flash_settings.collect_interval > 1440 ||
+        flash_settings.report_interval < 1 || flash_settings.report_interval > 1440)
+    {
+        APP_LOG_ERROR("%s Invalid interval values in flash: collect=%d, report=%d", 
+                     DEBUG_TAG, flash_settings.collect_interval, flash_settings.report_interval);
+        return false;
+    }
+    
+    // 恢复参数设置
+    s_param_settings.collect_interval = flash_settings.collect_interval;
+    s_param_settings.report_interval = flash_settings.report_interval;
+    s_param_settings.methane_threshold = flash_settings.methane_threshold;
+    s_param_settings.temp_threshold = flash_settings.temp_threshold;
+    s_param_settings.water_threshold = flash_settings.water_threshold;
+    s_param_settings.location_lat = flash_settings.location_lat;
+    s_param_settings.location_lon = flash_settings.location_lon;
+    strncpy(s_param_settings.server_address, flash_settings.server_address, sizeof(s_param_settings.server_address) - 1);
+    
+    APP_LOG_INFO("%s Parameter settings loaded from flash successfully", DEBUG_TAG);
+    APP_LOG_INFO("%s Collect interval: %d, Report interval: %d", DEBUG_TAG, 
+                s_param_settings.collect_interval, s_param_settings.report_interval);
+    
+    return true;
+}
 
 /**
  *****************************************************************************************
@@ -410,14 +555,28 @@ static void ble_protocol_init_status_info(void)
  */
 static void ble_protocol_init_param_settings(void)
 {
-    s_param_settings.collect_interval = 1;     // 默认1分钟检测周期
-    s_param_settings.report_interval = 5;      // 默认5分钟上报周期
-    s_param_settings.methane_threshold = 1.0f;  // 默认1%vol甲烷阈值
-    s_param_settings.temp_threshold = 50.0f;    // 默认50°C温度阈值
-    s_param_settings.water_threshold = 0.5f;    // 默认0.5水浸阈值
-    s_param_settings.location_lat = 39.9042f;   // 默认北京纬度
-    s_param_settings.location_lon = 116.4074f;  // 默认北京经度
-    strcpy(s_param_settings.server_address, "http://api.example.com");
+    // 尝试从Flash加载参数设置
+    if (!load_param_settings_from_flash())
+    {
+        APP_LOG_INFO("%s Using default parameter settings", DEBUG_TAG);
+        
+        // 使用默认设置
+        s_param_settings.collect_interval = 1;     // 默认1分钟检测周期
+        s_param_settings.report_interval = 5;      // 默认5分钟上报周期
+        s_param_settings.methane_threshold = 1.0f;  // 默认1%vol甲烷阈值
+        s_param_settings.temp_threshold = 50.0f;    // 默认50°C温度阈值
+        s_param_settings.water_threshold = 0.5f;    // 默认0.5水浸阈值
+        s_param_settings.location_lat = 39.9042f;   // 默认北京纬度
+        s_param_settings.location_lon = 116.4074f;  // 默认北京经度
+        strcpy(s_param_settings.server_address, "http://api.example.com");
+        
+        // 保存默认设置到Flash
+        save_param_settings_to_flash();
+    }
+    else
+    {
+        APP_LOG_INFO("%s Parameter settings loaded from Flash", DEBUG_TAG);
+    }
 }
 
 /**
@@ -517,7 +676,7 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             cJSON_AddStringToObject(body, "device_ver", s_device_info.firmware_version);
             // 组合经纬度字符串
             char location_str[64];
-            snprintf(location_str, sizeof(location_str), "%.14f,%.14f", 
+            snprintf(location_str, sizeof(location_str), "%.6f,%.6f", 
                     s_param_settings.location_lon, s_param_settings.location_lat);
             cJSON_AddStringToObject(body, "device_location", location_str);
             break;
@@ -624,7 +783,7 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
             case 109: // 安装坐标设置
                 {
                     char coordinate_str[64];
-                    snprintf(coordinate_str, sizeof(coordinate_str), "%.14f,%.14f", 
+                    snprintf(coordinate_str, sizeof(coordinate_str), "%.6f,%.6f", 
                             s_param_settings.location_lon, s_param_settings.location_lat);
                     cJSON_AddStringToObject(body, "coordinate", coordinate_str);
                 }
@@ -718,12 +877,47 @@ static void ble_protocol_parse_json_command(const char* json_str)
             if (interval_item == NULL || !cJSON_IsNumber(interval_item))
             {
                 APP_LOG_ERROR("%s Missing or invalid collect_time_set in body", DEBUG_TAG);
+                // 按照协议文档3.6格式发送失败回文
+                cJSON *response = cJSON_CreateObject();
+                cJSON *header = cJSON_CreateObject();
+                
+                cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_COLLECT_TIME_SET);
+                cJSON_AddNumberToObject(response, "result", 1); // 1:设置失败
+                
+                cJSON_AddItemToObject(response, "header", header);
+                
+                char *json_string = cJSON_Print(response);
+                if (json_string) {
+                    ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                    free(json_string);
+                }
+                cJSON_Delete(response);
                 break;
             }
             
             uint16_t interval = (uint16_t)interval_item->valueint;
             uint8_t data[2] = {(uint8_t)(interval >> 8), (uint8_t)(interval & 0xFF)};
             ble_protocol_handle_param_set(cmd_code, data, 2);
+            
+            // 按照协议文档3.6格式发送成功回文
+            cJSON *response = cJSON_CreateObject();
+            cJSON *header = cJSON_CreateObject();
+            cJSON *body = cJSON_CreateObject();
+            
+            cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_COLLECT_TIME_SET);
+            cJSON_AddNumberToObject(body, "collect_time_set", interval);
+            cJSON_AddNumberToObject(response, "result", 0); // 0:设置成功
+            
+            cJSON_AddItemToObject(response, "header", header);
+            cJSON_AddItemToObject(response, "body", body);
+            
+            char *json_string = cJSON_Print(response);
+            if (json_string) {
+                ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                APP_LOG_INFO("%s Collect time set response sent", DEBUG_TAG);
+                free(json_string);
+            }
+            cJSON_Delete(response);
             break;
         }
         
@@ -734,12 +928,47 @@ static void ble_protocol_parse_json_command(const char* json_str)
             if (interval_item == NULL || !cJSON_IsNumber(interval_item))
             {
                 APP_LOG_ERROR("%s Missing or invalid updata_time_set in body", DEBUG_TAG);
+                // 按照协议文档3.7格式发送失败回文
+                cJSON *response = cJSON_CreateObject();
+                cJSON *header = cJSON_CreateObject();
+                
+                cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_UPDATE_TIME_SET);
+                cJSON_AddNumberToObject(response, "result", 1); // 1:设置失败
+                
+                cJSON_AddItemToObject(response, "header", header);
+                
+                char *json_string = cJSON_Print(response);
+                if (json_string) {
+                    ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                    free(json_string);
+                }
+                cJSON_Delete(response);
                 break;
             }
             
             uint16_t interval = (uint16_t)interval_item->valueint;
             uint8_t data[2] = {(uint8_t)(interval >> 8), (uint8_t)(interval & 0xFF)};
             ble_protocol_handle_param_set(cmd_code, data, 2);
+            
+            // 按照协议文档3.7格式发送成功回文
+            cJSON *response = cJSON_CreateObject();
+            cJSON *header = cJSON_CreateObject();
+            cJSON *body = cJSON_CreateObject();
+            
+            cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_UPDATE_TIME_SET);
+            cJSON_AddNumberToObject(body, "updata_time_set", interval);
+            cJSON_AddNumberToObject(response, "result", 0); // 0:设置成功
+            
+            cJSON_AddItemToObject(response, "header", header);
+            cJSON_AddItemToObject(response, "body", body);
+            
+            char *json_string = cJSON_Print(response);
+            if (json_string) {
+                ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                APP_LOG_INFO("%s Update time set response sent", DEBUG_TAG);
+                free(json_string);
+            }
+            cJSON_Delete(response);
             break;
         }
         
@@ -1105,18 +1334,94 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
         case PROTOCOL_CMD_COLLECT_TIME_SET:
             if (length >= 2)
             {
-                s_param_settings.collect_interval = (p_data[0] << 8) | p_data[1];
-                result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set collect interval: %d seconds", DEBUG_TAG, s_param_settings.collect_interval);
+                uint16_t new_interval = (p_data[0] << 8) | p_data[1];
+                // 参数范围验证 (1-1440分钟)
+                if (new_interval >= 1 && new_interval <= 1440)
+                {
+                    s_param_settings.collect_interval = new_interval;
+                    result = PROTOCOL_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.collect_interval);
+                    
+                    // 保存到Flash
+                    if (save_param_settings_to_flash())
+                    {
+                        APP_LOG_INFO("%s Collect interval saved to Flash", DEBUG_TAG);
+                    }
+                    else
+                    {
+                        APP_LOG_ERROR("%s Failed to save collect interval to Flash", DEBUG_TAG);
+                    }
+                    
+                    // 同步到4G协议模块并重启定时器
+                    ble_4g_protocol_handle_param_set(PROTOCOL_4G_CMD_COLLECT_TIME_SET, p_data, length);
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Invalid collect interval: %d (range: 1-1440)", DEBUG_TAG, new_interval);
+                    // 按照协议文档3.6格式发送失败回文
+                    cJSON *response = cJSON_CreateObject();
+                    cJSON *header = cJSON_CreateObject();
+                    
+                    cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_COLLECT_TIME_SET);
+                    cJSON_AddNumberToObject(response, "result", 1); // 1:设置失败
+                    
+                    cJSON_AddItemToObject(response, "header", header);
+                    
+                    char *json_string = cJSON_Print(response);
+                    if (json_string) {
+                        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                        APP_LOG_INFO("%s Collect time set failed response sent", DEBUG_TAG);
+                        free(json_string);
+                    }
+                    cJSON_Delete(response);
+                }
             }
             break;
             
         case PROTOCOL_CMD_UPDATE_TIME_SET:
             if (length >= 2)
             {
-                s_param_settings.report_interval = (p_data[0] << 8) | p_data[1];
-                result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set report interval: %d seconds", DEBUG_TAG, s_param_settings.report_interval);
+                uint16_t new_interval = (p_data[0] << 8) | p_data[1];
+                // 参数范围验证 (1-1440分钟)
+                if (new_interval >= 1 && new_interval <= 1440)
+                {
+                    s_param_settings.report_interval = new_interval;
+                    result = PROTOCOL_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.report_interval);
+                    
+                    // 保存到Flash
+                    if (save_param_settings_to_flash())
+                    {
+                        APP_LOG_INFO("%s Report interval saved to Flash", DEBUG_TAG);
+                    }
+                    else
+                    {
+                        APP_LOG_ERROR("%s Failed to save report interval to Flash", DEBUG_TAG);
+                    }
+                    
+                    // 同步到4G协议模块并重启定时器
+                    ble_4g_protocol_handle_param_set(PROTOCOL_4G_CMD_UPDATE_TIME_SET, p_data, length);
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Invalid report interval: %d (range: 1-1440)", DEBUG_TAG, new_interval);
+                    // 按照协议文档3.7格式发送失败回文
+                    cJSON *response = cJSON_CreateObject();
+                    cJSON *header = cJSON_CreateObject();
+                    
+                    cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_UPDATE_TIME_SET);
+                    cJSON_AddNumberToObject(response, "result", 1); // 1:设置失败
+                    
+                    cJSON_AddItemToObject(response, "header", header);
+                    
+                    char *json_string = cJSON_Print(response);
+                    if (json_string) {
+                        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                        APP_LOG_INFO("%s Update time set failed response sent", DEBUG_TAG);
+                        free(json_string);
+                    }
+                    cJSON_Delete(response);
+                }
             }
             break;
             
@@ -1129,6 +1434,16 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 result = PROTOCOL_RESULT_SET_SUCCESS;
                 APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP=%.1f°C", 
                            DEBUG_TAG, s_param_settings.methane_threshold, s_param_settings.temp_threshold);
+                
+                // 保存到Flash
+                if (save_param_settings_to_flash())
+                {
+                    APP_LOG_INFO("%s Thresholds saved to Flash", DEBUG_TAG);
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Failed to save thresholds to Flash", DEBUG_TAG);
+                }
             }
             break;
             
@@ -1320,7 +1635,7 @@ static void check_and_send_collected_response(void)
             strcpy(g_at_collector.device_id, "12:34:56:78:9A:BC");  // 降级使用MAC地址
         }
         strcpy(g_at_collector.device_version, "1.0.0");         // 固件版本
-        strcpy(g_at_collector.installation_location, "113.74380613775224,34.84325572266224"); // 预设安装坐标
+        strcpy(g_at_collector.installation_location, "113.743806,34.843256"); // 预设安装坐标
         
         // 根据协议生成响应
         cJSON *response = cJSON_CreateObject();
@@ -1344,7 +1659,7 @@ static void check_and_send_collected_response(void)
             else
                 cJSON_AddStringToObject(body, "SIM_ID", "0");
                 
-            // device_ID (设备ID - MAC地址)
+            // device_ID (设备ID - IMEI)
             cJSON_AddStringToObject(body, "device_ID", g_at_collector.device_id);
             
             // device_ver (设备固件版本号)
@@ -1380,7 +1695,7 @@ static void check_and_send_collected_response(void)
             if (g_at_collector.signal_quality > 0)
                 cJSON_AddNumberToObject(body, "device_LTE_signal", g_at_collector.signal_quality);
             else
-                cJSON_AddNumberToObject(body, "device_LTE_signal", 15);  // 默认中等信号强度
+                cJSON_AddNumberToObject(body, "device_LTE_signal", 0);  // 默认0信号强度
             
             // device_GPS_status (GPS信号状态：0正常，1异常)
             cJSON_AddNumberToObject(body, "device_GPS_status", g_at_collector.gps_status);
@@ -1494,4 +1809,72 @@ bool ble_protocol_get_imei(char *p_imei_buffer, uint16_t buffer_size)
     // 没有 IMEI 数据
     p_imei_buffer[0] = '\0';
     return false;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Send success response to BLE client.
+ *
+ * @param[in] message: Success message to send.
+ *****************************************************************************************
+ */
+void ble_protocol_send_success_response(const char* message)
+{
+    if (!message) {
+        message = "Operation completed successfully";
+    }
+    
+    // 创建成功响应JSON
+    cJSON *response = cJSON_CreateObject();
+    if (!response) {
+        APP_LOG_ERROR("%s Failed to create success response JSON", DEBUG_TAG);
+        return;
+    }
+    
+    cJSON_AddStringToObject(response, "result", "success");
+    cJSON_AddStringToObject(response, "message", message);
+    
+    char *json_string = cJSON_Print(response);
+    if (json_string) {
+        // 通过BLE发送响应
+        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+        APP_LOG_INFO("%s Success response sent: %s", DEBUG_TAG, message);
+        free(json_string);
+    }
+    
+    cJSON_Delete(response);
+}
+
+/**
+ *****************************************************************************************
+ * @brief Send error response to BLE client.
+ *
+ * @param[in] message: Error message to send.
+ *****************************************************************************************
+ */
+void ble_protocol_send_error_response(const char* message)
+{
+    if (!message) {
+        message = "Operation failed";
+    }
+    
+    // 创建错误响应JSON
+    cJSON *response = cJSON_CreateObject();
+    if (!response) {
+        APP_LOG_ERROR("%s Failed to create error response JSON", DEBUG_TAG);
+        return;
+    }
+    
+    cJSON_AddStringToObject(response, "result", "error");
+    cJSON_AddStringToObject(response, "message", message);
+    
+    char *json_string = cJSON_Print(response);
+    if (json_string) {
+        // 通过BLE发送响应
+        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+        APP_LOG_ERROR("%s Error response sent: %s", DEBUG_TAG, message);
+        free(json_string);
+    }
+    
+    cJSON_Delete(response);
 }

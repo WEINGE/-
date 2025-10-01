@@ -247,6 +247,20 @@ void ble_4g_protocol_stop_report_timer(void);
 
 /**
  *****************************************************************************************
+ * @brief Restart collect timer with new interval.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_restart_collect_timer(void);
+
+/**
+ *****************************************************************************************
+ * @brief Restart report timer with new interval.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_restart_report_timer(void);
+
+/**
+ *****************************************************************************************
  * @brief Update sensor data from external source.
  *
  * @param[in] p_sensor_data: Pointer to sensor data to update.

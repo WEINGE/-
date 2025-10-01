@@ -1,7 +1,5 @@
 ---
-description: 
-globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # AI助手核心规则
 

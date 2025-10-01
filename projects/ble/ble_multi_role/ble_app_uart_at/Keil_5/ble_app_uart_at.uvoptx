@@ -823,8 +823,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\Src\user\config_manager.c</PathWithFileName>
-      <FilenameWithoutPath>config_manager.c</FilenameWithoutPath>
+      <PathWithFileName>..\Src\user\test_timing_config.c</PathWithFileName>
+      <FilenameWithoutPath>test_timing_config.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
