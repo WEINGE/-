@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\ble_app_uart_at.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\ble_app_uart_at.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Oct 01 11:46:47 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Oct 01 15:24:26 2025
 <BR><P>
 <H3>Maximum Stack Usage =       2256 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -4996,6 +4996,8 @@ Global Symbols
 <LI><a href="#[22e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_param_info_json
 <LI><a href="#[22d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_device_info_json
 <LI><a href="#[225]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_data_report_json
+<LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_report_timer
+<LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_collect_timer
 <LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_handle_param_set
 <LI><a href="#[1a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_send_json_response
 <LI><a href="#[2af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
@@ -5015,8 +5017,6 @@ Global Symbols
 <LI><a href="#[23f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_param_info_report
 <LI><a href="#[23e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_device_info_report
 <LI><a href="#[23c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_data_report
-<LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_report_timer
-<LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_collect_timer
 </UL>
 
 <P><STRONG><a name="[1c9]"></a>app_periph_init</STRONG> (Thumb, 172 bytes, Stack size 32 bytes, user_periph_setup.o(i.app_periph_init))
@@ -5082,9 +5082,9 @@ Global Symbols
 <LI><a href="#[243]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_start_report_timer
 <LI><a href="#[242]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_start_collect_timer
 <LI><a href="#[329]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;start_delayed_send_process
-<LI><a href="#[131]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;user_at_cmd_timing_start
 <LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_report_timer
 <LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_collect_timer
+<LI><a href="#[131]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;user_at_cmd_timing_start
 </UL>
 
 <P><STRONG><a name="[1d5]"></a>app_timer_stop_api</STRONG> (Thumb, 132 bytes, Stack size 24 bytes, app_timer.o(i.app_timer_stop_api))
@@ -5427,6 +5427,7 @@ Global Symbols
 <LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_handle_param_set
+<LI><a href="#[2af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 </UL>
 
 <P><STRONG><a name="[234]"></a>ble_4g_protocol_restart_report_timer</STRONG> (Thumb, 128 bytes, Stack size 32 bytes, ble_4g_protocol.o(i.ble_4g_protocol_restart_report_timer))
@@ -5439,6 +5440,7 @@ Global Symbols
 <LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_handle_param_set
+<LI><a href="#[2af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 </UL>
 
 <P><STRONG><a name="[23c]"></a>ble_4g_protocol_send_data_report</STRONG> (Thumb, 94 bytes, Stack size 24 bytes, ble_4g_protocol.o(i.ble_4g_protocol_send_data_report))
@@ -5957,7 +5959,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[130]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_uart1_evt_handler
 </UL>
 
-<P><STRONG><a name="[2af]"></a>ble_protocol_handle_param_set</STRONG> (Thumb, 1800 bytes, Stack size 64 bytes, ble_protocol.o(i.ble_protocol_handle_param_set))
+<P><STRONG><a name="[2af]"></a>ble_protocol_handle_param_set</STRONG> (Thumb, 1812 bytes, Stack size 64 bytes, ble_protocol.o(i.ble_protocol_handle_param_set))
 <BR><BR>[Stack]<UL><LI>Max Depth = 848<LI>Call Chain = ble_protocol_handle_param_set &rArr; save_param_settings_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -5968,6 +5970,8 @@ Global Symbols
 <LI><a href="#[226]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_CreateObject
 <LI><a href="#[228]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_AddNumberToObject
 <LI><a href="#[22a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_AddItemToObject
+<LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_report_timer
+<LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_collect_timer
 <LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_handle_param_set
 <LI><a href="#[1a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_send_json_response
 <LI><a href="#[2b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;save_param_settings_to_flash
@@ -10721,7 +10725,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[2af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 </UL>
 
-<P><STRONG><a name="[1a2]"></a>ble_protocol_create_query_response</STRONG> (Thumb, 694 bytes, Stack size 176 bytes, ble_protocol.o(i.ble_protocol_create_query_response))
+<P><STRONG><a name="[1a2]"></a>ble_protocol_create_query_response</STRONG> (Thumb, 704 bytes, Stack size 176 bytes, ble_protocol.o(i.ble_protocol_create_query_response))
 <BR><BR>[Stack]<UL><LI>Max Depth = 584<LI>Call Chain = ble_protocol_create_query_response &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -10758,7 +10762,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[253]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 </UL>
 
-<P><STRONG><a name="[2b5]"></a>ble_protocol_init_param_settings</STRONG> (Thumb, 128 bytes, Stack size 16 bytes, ble_protocol.o(i.ble_protocol_init_param_settings))
+<P><STRONG><a name="[2b5]"></a>ble_protocol_init_param_settings</STRONG> (Thumb, 132 bytes, Stack size 16 bytes, ble_protocol.o(i.ble_protocol_init_param_settings))
 <BR><BR>[Stack]<UL><LI>Max Depth = 800<LI>Call Chain = ble_protocol_init_param_settings &rArr; save_param_settings_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -10803,7 +10807,7 @@ Local Symbols
 <LI><a href="#[2b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;load_param_settings_from_flash
 </UL>
 
-<P><STRONG><a name="[1a1]"></a>check_and_send_collected_response</STRONG> (Thumb, 536 bytes, Stack size 120 bytes, ble_protocol.o(i.check_and_send_collected_response))
+<P><STRONG><a name="[1a1]"></a>check_and_send_collected_response</STRONG> (Thumb, 520 bytes, Stack size 120 bytes, ble_protocol.o(i.check_and_send_collected_response))
 <BR><BR>[Stack]<UL><LI>Max Depth = 528<LI>Call Chain = check_and_send_collected_response &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -10832,7 +10836,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[1e3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_4g_data
 </UL>
 
-<P><STRONG><a name="[2b6]"></a>load_param_settings_from_flash</STRONG> (Thumb, 328 bytes, Stack size 128 bytes, ble_protocol.o(i.load_param_settings_from_flash))
+<P><STRONG><a name="[2b6]"></a>load_param_settings_from_flash</STRONG> (Thumb, 332 bytes, Stack size 128 bytes, ble_protocol.o(i.load_param_settings_from_flash))
 <BR><BR>[Stack]<UL><LI>Max Depth = 216<LI>Call Chain = load_param_settings_from_flash &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -10844,7 +10848,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[2b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init_param_settings
 </UL>
 
-<P><STRONG><a name="[3e5]"></a>parse_at_command_response</STRONG> (Thumb, 892 bytes, Stack size 120 bytes, ble_protocol.o(i.parse_at_command_response))
+<P><STRONG><a name="[3e5]"></a>parse_at_command_response</STRONG> (Thumb, 1790 bytes, Stack size 120 bytes, ble_protocol.o(i.parse_at_command_response))
 <BR><BR>[Stack]<UL><LI>Max Depth = 384<LI>Call Chain = parse_at_command_response &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -10874,7 +10878,7 @@ Local Symbols
 <LI><a href="#[2b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init_param_settings
 </UL>
 
-<P><STRONG><a name="[225]"></a>ble_4g_protocol_create_data_report_json</STRONG> (Thumb, 280 bytes, Stack size 136 bytes, ble_4g_protocol.o(i.ble_4g_protocol_create_data_report_json))
+<P><STRONG><a name="[225]"></a>ble_4g_protocol_create_data_report_json</STRONG> (Thumb, 282 bytes, Stack size 136 bytes, ble_4g_protocol.o(i.ble_4g_protocol_create_data_report_json))
 <BR><BR>[Stack]<UL><LI>Max Depth = 544<LI>Call Chain = ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -11043,7 +11047,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler
 </UL>
 
-<P><STRONG><a name="[32a]"></a>update_status_info_from_sources</STRONG> (Thumb, 98 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.update_status_info_from_sources))
+<P><STRONG><a name="[32a]"></a>update_status_info_from_sources</STRONG> (Thumb, 106 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.update_status_info_from_sources))
 <BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = update_status_info_from_sources &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output

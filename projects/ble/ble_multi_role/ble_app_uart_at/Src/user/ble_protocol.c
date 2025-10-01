@@ -131,8 +131,8 @@ static bool save_param_settings_to_flash(void)
     
     // 填充Flash存储结构体
     flash_settings.magic = PARAM_SETTINGS_MAGIC;
-    flash_settings.collect_interval = s_param_settings.collect_interval;
-    flash_settings.report_interval = s_param_settings.report_interval;
+    flash_settings.collect_interval = s_param_settings.device_collect_time;
+    flash_settings.report_interval = s_param_settings.device_updata_time;
     flash_settings.methane_threshold = s_param_settings.methane_threshold;
     flash_settings.temp_threshold = s_param_settings.temp_threshold;
     flash_settings.water_threshold = s_param_settings.water_threshold;
@@ -212,6 +212,8 @@ static bool load_param_settings_from_flash(void)
     // 恢复参数设置
     s_param_settings.collect_interval = flash_settings.collect_interval;
     s_param_settings.report_interval = flash_settings.report_interval;
+    s_param_settings.device_collect_time = flash_settings.collect_interval;
+    s_param_settings.device_updata_time = flash_settings.report_interval;
     s_param_settings.methane_threshold = flash_settings.methane_threshold;
     s_param_settings.temp_threshold = flash_settings.temp_threshold;
     s_param_settings.water_threshold = flash_settings.water_threshold;
@@ -404,10 +406,35 @@ static void parse_at_command_response(const char* response, uint16_t length)
     
     if (strncmp(response, "+CSQ:", 5) == 0)
     {
-        // 信号质量: +CSQ:27
-        if (sscanf(response + 5, "%d", &g_at_collector.signal_quality) == 1)
+        // 信号质量: +CSQ:27,0 (格式: rssi,ber)
+        int rssi, ber;
+        if (sscanf(response + 5, "%d,%d", &rssi, &ber) == 2)
         {
-            APP_LOG_INFO("%s Collected signal quality: %d", DEBUG_TAG, g_at_collector.signal_quality);
+            // 验证rssi范围 (0-31, 99表示未知)
+            if ((rssi >= 0 && rssi <= 31) || rssi == 99)
+            {
+                g_at_collector.signal_quality = rssi;
+                APP_LOG_INFO("%s Collected signal quality: RSSI=%d, BER=%d", DEBUG_TAG, rssi, ber);
+            }
+            else
+            {
+                APP_LOG_WARNING("%s Invalid RSSI value: %d", DEBUG_TAG, rssi);
+                g_at_collector.signal_quality = 0; // 默认值
+            }
+        }
+        else if (sscanf(response + 5, "%d", &rssi) == 1)
+        {
+            // 兼容只有一个数字的情况
+            if ((rssi >= 0 && rssi <= 31) || rssi == 99)
+            {
+                g_at_collector.signal_quality = rssi;
+                APP_LOG_INFO("%s Collected signal quality (single value): %d", DEBUG_TAG, rssi);
+            }
+            else
+            {
+                APP_LOG_WARNING("%s Invalid signal quality value: %d", DEBUG_TAG, rssi);
+                g_at_collector.signal_quality = 0;
+            }
         }
     }
     else if (strncmp(response, "+VER:", 5) == 0)
@@ -563,6 +590,8 @@ static void ble_protocol_init_param_settings(void)
         // 使用默认设置
         s_param_settings.collect_interval = 1;     // 默认1分钟检测周期
         s_param_settings.report_interval = 5;      // 默认5分钟上报周期
+        s_param_settings.device_collect_time = 1;     // 默认1分钟检测周期
+        s_param_settings.device_updata_time = 5;      // 默认5分钟上报周期
         s_param_settings.methane_threshold = 1.0f;  // 默认1%vol甲烷阈值
         s_param_settings.temp_threshold = 50.0f;    // 默认50°C温度阈值
         s_param_settings.water_threshold = 0.5f;    // 默认0.5水浸阈值
@@ -659,6 +688,7 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
     
     // 根据查询类型设置不同的code
     int response_code = 102; // 默认设备信息上报
+    int lte_signal; // 声明在switch之前避免编译警告
     switch (query_type)
     {
         case PROTOCOL_QUERY_TYPE_DEVICE_INFO:
@@ -687,15 +717,18 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             cJSON_AddNumberToObject(body, "device_water", s_status_info.device_status & 0x01); // 水浸状态
             cJSON_AddNumberToObject(body, "sensor_status", s_status_info.sensor_status);
             cJSON_AddNumberToObject(body, "device_move", (s_status_info.device_status >> 1) & 0x01); // 防盗状态
-            cJSON_AddNumberToObject(body, "device_LTE_signal", s_status_info.communication_status); // 4G信号值，0-31
+            // 直接使用4G信号强度原始值(0-31)，不进行分等级处理
+            // CSQ RSSI值: 0-31 (99表示未知，此时显示为0)
+            lte_signal = (g_at_collector.signal_quality == 99) ? 0 : g_at_collector.signal_quality;
+            cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
             cJSON_AddNumberToObject(body, "device_GPS_status", (s_status_info.device_status >> 2) & 0x01); // GPS状态
             break;
             
         case PROTOCOL_QUERY_TYPE_PARAM_INFO:
             response_code = 104; // 当前设置参数上报
             // 按照蓝牙协议文档3.4的字段名称
-            cJSON_AddNumberToObject(body, "device_collect_time", s_param_settings.collect_interval);
-            cJSON_AddNumberToObject(body, "device_updata_time", s_param_settings.report_interval);
+            cJSON_AddNumberToObject(body, "device_collect_time", s_param_settings.device_collect_time);
+            cJSON_AddNumberToObject(body, "device_updata_time", s_param_settings.device_updata_time);
             // 甲烷阈值改为float类型（协议V1.4更新）
             cJSON_AddNumberToObject(body, "methane_threshold", s_param_settings.methane_threshold);
             cJSON_AddNumberToObject(body, "TEMPH_threshold", s_param_settings.temp_threshold);
@@ -769,10 +802,10 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
         switch (cmd_code)
         {
             case 106: // 检测周期设置
-                cJSON_AddNumberToObject(body, "collect_time_set", s_param_settings.collect_interval);
+                cJSON_AddNumberToObject(body, "collect_time_set", s_param_settings.device_collect_time);
                 break;
             case 107: // 上报周期设置
-                cJSON_AddNumberToObject(body, "updata_time_set", s_param_settings.report_interval);
+                cJSON_AddNumberToObject(body, "updata_time_set", s_param_settings.device_updata_time);
                 break;
             case 108: // 甲烷及温度报警阈值设置
                 // 甲烷阈值改为float类型（协议V1.4更新）
@@ -1339,13 +1372,18 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 if (new_interval >= 1 && new_interval <= 1440)
                 {
                     s_param_settings.collect_interval = new_interval;
+                    s_param_settings.device_collect_time = new_interval;
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.collect_interval);
+                    APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
                     
                     // 保存到Flash
                     if (save_param_settings_to_flash())
                     {
                         APP_LOG_INFO("%s Collect interval saved to Flash", DEBUG_TAG);
+                        
+                        // 通知4G模块重启采集定时器
+                        extern void ble_4g_protocol_restart_collect_timer(void);
+                        ble_4g_protocol_restart_collect_timer();
                     }
                     else
                     {
@@ -1386,13 +1424,18 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 if (new_interval >= 1 && new_interval <= 1440)
                 {
                     s_param_settings.report_interval = new_interval;
+                    s_param_settings.device_updata_time = new_interval;
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.report_interval);
+                    APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
                     
                     // 保存到Flash
                     if (save_param_settings_to_flash())
                     {
                         APP_LOG_INFO("%s Report interval saved to Flash", DEBUG_TAG);
+                        
+                        // 通知4G模块重启上报定时器
+                        extern void ble_4g_protocol_restart_report_timer(void);
+                        ble_4g_protocol_restart_report_timer();
                     }
                     else
                     {
@@ -1691,11 +1734,10 @@ static void check_and_send_collected_response(void)
             // device_move (防盗状态：0定位与安装坐标一致，1不一致)
             cJSON_AddNumberToObject(body, "device_move", 0);   // 固定值：一致
             
-            // device_LTE_signal (4G信号值，0-31)
-            if (g_at_collector.signal_quality > 0)
-                cJSON_AddNumberToObject(body, "device_LTE_signal", g_at_collector.signal_quality);
-            else
-                cJSON_AddNumberToObject(body, "device_LTE_signal", 0);  // 默认0信号强度
+            // device_LTE_signal (4G信号值，0-31) - 直接显示原始值，不分等级
+            // CSQ RSSI值: 0-31 (99表示未知，此时显示为0)
+            int lte_signal = (g_at_collector.signal_quality == 99) ? 0 : g_at_collector.signal_quality;
+            cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
             
             // device_GPS_status (GPS信号状态：0正常，1异常)
             cJSON_AddNumberToObject(body, "device_GPS_status", g_at_collector.gps_status);

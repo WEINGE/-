@@ -203,8 +203,10 @@ static void update_status_info_from_sources(void)
     status_info_t ble_status_info = {0};
     ble_protocol_get_status_info(&ble_status_info);
     
-    // 更新4G信号值（0-31）
-    s_status_info.device_LTE_signal = ble_status_info.communication_status;
+    // 更新4G信号值（0-31）- 使用与蓝牙协议相同的AT+CSQ数据源
+    extern at_response_collector_t g_at_collector;
+    int signal_quality = (g_at_collector.signal_quality == 99) ? 0 : g_at_collector.signal_quality;
+    s_status_info.device_LTE_signal = signal_quality;
     
     // 更新GPS状态（从device_status的bit 2提取）
     s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
