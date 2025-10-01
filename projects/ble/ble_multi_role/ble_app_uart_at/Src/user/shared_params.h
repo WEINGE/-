@@ -1,0 +1,89 @@
+#ifndef SHARED_PARAMS_H
+#define SHARED_PARAMS_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+/**
+ * @brief 统一的设备参数结构体
+ * 蓝牙和4G协议共享此数据结构，确保参数同步一致性
+ */
+typedef struct {
+    // 采集和上报周期
+    uint16_t device_collect_time;       /**< 传感器采集间隔，单位分钟 (1-1440) */
+    uint16_t device_updata_time;        /**< 数据上报间隔，单位分钟 (1-1440) */
+    
+    // 阈值设置 - 统一数据类型
+    float    methane_threshold;         /**< 甲烷报警阈值，单位%vol */
+    int16_t  temp_high_threshold;       /**< 高温报警阈值，单位℃ */
+    int16_t  temp_low_threshold;        /**< 低温报警阈值，单位℃ */
+    uint16_t water_threshold;           /**< 水浸报警阈值 */
+    
+    // 位置信息
+    float    location_lat;              /**< 纬度 */
+    float    location_lon;              /**< 经度 */
+    float    install_lat;               /**< 安装位置纬度 */
+    float    install_lon;               /**< 安装位置经度 */
+    
+    // 服务器配置
+    char     server_address[64];        /**< 服务器地址 */
+    uint16_t server_port;               /**< 服务器端口 */
+    char     username[32];              /**< 用户名 */
+    char     password[32];              /**< 密码 */
+    uint8_t  server_type;               /**< 服务器类型: 0=TCP, 1=MQTT, 2=HTTP */
+    
+    // 设备信息
+    char     device_id[32];             /**< 设备ID */
+    char     device_version[16];        /**< 固件版本 */
+    char     imei[16];                  /**< IMEI号 */
+    char     sim_id[32];                /**< SIM卡ID */
+    
+    // 参数有效性标志
+    bool     params_initialized;        /**< 参数是否已初始化 */
+    uint32_t params_checksum;           /**< 参数校验和 */
+    
+} shared_device_params_t;
+
+// 全局共享参数实例
+extern shared_device_params_t g_shared_params;
+
+// 参数管理函数
+bool shared_params_init(void);
+bool shared_params_save_to_flash(void);
+bool shared_params_load_from_flash(void);
+uint32_t shared_params_calculate_checksum(void);
+bool shared_params_validate(void);
+
+// 参数设置函数 - 带同步通知
+bool shared_params_set_collect_time(uint16_t time_minutes);
+bool shared_params_set_update_time(uint16_t time_minutes);
+bool shared_params_set_methane_threshold(float threshold);
+bool shared_params_set_temp_thresholds(int16_t high, int16_t low);
+bool shared_params_set_water_threshold(uint16_t threshold);
+bool shared_params_set_location(float lat, float lon);
+bool shared_params_set_install_location(float lat, float lon);
+
+// 参数获取函数
+uint16_t shared_params_get_collect_time(void);
+uint16_t shared_params_get_update_time(void);
+float shared_params_get_methane_threshold(void);
+int16_t shared_params_get_temp_high_threshold(void);
+int16_t shared_params_get_temp_low_threshold(void);
+uint16_t shared_params_get_water_threshold(void);
+
+// 同步回调函数类型
+typedef void (*param_change_callback_t)(uint16_t param_type, const void* param_data);
+
+// 回调注册函数
+void shared_params_register_callback(param_change_callback_t callback);
+
+// 参数类型定义
+#define PARAM_TYPE_COLLECT_TIME     0x0001
+#define PARAM_TYPE_UPDATE_TIME      0x0002
+#define PARAM_TYPE_METHANE_THRESH   0x0003
+#define PARAM_TYPE_TEMP_THRESH      0x0004
+#define PARAM_TYPE_WATER_THRESH     0x0005
+#define PARAM_TYPE_LOCATION         0x0006
+#define PARAM_TYPE_INSTALL_LOC      0x0007
+
+#endif // SHARED_PARAMS_H

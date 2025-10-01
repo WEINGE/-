@@ -18,6 +18,7 @@
  */
 #include "ble_protocol.h"
 #include "ble_4g_protocol.h"
+#include "shared_params.h"  // 添加共享参数头文件
 #include "user_app.h"
 #include "sensor_data_parser.h"
 #include "cJSON.h"
@@ -29,7 +30,7 @@
 #include "gr55xx_delay.h"
 #include "gr55xx_sys.h"
 #include "user_periph_setup.h"  // 包含uart1_tx_data_send声明
-#include "hal_flash.h"  // Flash存储功能
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,8 +41,7 @@
  * FORWARD DECLARATIONS
  *****************************************************************************************
  */
-// static void parse_super_device_info_response(const char* response, uint16_t length);  // 暂未使用
-// static void parse_super_status_info_response(const char* response, uint16_t length);  // 暂未使用
+
 static void parse_at_command_response(const char* response, uint16_t length);
 static char* ble_protocol_create_query_response(uint8_t query_type);
 
@@ -60,10 +60,6 @@ void ble_protocol_send_json_response(const char *p_json_str);
 #define JSON_BUFFER_SIZE            1024
 #define DEVICE_ID_SIZE              32
 
-// Flash存储相关定义
-#define PARAM_SETTINGS_FLASH_ADDR   0x01080000  // Flash存储地址
-#define PARAM_SETTINGS_MAGIC        0x12345678  // 魔数，用于验证数据有效性
-
 /*
  * LOCAL VARIABLE DEFINITIONS
  *****************************************************************************************
@@ -71,27 +67,12 @@ void ble_protocol_send_json_response(const char *p_json_str);
 static ble_sensor_data_t s_current_sensor_data = {0};
 static device_info_t s_device_info = {0};
 static status_info_t s_status_info = {0};
-static param_settings_t s_param_settings = {0};
 static bool s_protocol_initialized = false;
 static char s_device_id[DEVICE_ID_SIZE] = {0};
 
-// Flash存储的参数设置结构体
-typedef struct {
-    uint32_t magic;                    // 魔数，用于验证数据有效性
-    uint16_t collect_interval;         // 采集时间间隔（分钟）
-    uint16_t report_interval;          // 上报时间间隔（分钟）
-    float methane_threshold;           // 甲烷阈值
-    float temp_threshold;              // 温度阈值
-    float water_threshold;             // 水浸阈值
-    float location_lat;                // 纬度
-    float location_lon;                // 经度
-    char server_address[64];           // 服务器地址
-    uint32_t checksum;                 // 校验和
-} flash_param_settings_t;
-
 // 4G响应缓冲区
 static char g_4g_response_buffer[512];
-// static uint16_t g_4g_response_len = 0;  // 暂未使用
+
 
 // AT指令响应收集器实例（类型定义在 ble_protocol.h 中）
 at_response_collector_t g_at_collector = {0};
@@ -101,132 +82,7 @@ at_response_collector_t g_at_collector = {0};
  *****************************************************************************************
  */
 
-/**
- *****************************************************************************************
- * @brief 计算校验和
- *****************************************************************************************
- */
-static uint32_t calculate_checksum(const flash_param_settings_t *p_settings)
-{
-    uint32_t checksum = 0;
-    const uint8_t *p_data = (const uint8_t *)p_settings;
-    
-    // 计算除checksum字段外的所有数据的校验和
-    for (uint32_t i = 0; i < sizeof(flash_param_settings_t) - sizeof(uint32_t); i++)
-    {
-        checksum += p_data[i];
-    }
-    
-    return checksum;
-}
 
-/**
- *****************************************************************************************
- * @brief 保存参数设置到Flash
- *****************************************************************************************
- */
-static bool save_param_settings_to_flash(void)
-{
-    flash_param_settings_t flash_settings = {0};
-    
-    // 填充Flash存储结构体
-    flash_settings.magic = PARAM_SETTINGS_MAGIC;
-    flash_settings.collect_interval = s_param_settings.device_collect_time;
-    flash_settings.report_interval = s_param_settings.device_updata_time;
-    flash_settings.methane_threshold = s_param_settings.methane_threshold;
-    flash_settings.temp_threshold = s_param_settings.temp_threshold;
-    flash_settings.water_threshold = s_param_settings.water_threshold;
-    flash_settings.location_lat = s_param_settings.location_lat;
-    flash_settings.location_lon = s_param_settings.location_lon;
-    strncpy(flash_settings.server_address, s_param_settings.server_address, sizeof(flash_settings.server_address) - 1);
-    
-    // 计算校验和
-    flash_settings.checksum = calculate_checksum(&flash_settings);
-    
-    // 擦除Flash扇区
-    bool ret = hal_flash_erase(PARAM_SETTINGS_FLASH_ADDR, sizeof(flash_param_settings_t));
-    if (!ret)
-    {
-        APP_LOG_ERROR("%s Failed to erase flash", DEBUG_TAG);
-        return false;
-    }
-    
-    // 写入Flash
-    uint32_t written = hal_flash_write(PARAM_SETTINGS_FLASH_ADDR, (uint8_t *)&flash_settings, sizeof(flash_param_settings_t));
-    if (written != sizeof(flash_param_settings_t))
-    {
-        APP_LOG_ERROR("%s Failed to write flash: written=%d, expected=%d", DEBUG_TAG, written, sizeof(flash_param_settings_t));
-        return false;
-    }
-    
-    APP_LOG_INFO("%s Parameter settings saved to flash successfully", DEBUG_TAG);
-    APP_LOG_INFO("%s Collect interval: %d, Report interval: %d", DEBUG_TAG, 
-                flash_settings.collect_interval, flash_settings.report_interval);
-    
-    return true;
-}
-
-/**
- *****************************************************************************************
- * @brief 从Flash加载参数设置
- *****************************************************************************************
- */
-static bool load_param_settings_from_flash(void)
-{
-    flash_param_settings_t flash_settings = {0};
-    
-    // 从Flash读取数据
-    uint32_t read_bytes = hal_flash_read(PARAM_SETTINGS_FLASH_ADDR, (uint8_t *)&flash_settings, sizeof(flash_param_settings_t));
-    if (read_bytes != sizeof(flash_param_settings_t))
-    {
-        APP_LOG_ERROR("%s Failed to read flash: read=%d, expected=%d", DEBUG_TAG, read_bytes, sizeof(flash_param_settings_t));
-        return false;
-    }
-    
-    // 验证魔数
-    if (flash_settings.magic != PARAM_SETTINGS_MAGIC)
-    {
-        APP_LOG_WARNING("%s Invalid magic number in flash: 0x%08X (expected: 0x%08X)", 
-                       DEBUG_TAG, flash_settings.magic, PARAM_SETTINGS_MAGIC);
-        return false;
-    }
-    
-    // 验证校验和
-    uint32_t calculated_checksum = calculate_checksum(&flash_settings);
-    if (flash_settings.checksum != calculated_checksum)
-    {
-        APP_LOG_ERROR("%s Checksum mismatch: stored=0x%08X, calculated=0x%08X", 
-                     DEBUG_TAG, flash_settings.checksum, calculated_checksum);
-        return false;
-    }
-    
-    // 验证参数范围
-    if (flash_settings.collect_interval < 1 || flash_settings.collect_interval > 1440 ||
-        flash_settings.report_interval < 1 || flash_settings.report_interval > 1440)
-    {
-        APP_LOG_ERROR("%s Invalid interval values in flash: collect=%d, report=%d", 
-                     DEBUG_TAG, flash_settings.collect_interval, flash_settings.report_interval);
-        return false;
-    }
-    
-    // 恢复参数设置
-    s_param_settings.collect_interval = flash_settings.collect_interval;
-    s_param_settings.report_interval = flash_settings.report_interval;
-    s_param_settings.device_collect_time = flash_settings.collect_interval;
-    s_param_settings.device_updata_time = flash_settings.report_interval;
-    s_param_settings.methane_threshold = flash_settings.methane_threshold;
-    s_param_settings.temp_threshold = flash_settings.temp_threshold;
-    s_param_settings.water_threshold = flash_settings.water_threshold;
-    s_param_settings.location_lat = flash_settings.location_lat;
-    s_param_settings.location_lon = flash_settings.location_lon;
-    strncpy(s_param_settings.server_address, flash_settings.server_address, sizeof(s_param_settings.server_address) - 1);
-    
-    APP_LOG_INFO("%s Parameter settings loaded from flash successfully", DEBUG_TAG);
-    APP_LOG_INFO("%s Collect interval: %d, Report interval: %d", DEBUG_TAG, 
-                s_param_settings.collect_interval, s_param_settings.report_interval);
-    
-    return true;
-}
 
 /**
  *****************************************************************************************
@@ -291,9 +147,10 @@ static void parse_super_device_info_response(const char* response, uint16_t leng
         lat_start += 4; // 跳过"LAT="
         lon_start += 4; // 跳过"LON="
         
-        s_param_settings.location_lat = atof(lat_start);
-        s_param_settings.location_lon = atof(lon_start);
-        APP_LOG_INFO("%s Got GPS: lat=%.6f, lon=%.6f", DEBUG_TAG, s_param_settings.location_lat, s_param_settings.location_lon);
+        float lat = atof(lat_start);
+        float lon = atof(lon_start);
+        shared_params_set_location(lat, lon);
+        APP_LOG_INFO("%s Got GPS: lat=%.6f, lon=%.6f", DEBUG_TAG, lat, lon);
     }
     
     // 发送设备信息查询响应
@@ -582,30 +439,9 @@ static void ble_protocol_init_status_info(void)
  */
 static void ble_protocol_init_param_settings(void)
 {
-    // 尝试从Flash加载参数设置
-    if (!load_param_settings_from_flash())
-    {
-        APP_LOG_INFO("%s Using default parameter settings", DEBUG_TAG);
-        
-        // 使用默认设置
-        s_param_settings.collect_interval = 1;     // 默认1分钟检测周期
-        s_param_settings.report_interval = 5;      // 默认5分钟上报周期
-        s_param_settings.device_collect_time = 1;     // 默认1分钟检测周期
-        s_param_settings.device_updata_time = 5;      // 默认5分钟上报周期
-        s_param_settings.methane_threshold = 1.0f;  // 默认1%vol甲烷阈值
-        s_param_settings.temp_threshold = 50.0f;    // 默认50°C温度阈值
-        s_param_settings.water_threshold = 0.5f;    // 默认0.5水浸阈值
-        s_param_settings.location_lat = 39.9042f;   // 默认北京纬度
-        s_param_settings.location_lon = 116.4074f;  // 默认北京经度
-        strcpy(s_param_settings.server_address, "http://api.example.com");
-        
-        // 保存默认设置到Flash
-        save_param_settings_to_flash();
-    }
-    else
-    {
-        APP_LOG_INFO("%s Parameter settings loaded from Flash", DEBUG_TAG);
-    }
+    // 使用共享参数模块统一管理参数
+    shared_params_init();
+    APP_LOG_INFO("%s Parameter settings initialized via shared_params", DEBUG_TAG);
 }
 
 /**
@@ -689,6 +525,7 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
     // 根据查询类型设置不同的code
     int response_code = 102; // 默认设备信息上报
     int lte_signal; // 声明在switch之前避免编译警告
+    ble_4g_status_info_t ble_4g_status = {0}; // 声明在switch之前避免编译警告
     switch (query_type)
     {
         case PROTOCOL_QUERY_TYPE_DEVICE_INFO:
@@ -707,7 +544,7 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             // 组合经纬度字符串
             char location_str[64];
             snprintf(location_str, sizeof(location_str), "%.6f,%.6f", 
-                    s_param_settings.location_lon, s_param_settings.location_lat);
+                    g_shared_params.location_lon, g_shared_params.location_lat);
             cJSON_AddStringToObject(body, "device_location", location_str);
             break;
             
@@ -717,9 +554,17 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             cJSON_AddNumberToObject(body, "device_water", s_status_info.device_status & 0x01); // 水浸状态
             cJSON_AddNumberToObject(body, "sensor_status", s_status_info.sensor_status);
             cJSON_AddNumberToObject(body, "device_move", (s_status_info.device_status >> 1) & 0x01); // 防盗状态
-            // 直接使用4G信号强度原始值(0-31)，不进行分等级处理
-            // CSQ RSSI值: 0-31 (99表示未知，此时显示为0)
-            lte_signal = (g_at_collector.signal_quality == 99) ? 0 : g_at_collector.signal_quality;
+            // 使用与4G协议相同的信号值获取逻辑，确保数据一致性
+            // 优先从4G协议模块获取已更新的信号值
+            ble_4g_protocol_get_status_info(&ble_4g_status);
+            lte_signal = ble_4g_status.device_LTE_signal;
+            // 如果4G模块的信号值为0，尝试使用AT收集器的值作为备用
+            if (lte_signal == 0 && g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
+                lte_signal = g_at_collector.signal_quality;
+                APP_LOG_INFO("%s Using AT collector signal as fallback: %d", DEBUG_TAG, lte_signal);
+            }
+            APP_LOG_INFO("%s Status query - 4G signal: %d, AT signal: %d, final: %d", 
+                        DEBUG_TAG, ble_4g_status.device_LTE_signal, g_at_collector.signal_quality, lte_signal);
             cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
             cJSON_AddNumberToObject(body, "device_GPS_status", (s_status_info.device_status >> 2) & 0x01); // GPS状态
             break;
@@ -727,13 +572,13 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
         case PROTOCOL_QUERY_TYPE_PARAM_INFO:
             response_code = 104; // 当前设置参数上报
             // 按照蓝牙协议文档3.4的字段名称
-            cJSON_AddNumberToObject(body, "device_collect_time", s_param_settings.device_collect_time);
-            cJSON_AddNumberToObject(body, "device_updata_time", s_param_settings.device_updata_time);
+            cJSON_AddNumberToObject(body, "device_collect_time", g_shared_params.device_collect_time);
+            cJSON_AddNumberToObject(body, "device_updata_time", g_shared_params.device_updata_time);
             // 甲烷阈值改为float类型（协议V1.4更新）
-            cJSON_AddNumberToObject(body, "methane_threshold", s_param_settings.methane_threshold);
-            cJSON_AddNumberToObject(body, "TEMPH_threshold", s_param_settings.temp_threshold);
-            cJSON_AddNumberToObject(body, "TEMPL_threshold", s_param_settings.temp_threshold);
-            cJSON_AddNumberToObject(body, "water_threshold", s_param_settings.water_threshold);
+            cJSON_AddNumberToObject(body, "methane_threshold", g_shared_params.methane_threshold);
+            cJSON_AddNumberToObject(body, "TEMPH_threshold", g_shared_params.temp_high_threshold);
+            cJSON_AddNumberToObject(body, "TEMPL_threshold", g_shared_params.temp_low_threshold);
+            cJSON_AddNumberToObject(body, "water_threshold", g_shared_params.water_threshold);
             break;
             
         case PROTOCOL_QUERY_TYPE_CURRENT_DATA:
@@ -802,30 +647,30 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
         switch (cmd_code)
         {
             case 106: // 检测周期设置
-                cJSON_AddNumberToObject(body, "collect_time_set", s_param_settings.device_collect_time);
+                cJSON_AddNumberToObject(body, "collect_time_set", g_shared_params.device_collect_time);
                 break;
             case 107: // 上报周期设置
-                cJSON_AddNumberToObject(body, "updata_time_set", s_param_settings.device_updata_time);
+                cJSON_AddNumberToObject(body, "updata_time_set", g_shared_params.device_updata_time);
                 break;
             case 108: // 甲烷及温度报警阈值设置
                 // 甲烷阈值改为float类型（协议V1.4更新）
-                cJSON_AddNumberToObject(body, "methane_threshold_set", s_param_settings.methane_threshold);
-                cJSON_AddNumberToObject(body, "TEMPH_threshold_set", s_param_settings.temp_threshold);
-                cJSON_AddNumberToObject(body, "TEMPL_threshold_set", s_param_settings.temp_threshold);
+                cJSON_AddNumberToObject(body, "methane_threshold_set", g_shared_params.methane_threshold);
+                cJSON_AddNumberToObject(body, "TEMPH_threshold_set", g_shared_params.temp_high_threshold);
+                cJSON_AddNumberToObject(body, "TEMPL_threshold_set", g_shared_params.temp_low_threshold);
                 break;
             case 109: // 安装坐标设置
                 {
                     char coordinate_str[64];
                     snprintf(coordinate_str, sizeof(coordinate_str), "%.6f,%.6f", 
-                            s_param_settings.location_lon, s_param_settings.location_lat);
+                            g_shared_params.location_lon, g_shared_params.location_lat);
                     cJSON_AddStringToObject(body, "coordinate", coordinate_str);
                 }
                 break;
             case 110: // 水浸报警阈值设置
-                cJSON_AddNumberToObject(body, "water_threshold_set", s_param_settings.water_threshold);
+                cJSON_AddNumberToObject(body, "water_threshold_set", g_shared_params.water_threshold);
                 break;
             case 111: // 服务器地址设置
-                cJSON_AddStringToObject(body, "server_address", s_param_settings.server_address);
+                cJSON_AddStringToObject(body, "server_address", g_shared_params.server_address);
                 break;
         }
         cJSON_AddItemToObject(json, "body", body);
@@ -1371,24 +1216,21 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 // 参数范围验证 (1-1440分钟)
                 if (new_interval >= 1 && new_interval <= 1440)
                 {
-                    s_param_settings.collect_interval = new_interval;
-                    s_param_settings.device_collect_time = new_interval;
-                    result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
-                    
-                    // 保存到Flash
-                    if (save_param_settings_to_flash())
+                    // 使用共享参数API设置采集周期
+                    if (shared_params_set_collect_time(new_interval))
                     {
-                        APP_LOG_INFO("%s Collect interval saved to Flash", DEBUG_TAG);
-                        
-                        // 通知4G模块重启采集定时器
-                        extern void ble_4g_protocol_restart_collect_timer(void);
-                        ble_4g_protocol_restart_collect_timer();
+                        result = PROTOCOL_RESULT_SET_SUCCESS;
+                        APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, new_interval);
                     }
                     else
                     {
-                        APP_LOG_ERROR("%s Failed to save collect interval to Flash", DEBUG_TAG);
+                        result = PROTOCOL_RESULT_SET_FAILED;
+                        APP_LOG_ERROR("%s Failed to set collect interval", DEBUG_TAG);
                     }
+                    
+                    // 通知4G模块重启采集定时器
+                    extern void ble_4g_protocol_restart_collect_timer(void);
+                    ble_4g_protocol_restart_collect_timer();
                     
                     // 同步到4G协议模块并重启定时器
                     ble_4g_protocol_handle_param_set(PROTOCOL_4G_CMD_COLLECT_TIME_SET, p_data, length);
@@ -1423,24 +1265,21 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 // 参数范围验证 (1-1440分钟)
                 if (new_interval >= 1 && new_interval <= 1440)
                 {
-                    s_param_settings.report_interval = new_interval;
-                    s_param_settings.device_updata_time = new_interval;
-                    result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
-                    
-                    // 保存到Flash
-                    if (save_param_settings_to_flash())
+                    // 使用共享参数API设置上报周期
+                    if (shared_params_set_update_time(new_interval))
                     {
-                        APP_LOG_INFO("%s Report interval saved to Flash", DEBUG_TAG);
-                        
-                        // 通知4G模块重启上报定时器
-                        extern void ble_4g_protocol_restart_report_timer(void);
-                        ble_4g_protocol_restart_report_timer();
+                        result = PROTOCOL_RESULT_SET_SUCCESS;
+                        APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, new_interval);
                     }
                     else
                     {
-                        APP_LOG_ERROR("%s Failed to save report interval to Flash", DEBUG_TAG);
+                        result = PROTOCOL_RESULT_SET_FAILED;
+                        APP_LOG_ERROR("%s Failed to set report interval", DEBUG_TAG);
                     }
+                    
+                    // 通知4G模块重启上报定时器
+                    extern void ble_4g_protocol_restart_report_timer(void);
+                    ble_4g_protocol_restart_report_timer();
                     
                     // 同步到4G协议模块并重启定时器
                     ble_4g_protocol_handle_param_set(PROTOCOL_4G_CMD_UPDATE_TIME_SET, p_data, length);
@@ -1472,21 +1311,25 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
             if (length >= 8)
             {
                 // 解析甲烷和温度阈值 (4字节浮点数)
-                memcpy(&s_param_settings.methane_threshold, &p_data[0], 4);
-                memcpy(&s_param_settings.temp_threshold, &p_data[4], 4);
-                result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP=%.1f°C", 
-                           DEBUG_TAG, s_param_settings.methane_threshold, s_param_settings.temp_threshold);
+                float methane_thresh, temp_thresh;
+                memcpy(&methane_thresh, &p_data[0], 4);
+                memcpy(&temp_thresh, &p_data[4], 4);
                 
-                // 保存到Flash
-                if (save_param_settings_to_flash())
+                // 使用共享参数API设置阈值
+                if (shared_params_set_methane_threshold(methane_thresh) && 
+                    shared_params_set_temp_thresholds((int16_t)(temp_thresh + 10), (int16_t)(temp_thresh - 10)))
                 {
-                    APP_LOG_INFO("%s Thresholds saved to Flash", DEBUG_TAG);
+                    result = PROTOCOL_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP=%.1f°C", 
+                               DEBUG_TAG, methane_thresh, temp_thresh);
                 }
                 else
                 {
-                    APP_LOG_ERROR("%s Failed to save thresholds to Flash", DEBUG_TAG);
+                    result = PROTOCOL_RESULT_SET_FAILED;
+                    APP_LOG_ERROR("%s Failed to set thresholds", DEBUG_TAG);
                 }
+                
+
             }
             break;
             
@@ -1494,11 +1337,21 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
             if (length >= 8)
             {
                 // 解析经纬度 (4字节浮点数)
-                memcpy(&s_param_settings.location_lat, &p_data[0], 4);
-                memcpy(&s_param_settings.location_lon, &p_data[4], 4);
-                result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set location: lat=%.6f, lon=%.6f", 
-                           DEBUG_TAG, s_param_settings.location_lat, s_param_settings.location_lon);
+                float lat, lon;
+                memcpy(&lat, &p_data[0], 4);
+                memcpy(&lon, &p_data[4], 4);
+                
+                // 使用共享参数API设置位置
+                if (shared_params_set_install_location(lat, lon))
+                {
+                    result = PROTOCOL_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set install location: lat=%.6f, lon=%.6f", DEBUG_TAG, lat, lon);
+                }
+                else
+                {
+                    result = PROTOCOL_RESULT_SET_FAILED;
+                    APP_LOG_ERROR("%s Failed to set install location", DEBUG_TAG);
+                }
             }
             break;
             
@@ -1506,19 +1359,31 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
             if (length >= 4)
             {
                 // 解析水浸阈值 (4字节浮点数)
-                memcpy(&s_param_settings.water_threshold, &p_data[0], 4);
-                result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set water threshold: %.2f", DEBUG_TAG, s_param_settings.water_threshold);
+                float water_thresh;
+                memcpy(&water_thresh, &p_data[0], 4);
+                
+                // 使用共享参数API设置水浸阈值
+                if (shared_params_set_water_threshold((uint16_t)water_thresh))
+                {
+                    result = PROTOCOL_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set water threshold: %.2f", DEBUG_TAG, water_thresh);
+                }
+                else
+                {
+                    result = PROTOCOL_RESULT_SET_FAILED;
+                    APP_LOG_ERROR("%s Failed to set water threshold", DEBUG_TAG);
+                }
             }
             break;
             
         case PROTOCOL_CMD_SERVER_ADDRESS_SET:
-            if (length > 0 && length < sizeof(s_param_settings.server_address))
+            if (length > 0 && length < sizeof(g_shared_params.server_address))
             {
-                strncpy(s_param_settings.server_address, (char*)p_data, length);
-                s_param_settings.server_address[length] = '\0';
+                strncpy(g_shared_params.server_address, (char*)p_data, length);
+                g_shared_params.server_address[length] = '\0';
                 result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set server address: %s", DEBUG_TAG, s_param_settings.server_address);
+                APP_LOG_INFO("%s Set server address: %s", DEBUG_TAG, g_shared_params.server_address);
+                shared_params_save_to_flash();
             }
             break;
             
@@ -1622,7 +1487,15 @@ void ble_protocol_get_param_settings(param_settings_t *p_param_settings)
 {
     if (p_param_settings != NULL)
     {
-        memcpy(p_param_settings, &s_param_settings, sizeof(param_settings_t));
+        // 从共享参数复制到旧格式结构体（兼容性）
+        p_param_settings->device_collect_time = g_shared_params.device_collect_time;
+        p_param_settings->device_updata_time = g_shared_params.device_updata_time;
+        p_param_settings->methane_threshold = g_shared_params.methane_threshold;
+        p_param_settings->temp_threshold = (g_shared_params.temp_high_threshold + g_shared_params.temp_low_threshold) / 2.0f;
+        p_param_settings->water_threshold = g_shared_params.water_threshold;
+        p_param_settings->location_lat = g_shared_params.location_lat;
+        p_param_settings->location_lon = g_shared_params.location_lon;
+        strncpy(p_param_settings->server_address, g_shared_params.server_address, sizeof(p_param_settings->server_address) - 1);
     }
 }
 
@@ -1734,9 +1607,18 @@ static void check_and_send_collected_response(void)
             // device_move (防盗状态：0定位与安装坐标一致，1不一致)
             cJSON_AddNumberToObject(body, "device_move", 0);   // 固定值：一致
             
-            // device_LTE_signal (4G信号值，0-31) - 直接显示原始值，不分等级
-            // CSQ RSSI值: 0-31 (99表示未知，此时显示为0)
-            int lte_signal = (g_at_collector.signal_quality == 99) ? 0 : g_at_collector.signal_quality;
+            // device_LTE_signal (4G信号值，0-31) - 使用与4G协议相同的数据源
+            // 优先从4G协议模块获取已更新的信号值，确保数据一致性
+            ble_4g_status_info_t ble_4g_status = {0};
+            ble_4g_protocol_get_status_info(&ble_4g_status);
+            int lte_signal = ble_4g_status.device_LTE_signal;
+            // 如果4G模块的信号值为0，尝试使用AT收集器的值作为备用
+            if (lte_signal == 0 && g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
+                lte_signal = g_at_collector.signal_quality;
+                APP_LOG_INFO("%s Using AT collector signal as fallback: %d", DEBUG_TAG, lte_signal);
+            }
+            APP_LOG_INFO("%s Collected response - 4G signal: %d, AT signal: %d, final: %d", 
+                        DEBUG_TAG, ble_4g_status.device_LTE_signal, g_at_collector.signal_quality, lte_signal);
             cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
             
             // device_GPS_status (GPS信号状态：0正常，1异常)

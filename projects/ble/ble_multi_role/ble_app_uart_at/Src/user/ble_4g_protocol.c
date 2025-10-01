@@ -18,6 +18,7 @@
  */
 #include "ble_4g_protocol.h"
 #include "ble_protocol.h"
+#include "shared_params.h"
 #include "user_app.h"
 #include "sensor_data_parser.h"
 #include "sensor_status_manager.h"  // 为了使用传感器状态管理器
@@ -50,7 +51,8 @@
 static ble_4g_sensor_data_t s_current_sensor_data_4g = {0};
 static ble_4g_device_info_t s_device_info = {0};
 static ble_4g_status_info_t s_status_info = {0};
-static ble_4g_param_settings_t s_param_settings = {0};
+// 移除旧的参数结构体，使用共享参数
+
 static bool s_protocol_initialized = false;
 static char s_device_id[DEVICE_ID_SIZE] = {0};
 
@@ -203,10 +205,19 @@ static void update_status_info_from_sources(void)
     status_info_t ble_status_info = {0};
     ble_protocol_get_status_info(&ble_status_info);
     
-    // 更新4G信号值（0-31）- 使用与蓝牙协议相同的AT+CSQ数据源
+    // 更新4G信号值（0-31）- 使用与蓝牙协议完全相同的逻辑
     extern at_response_collector_t g_at_collector;
-    int signal_quality = (g_at_collector.signal_quality == 99) ? 0 : g_at_collector.signal_quality;
+    int signal_quality = 0;
+    
+    // 优先使用AT收集器的信号值，与蓝牙协议保持一致
+    if (g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
+        signal_quality = g_at_collector.signal_quality;
+    }
+    
     s_status_info.device_LTE_signal = signal_quality;
+    
+    APP_LOG_INFO("%s 4G protocol signal update: AT signal=%d, final signal=%d", 
+                 DEBUG_TAG, g_at_collector.signal_quality, signal_quality);
     
     // 更新GPS状态（从device_status的bit 2提取）
     s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
@@ -233,12 +244,8 @@ static void update_status_info_from_sources(void)
  */
 static void ble_4g_protocol_init_param_settings(void)
 {
-    s_param_settings.device_collect_time = 1;     // 默认1分钟检测周期
-    s_param_settings.device_updata_time = 5;      // 默认5分钟上报周期
-    s_param_settings.methane_threshold = 1.0f;    // 默认1%vol甲烷阈值
-    s_param_settings.TEMPH_threshold = 50;        // 默认50°C高温阈值
-    s_param_settings.TEMPL_threshold = -20;       // 默认-20°C低温阈值
-    s_param_settings.water_threshold = 0;         // 默认水浸阈值
+    // 使用共享参数初始化，如果共享参数未初始化则会使用默认值
+    shared_params_init();
 }
 
 /**
@@ -411,12 +418,12 @@ static char* ble_4g_protocol_create_param_info_json(void)
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body
-    cJSON_AddNumberToObject(body, "device_collect_time", s_param_settings.device_collect_time);
-    cJSON_AddNumberToObject(body, "device_updata_time", s_param_settings.device_updata_time);
-    cJSON_AddNumberToObject(body, "methane_threshold", s_param_settings.methane_threshold);
-    cJSON_AddNumberToObject(body, "TEMPH_threshold", s_param_settings.TEMPH_threshold);
-    cJSON_AddNumberToObject(body, "TEMPL_threshold", s_param_settings.TEMPL_threshold);
-    cJSON_AddNumberToObject(body, "water_threshold", s_param_settings.water_threshold);
+    cJSON_AddNumberToObject(body, "device_collect_time", g_shared_params.device_collect_time);
+    cJSON_AddNumberToObject(body, "device_updata_time", g_shared_params.device_updata_time);
+    cJSON_AddNumberToObject(body, "methane_threshold", g_shared_params.methane_threshold);
+    cJSON_AddNumberToObject(body, "TEMPH_threshold", g_shared_params.temp_high_threshold);
+    cJSON_AddNumberToObject(body, "TEMPL_threshold", g_shared_params.temp_low_threshold);
+    cJSON_AddNumberToObject(body, "water_threshold", g_shared_params.water_threshold);
     
     cJSON_AddItemToObject(json, "body", body);
     
@@ -891,9 +898,17 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
                 // 参数范围验证 (1-1440分钟)
                 if (new_interval >= 1 && new_interval <= 1440)
                 {
-                    s_param_settings.device_collect_time = new_interval;
-                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
+                    // 使用共享参数API设置采集周期
+                    if (shared_params_set_collect_time(new_interval))
+                    {
+                        result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                        APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, new_interval);
+                    }
+                    else
+                    {
+                        result = PROTOCOL_4G_RESULT_SET_FAILED;
+                        APP_LOG_ERROR("%s Failed to set collect interval", DEBUG_TAG);
+                    }
                     
                     // 立即重启采集定时器
                     ble_4g_protocol_restart_collect_timer();
@@ -912,9 +927,17 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
                 // 参数范围验证 (1-1440分钟)
                 if (new_interval >= 1 && new_interval <= 1440)
                 {
-                    s_param_settings.device_updata_time = new_interval;
-                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
+                    // 使用共享参数API设置上报周期
+                    if (shared_params_set_update_time(new_interval))
+                    {
+                        result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                        APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, new_interval);
+                    }
+                    else
+                    {
+                        result = PROTOCOL_4G_RESULT_SET_FAILED;
+                        APP_LOG_ERROR("%s Failed to set report interval", DEBUG_TAG);
+                    }
                     
                     // 立即重启上报定时器
                     ble_4g_protocol_restart_report_timer();
@@ -929,23 +952,45 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
         case PROTOCOL_4G_CMD_THRESHOLD_SET:
             if (length >= 8)
             {
-                // 解析甲烷和温度阈值 (4字节浮点数)
-                memcpy(&s_param_settings.methane_threshold, &p_data[0], 4);
-                memcpy(&s_param_settings.TEMPH_threshold, &p_data[4], 2);
-                memcpy(&s_param_settings.TEMPL_threshold, &p_data[6], 2);
-                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP_H=%d°C, TEMP_L=%d°C", 
-                           DEBUG_TAG, s_param_settings.methane_threshold, 
-                           s_param_settings.TEMPH_threshold, s_param_settings.TEMPL_threshold);
+                // 解析甲烷和温度阈值
+                float methane_thresh;
+                int16_t temp_high, temp_low;
+                memcpy(&methane_thresh, &p_data[0], 4);
+                memcpy(&temp_high, &p_data[4], 2);
+                memcpy(&temp_low, &p_data[6], 2);
+                
+                // 使用共享参数API设置阈值
+                if (shared_params_set_methane_threshold(methane_thresh) && 
+                    shared_params_set_temp_thresholds(temp_high, temp_low))
+                {
+                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP_H=%d°C, TEMP_L=%d°C", 
+                               DEBUG_TAG, methane_thresh, temp_high, temp_low);
+                }
+                else
+                {
+                    result = PROTOCOL_4G_RESULT_SET_FAILED;
+                    APP_LOG_ERROR("%s Failed to set thresholds", DEBUG_TAG);
+                }
             }
             break;
             
         case PROTOCOL_4G_CMD_WATER_THRESHOLD_SET:
             if (length >= 2)
             {
-                s_param_settings.water_threshold = (p_data[0] << 8) | p_data[1];
-                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set water threshold: %d", DEBUG_TAG, s_param_settings.water_threshold);
+                uint16_t water_thresh = (p_data[0] << 8) | p_data[1];
+                
+                // 使用共享参数API设置水浸阈值
+                if (shared_params_set_water_threshold(water_thresh))
+                {
+                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Set water threshold: %d", DEBUG_TAG, water_thresh);
+                }
+                else
+                {
+                    result = PROTOCOL_4G_RESULT_SET_FAILED;
+                    APP_LOG_ERROR("%s Failed to set water threshold", DEBUG_TAG);
+                }
             }
             break;
             
@@ -1002,7 +1047,13 @@ void ble_4g_protocol_get_param_settings(ble_4g_param_settings_t *p_param_setting
 {
     if (p_param_settings != NULL)
     {
-        memcpy(p_param_settings, &s_param_settings, sizeof(ble_4g_param_settings_t));
+        // 从共享参数复制到旧格式结构体（兼容性）
+        p_param_settings->device_collect_time = g_shared_params.device_collect_time;
+        p_param_settings->device_updata_time = g_shared_params.device_updata_time;
+        p_param_settings->methane_threshold = g_shared_params.methane_threshold;
+        p_param_settings->TEMPH_threshold = g_shared_params.temp_high_threshold;
+        p_param_settings->TEMPL_threshold = g_shared_params.temp_low_threshold;
+        p_param_settings->water_threshold = g_shared_params.water_threshold;
     }
 }
 
@@ -1015,12 +1066,12 @@ void ble_4g_protocol_start_collect_timer(void)
     }
     
     sdk_err_t err_code;
-    uint32_t timeout_ms = s_param_settings.device_collect_time * 60 * 1000; // 分钟转换为毫秒
+    uint32_t timeout_ms = g_shared_params.device_collect_time * 60 * 1000; // 分钟转换为毫秒
     
     err_code = app_timer_start(m_sensor_collect_timer, timeout_ms, NULL);
     APP_ERROR_CHECK(err_code);
     
-    APP_LOG_INFO("%s Started collect timer: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
+    APP_LOG_INFO("%s Started collect timer: %d minutes", DEBUG_TAG, g_shared_params.device_collect_time);
 }
 
 void ble_4g_protocol_start_report_timer(void)
@@ -1032,12 +1083,12 @@ void ble_4g_protocol_start_report_timer(void)
     }
     
     sdk_err_t err_code;
-    uint32_t timeout_ms = s_param_settings.device_updata_time * 60 * 1000; // 分钟转换为毫秒
+    uint32_t timeout_ms = g_shared_params.device_updata_time * 60 * 1000; // 分钟转换为毫秒
     
     err_code = app_timer_start(m_data_report_timer, timeout_ms, NULL);
     APP_ERROR_CHECK(err_code);
     
-    APP_LOG_INFO("%s Started report timer: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
+    APP_LOG_INFO("%s Started report timer: %d minutes", DEBUG_TAG, g_shared_params.device_updata_time);
 }
 
 void ble_4g_protocol_stop_collect_timer(void)
@@ -1083,13 +1134,13 @@ void ble_4g_protocol_restart_collect_timer(void)
     app_timer_stop(m_sensor_collect_timer);
     
     // 计算新的超时时间
-    uint32_t timeout_ms = s_param_settings.device_collect_time * 60 * 1000; // 分钟转换为毫秒
+    uint32_t timeout_ms = g_shared_params.device_collect_time * 60 * 1000; // 分钟转换为毫秒
     
     // 启动新定时器
     sdk_err_t err_code = app_timer_start(m_sensor_collect_timer, timeout_ms, NULL);
     APP_ERROR_CHECK(err_code);
     
-    APP_LOG_INFO("%s Collect timer restarted: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
+    APP_LOG_INFO("%s Collect timer restarted: %d minutes", DEBUG_TAG, g_shared_params.device_collect_time);
 }
 
 /**
@@ -1109,13 +1160,13 @@ void ble_4g_protocol_restart_report_timer(void)
     app_timer_stop(m_data_report_timer);
     
     // 计算新的超时时间
-    uint32_t timeout_ms = s_param_settings.device_updata_time * 60 * 1000; // 分钟转换为毫秒
+    uint32_t timeout_ms = g_shared_params.device_updata_time * 60 * 1000; // 分钟转换为毫秒
     
     // 启动新定时器
     sdk_err_t err_code = app_timer_start(m_data_report_timer, timeout_ms, NULL);
     APP_ERROR_CHECK(err_code);
     
-    APP_LOG_INFO("%s Report timer restarted: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
+    APP_LOG_INFO("%s Report timer restarted: %d minutes", DEBUG_TAG, g_shared_params.device_updata_time);
 }
 
 /**

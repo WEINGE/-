@@ -106,7 +106,7 @@ static bool                        s_is_target_found;
 
 // 指令模式管理
 static bool                        s_cmd_mode_enabled = false;   /**< 指令模式状态 */
-// static uint32_t                    s_cmd_mode_enter_time = 0;    /**< 进入指令模式的时间 - 暂未使用 */
+
 
 static at_cmd_attr_t s_at_cmd_attr_table[] =
 {
@@ -1230,7 +1230,7 @@ void uart_at_enter_cmd_mode(void)
     AT_CMD_RSP_DEF(cmd_rsp);
     
     s_cmd_mode_enabled = true;
-    // s_cmd_mode_enter_time = 0; // TODO: 获取系统时间戳
+
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "OK");
     at_cmd_execute_cplt(&cmd_rsp);

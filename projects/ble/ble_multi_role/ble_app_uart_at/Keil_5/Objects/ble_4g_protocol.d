@@ -106,6 +106,7 @@
 .\objects\ble_4g_protocol.o: ..\Src\user\sensor_data_parser.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
 .\objects\ble_4g_protocol.o: ..\Src\user\ble_protocol.h
+.\objects\ble_4g_protocol.o: ..\Src\user\shared_params.h
 .\objects\ble_4g_protocol.o: ..\Src\user\user_app.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\profiles\gus\gus.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h

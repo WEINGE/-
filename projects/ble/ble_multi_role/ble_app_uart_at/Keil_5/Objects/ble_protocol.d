@@ -106,6 +106,7 @@
 .\objects\ble_protocol.o: ..\Src\user\sensor_data_parser.h
 .\objects\ble_protocol.o: ..\Src\user\ble_4g_protocol.h
 .\objects\ble_protocol.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
+.\objects\ble_protocol.o: ..\Src\user\shared_params.h
 .\objects\ble_protocol.o: ..\Src\user\user_app.h
 .\objects\ble_protocol.o: ..\..\..\..\..\components\profiles\gus\gus.h
 .\objects\ble_protocol.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h
@@ -125,5 +126,4 @@
 .\objects\ble_protocol.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
 .\objects\ble_protocol.o: ..\Src\user\transport_scheduler.h
 .\objects\ble_protocol.o: ..\Src\platform\user_periph_setup.h
-.\objects\ble_protocol.o: ..\..\..\..\..\components\libraries\hal_flash\hal_flash.h
 .\objects\ble_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
