@@ -17,8 +17,10 @@
  *****************************************************************************************
  */
 #include "ble_4g_protocol.h"
+#include "ble_protocol.h"
 #include "user_app.h"
 #include "sensor_data_parser.h"
+#include "sensor_status_manager.h"  // 为了使用传感器状态管理器
 #include "cJSON.h"
 #include "app_log.h"
 #include "app_error.h"
@@ -34,6 +36,9 @@
  * DEFINES
  *****************************************************************************************
  */
+#define SEND_AT_COMMAND_ASYNC(cmd) do { \
+    uart1_tx_data_send((uint8_t*)(cmd), strlen(cmd)); \
+} while(0)
 #define DEBUG_TAG                   "[4G_PROTOCOL]"
 #define JSON_BUFFER_SIZE            1024
 #define DEVICE_ID_SIZE              32
@@ -52,6 +57,19 @@ static char s_device_id[DEVICE_ID_SIZE] = {0};
 // 定时器定义
 static app_timer_id_t m_sensor_collect_timer;
 static app_timer_id_t m_data_report_timer;
+static app_timer_id_t m_delayed_send_timer;  // 延时发送定时器
+
+// 数据累积机制
+#define MAX_COLLECTED_DATA_COUNT 10  // 最大存储10次采集数据
+static ble_4g_sensor_data_t s_collected_data_array[MAX_COLLECTED_DATA_COUNT];
+static uint8_t s_collected_data_count = 0;
+static uint8_t s_data_collection_index = 0;
+
+// 延时发送机制
+#define DELAYED_SEND_INTERVAL_MS 500  // 每条消息之间延迟500ms
+static uint8_t s_send_data_index = 0;  // 当前发送的数据索引
+static uint8_t s_total_data_to_send = 0;  // 总共需要发送的数据数量
+static bool s_is_sending = false;  // 是否正在发送数据
 
 /*
  * LOCAL FUNCTION DEFINITIONS
@@ -62,24 +80,85 @@ static app_timer_id_t m_data_report_timer;
 
 /**
  *****************************************************************************************
- * @brief Get device ID (MAC address).
+ * @brief Get device ID (IMEI) dynamically.
+ * 
+ * This function tries to get the IMEI from ble_protocol module.
+ * If IMEI is not available, it returns a fallback device ID.
+ * 
+ * @param[out] p_device_id_buffer: Buffer to store device ID.
+ * @param[in] buffer_size: Size of the buffer.
  *****************************************************************************************
  */
-static void ble_4g_protocol_get_device_id(void)
+static void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buffer_size)
 {
-    // 获取设备MAC地址作为设备ID
-    uint8_t mac_addr[6] = {0};
-    // TODO: 实际获取MAC地址的函数调用
-    // ble_gap_addr_get(mac_addr);
+    if (p_device_id_buffer == NULL || buffer_size == 0)
+    {
+        return;
+    }
     
-    // 暂时使用固定MAC地址
-    mac_addr[0] = 0x12; mac_addr[1] = 0x34; mac_addr[2] = 0x56;
-    mac_addr[3] = 0x78; mac_addr[4] = 0x9A; mac_addr[5] = 0xBC;
+    // 首先尝试使用初始化时获取的IMEI
+    if (strlen(s_device_id) > 0)
+    {
+        strncpy(p_device_id_buffer, s_device_id, buffer_size - 1);
+        p_device_id_buffer[buffer_size - 1] = '\0';
+        APP_LOG_DEBUG("%s Device ID (IMEI): %s", DEBUG_TAG, p_device_id_buffer);
+        return;
+    }
     
-    snprintf(s_device_id, sizeof(s_device_id), "%02X:%02X:%02X:%02X:%02X:%02X",
-             mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-    
-    APP_LOG_INFO("%s Device ID: %s", DEBUG_TAG, s_device_id);
+    // 如果s_device_id为空，尝试从AT收集器获取最新的IMEI
+    if (strlen(g_at_collector.imei) > 0)
+    {
+        strncpy(p_device_id_buffer, g_at_collector.imei, buffer_size - 1);
+        p_device_id_buffer[buffer_size - 1] = '\0';
+        
+        // 同时更新本地缓存
+        strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
+        s_device_id[sizeof(s_device_id) - 1] = '\0';
+        
+        APP_LOG_DEBUG("%s Device ID (IMEI) updated: %s", DEBUG_TAG, p_device_id_buffer);
+    }
+    else
+    {
+        // 如果 IMEI 仍不可用，强制触发IMEI获取
+        APP_LOG_WARNING("%s IMEI not available, attempting to force IMEI query", DEBUG_TAG);
+        
+        // 尝试强制获取IMEI - 使用超级指令
+        const char* imei_cmd = "adminAT+IMEI?\r\n";
+        SEND_AT_COMMAND_ASYNC(imei_cmd);
+        
+        // 等待一小段时间让IMEI获取完成
+        sys_delay_ms(100);
+        
+        // 再次检查IMEI
+        if (strlen(g_at_collector.imei) > 0)
+        {
+            strncpy(p_device_id_buffer, g_at_collector.imei, buffer_size - 1);
+            p_device_id_buffer[buffer_size - 1] = '\0';
+            
+            // 更新本地缓存
+            strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
+            s_device_id[sizeof(s_device_id) - 1] = '\0';
+            
+            APP_LOG_INFO("%s Device ID (IMEI) force updated: %s", DEBUG_TAG, p_device_id_buffer);
+        }
+        else
+        {
+            // 最后的fallback：使用MAC地址作为设备ID
+            if (strlen(g_at_collector.device_id) > 0)
+            {
+                strncpy(p_device_id_buffer, g_at_collector.device_id, buffer_size - 1);
+                p_device_id_buffer[buffer_size - 1] = '\0';
+                APP_LOG_WARNING("%s Using MAC address as device ID: %s", DEBUG_TAG, p_device_id_buffer);
+            }
+            else
+            {
+                // 真正的最后fallback
+                strncpy(p_device_id_buffer, "NO_IMEI_AVAILABLE", buffer_size - 1);
+                p_device_id_buffer[buffer_size - 1] = '\0';
+                APP_LOG_ERROR("%s No IMEI or MAC available, using error ID: %s", DEBUG_TAG, p_device_id_buffer);
+            }
+        }
+    }
 }
 
 /**
@@ -89,7 +168,7 @@ static void ble_4g_protocol_get_device_id(void)
  */
 static void ble_4g_protocol_init_device_info(void)
 {
-    strcpy(s_device_info.device_id, s_device_id);
+    // device_id 将在需要时动态获取，这里不再设置
     strcpy(s_device_info.device_ver, "1.0.0");
 }
 
@@ -105,6 +184,44 @@ static void ble_4g_protocol_init_status_info(void)
     s_status_info.device_move = 0;         // 位置正常
     s_status_info.device_LTE_signal = 25;  // 4G信号值
     s_status_info.device_GPS_status = 0;   // GPS正常
+}
+
+/**
+ *****************************************************************************************
+ * @brief Update status information from external sources.
+ * 
+ * 从外部数据源更新状态信息（4G模块、传感器状态管理器等）
+ *****************************************************************************************
+ */
+static void update_status_info_from_sources(void)
+{
+    // 1. 从传感器状态管理器获取传感器状态
+    sensor_simple_status_t sensor_status = sensor_status_get_simple();
+    s_status_info.sensor_status = (sensor_status == SENSOR_SIMPLE_STATUS_NORMAL) ? 0 : 1;
+    
+    // 2. 从ble_protocol模块获取4G信号强度和GPS状态
+    status_info_t ble_status_info = {0};
+    ble_protocol_get_status_info(&ble_status_info);
+    
+    // 更新4G信号值（0-31）
+    s_status_info.device_LTE_signal = ble_status_info.communication_status;
+    
+    // 更新GPS状态（从device_status的bit 2提取）
+    s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
+    
+    // 更新水浸状态（从device_status的bit 0提取）
+    s_status_info.device_water = ble_status_info.device_status & 0x01;
+    
+    // 更新防盗状态（从device_status的bit 1提取）
+    s_status_info.device_move = (ble_status_info.device_status >> 1) & 0x01;
+    
+    APP_LOG_INFO("%s Status info updated: water=%d, sensor=%d, move=%d, signal=%d, gps=%d", 
+                 DEBUG_TAG,
+                 s_status_info.device_water,
+                 s_status_info.sensor_status,
+                 s_status_info.device_move,
+                 s_status_info.device_LTE_signal,
+                 s_status_info.device_GPS_status);
 }
 
 /**
@@ -142,9 +259,13 @@ static char* ble_4g_protocol_create_data_report_json(const ble_4g_sensor_data_t 
         return NULL;
     }
     
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
     // 构建header
     cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_DATA_REPORT);
-    cJSON_AddStringToObject(header, "device_ID", s_device_id);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body - 使用特殊字段让4G模块自动转换
@@ -190,9 +311,13 @@ static char* ble_4g_protocol_create_device_info_json(void)
         return NULL;
     }
     
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
     // 构建header
     cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_DEVICE_INFO_REPORT);
-    cJSON_AddStringToObject(header, "device_ID", s_device_id);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body - 使用特殊字段
@@ -226,9 +351,13 @@ static char* ble_4g_protocol_create_status_info_json(void)
         return NULL;
     }
     
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
     // 构建header
     cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_STATUS_INFO_REPORT);
-    cJSON_AddStringToObject(header, "device_ID", s_device_id);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body - 使用特殊字段
@@ -270,9 +399,13 @@ static char* ble_4g_protocol_create_param_info_json(void)
         return NULL;
     }
     
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
     // 构建header
     cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_PARAM_INFO_REPORT);
-    cJSON_AddStringToObject(header, "device_ID", s_device_id);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body
@@ -309,9 +442,13 @@ static char* ble_4g_protocol_create_settings_query_json(void)
         return NULL;
     }
     
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
     // 构建header
     cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_QUERY_SETTINGS);
-    cJSON_AddStringToObject(header, "device_ID", s_device_id);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
     cJSON_AddItemToObject(json, "header", header);
     
     char *json_string = cJSON_Print(json);
@@ -323,36 +460,192 @@ static char* ble_4g_protocol_create_settings_query_json(void)
 /**
  *****************************************************************************************
  * @brief Sensor data collection timer handler.
+ * 
+ * 采集定时器处理函数：只负责采集和存储数据，不进行上报
+ * 同时更新状态信息（103），使其与监测数据（105）同步
  *****************************************************************************************
  */
 static void sensor_collect_timer_handler(void *p_context)
 {
-    APP_LOG_INFO("%s Sensor collect timer triggered", DEBUG_TAG);
+    APP_LOG_INFO("%s Sensor collect timer triggered - collecting data", DEBUG_TAG);
     
-    // 更新传感器数据
+    // 1. 更新传感器数据到当前数据结构
     update_sensor_data_from_parser();
     
-    // 发送数据上报
-    ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
+    // 2. 更新状态信息（103）- 使其与监测数据同步采集
+    update_status_info_from_sources();
+    
+    // 3. 将当前数据存储到累积数组中
+    if (s_collected_data_count < MAX_COLLECTED_DATA_COUNT)
+    {
+        memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
+               sizeof(ble_4g_sensor_data_t));
+        
+        s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
+        s_collected_data_count++;
+        
+        APP_LOG_INFO("%s Data collected, count: %d", DEBUG_TAG, s_collected_data_count);
+    }
+    else
+    {
+        // 数组已满，覆盖最旧的数据
+        memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
+               sizeof(ble_4g_sensor_data_t));
+        
+        s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
+        
+        APP_LOG_INFO("%s Data collected, array full, overwriting old data", DEBUG_TAG);
+    }
+}
+
+/**
+ *****************************************************************************************
+ * @brief Delayed send timer handler.
+ * 
+ * 延时发送定时器处理函数：每次发送一条数据，直到所有数据发送完毕
+ *****************************************************************************************
+ */
+static void delayed_send_timer_handler(void *p_context)
+{
+    if (!s_is_sending || s_send_data_index >= s_total_data_to_send)
+    {
+        // 所有数据发送完毕
+        s_is_sending = false;
+        app_timer_stop(m_delayed_send_timer);
+        
+        // 清空累积数据计数
+        s_collected_data_count = 0;
+        s_data_collection_index = 0;
+        
+        APP_LOG_INFO("%s All collected data sent, buffer cleared", DEBUG_TAG);
+        
+        // 所有105和103数据已经发送完毕，现在发送静态信息：102设备信息、104参数设置、120设置查询
+        // 注意：103状态信息已经跟每个105一起发送了，这里不再重复发送
+        APP_LOG_INFO("%s Sending device info report (code 102) - static info", DEBUG_TAG);
+        ble_4g_protocol_send_device_info_report();
+        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+        
+        APP_LOG_INFO("%s Sending param info report (code 104) - static info", DEBUG_TAG);
+        ble_4g_protocol_send_param_info_report();
+        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+        
+        // 最后发送设置查询
+        APP_LOG_INFO("%s Sending settings query (code 120)", DEBUG_TAG);
+        ble_4g_protocol_send_settings_query();
+        sys_delay_ms(300);  // 添加发送间隔，确保与后续数据隔离
+        
+        return;
+    }
+    
+    // 计算实际索引（从最旧的数据开始上报）
+    uint8_t report_index = (s_data_collection_index - s_total_data_to_send + s_send_data_index) % MAX_COLLECTED_DATA_COUNT;
+    
+    APP_LOG_INFO("%s Sending data point %d/%d", DEBUG_TAG, s_send_data_index + 1, s_total_data_to_send);
+    
+    // 发送105监测数据
+    ble_4g_protocol_send_data_report(&s_collected_data_array[report_index]);
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+    
+    // 每次105之后都发送103状态信息（因为状态是动态变化的）
+    APP_LOG_INFO("%s Sending status info report (code 103) with data point %d", DEBUG_TAG, s_send_data_index + 1);
+    ble_4g_protocol_send_status_info_report();
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+    
+    s_send_data_index++;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Start delayed send process.
+ * 
+ * 启动延时发送流程
+ *****************************************************************************************
+ */
+static void start_delayed_send_process(void)
+{
+    if (s_is_sending)
+    {
+        APP_LOG_WARNING("%s Already sending data, skip", DEBUG_TAG);
+        return;
+    }
+    
+    if (s_collected_data_count == 0)
+    {
+        APP_LOG_WARNING("%s No data to send", DEBUG_TAG);
+        return;
+    }
+    
+    // 初始化发送状态
+    s_is_sending = true;
+    s_send_data_index = 0;
+    s_total_data_to_send = s_collected_data_count;
+    
+    APP_LOG_INFO("%s Starting delayed send process for %d data points", DEBUG_TAG, s_total_data_to_send);
+    
+    // 立即发送第一条数据
+    delayed_send_timer_handler(NULL);
+    
+    // 启动定时器，后续数据延时发送
+    if (s_total_data_to_send > 1)
+    {
+        sdk_err_t err_code = app_timer_start(m_delayed_send_timer, DELAYED_SEND_INTERVAL_MS, NULL);
+        if (err_code != SDK_SUCCESS)
+        {
+            APP_LOG_ERROR("%s Failed to start delayed send timer: 0x%X", DEBUG_TAG, err_code);
+            s_is_sending = false;
+        }
+    }
 }
 
 /**
  *****************************************************************************************
  * @brief Data report timer handler.
+ * 
+ * 上报定时器处理函数：触发延时发送流程
  *****************************************************************************************
  */
 static void data_report_timer_handler(void *p_context)
 {
-    APP_LOG_INFO("%s Data report timer triggered", DEBUG_TAG);
+    APP_LOG_INFO("%s Data report timer triggered - reporting collected data", DEBUG_TAG);
     
-    // 更新传感器数据
-    update_sensor_data_from_parser();
-    
-    // 发送数据上报
-    ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
-    
-    // 发送设置查询
-    ble_4g_protocol_send_settings_query();
+    // 确保有数据需要上报
+    if (s_collected_data_count == 0)
+    {
+        APP_LOG_WARNING("%s No collected data to report", DEBUG_TAG);
+        
+        // 即使没有累积数据，也获取当前最新数据进行上报
+        update_sensor_data_from_parser();
+        update_status_info_from_sources();  // 同时更新状态信息
+        
+        APP_LOG_INFO("%s Sending current sensor data (code 105)", DEBUG_TAG);
+        ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
+        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+        
+        // 发送103状态信息（动态数据，和105一起发送）
+        APP_LOG_INFO("%s Sending status info report (code 103) - dynamic info", DEBUG_TAG);
+        ble_4g_protocol_send_status_info_report();
+        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+        
+        // 发送静态信息：102设备信息、104参数设置
+        APP_LOG_INFO("%s Sending device info report (code 102) - static info", DEBUG_TAG);
+        ble_4g_protocol_send_device_info_report();
+        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+        
+        APP_LOG_INFO("%s Sending param info report (code 104) - static info", DEBUG_TAG);
+        ble_4g_protocol_send_param_info_report();
+        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+        
+        // 最后发送设置查询
+        APP_LOG_INFO("%s Sending settings query (code 120)", DEBUG_TAG);
+        ble_4g_protocol_send_settings_query();
+    }
+    else
+    {
+        APP_LOG_INFO("%s %d data points ready to report", DEBUG_TAG, s_collected_data_count);
+        
+        // 启动延时发送流程（每个105都会附带发送103，最后发送102/104/120）
+        start_delayed_send_process();
+    }
 }
 
 /*
@@ -388,8 +681,47 @@ void ble_4g_protocol_init(void)
     
     sdk_err_t err_code;
     
-    // 获取设备ID
-    ble_4g_protocol_get_device_id();
+    // 等待4G模块启动并获取IMEI
+    APP_LOG_INFO("%s Waiting for 4G module to initialize and get IMEI...", DEBUG_TAG);
+    sys_delay_ms(3000);  // 增加等待时间，确保4G模块完全启动
+    
+    // 多次尝试获取IMEI，确保成功
+    int imei_retry_count = 0;
+    const int max_imei_retries = 3;
+    
+    while (imei_retry_count < max_imei_retries && strlen(g_at_collector.imei) == 0)
+    {
+        APP_LOG_INFO("%s Querying IMEI (attempt %d/%d)...", DEBUG_TAG, imei_retry_count + 1, max_imei_retries);
+        
+        // 使用超级指令查询IMEI
+        const char* imei_cmd = "adminAT+IMEI?\r\n";
+        SEND_AT_COMMAND_ASYNC(imei_cmd);
+        sys_delay_ms(800);  // 增加等待时间
+        
+        // 如果超级指令失败，再次尝试超级指令（可能是时序问题）
+        if (strlen(g_at_collector.imei) == 0)
+        {
+            APP_LOG_INFO("%s Retrying IMEI super command...", DEBUG_TAG);
+            sys_delay_ms(200);  // 短暂延时后重试
+            SEND_AT_COMMAND_ASYNC(imei_cmd);
+            sys_delay_ms(500);
+        }
+        
+        imei_retry_count++;
+    }
+    
+    // 从AT收集器获取IMEI
+    if (strlen(g_at_collector.imei) > 0)
+    {
+        strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
+        s_device_id[sizeof(s_device_id) - 1] = '\0';
+        APP_LOG_INFO("%s Device ID (IMEI) successfully obtained: %s", DEBUG_TAG, s_device_id);
+    }
+    else
+    {
+        APP_LOG_ERROR("%s Failed to get IMEI after %d attempts, device_ID will use fallback", DEBUG_TAG, max_imei_retries);
+        memset(s_device_id, 0, sizeof(s_device_id));
+    }
     
     // 初始化各种信息结构
     ble_4g_protocol_init_device_info();
@@ -408,6 +740,11 @@ void ble_4g_protocol_init(void)
     err_code = app_timer_create(&m_data_report_timer, 
                                ATIMER_REPEAT, 
                                data_report_timer_handler);
+    APP_ERROR_CHECK(err_code);
+    
+    err_code = app_timer_create(&m_delayed_send_timer, 
+                               ATIMER_REPEAT, 
+                               delayed_send_timer_handler);
     APP_ERROR_CHECK(err_code);
     
     s_protocol_initialized = true;
@@ -609,8 +946,12 @@ bool ble_4g_protocol_get_sensor_data(ble_4g_sensor_data_t *p_sensor_data)
         return false;
     }
     
+    // 始终获取最新的传感器数据（用于BLE查询）
     update_sensor_data_from_parser();
     memcpy(p_sensor_data, &s_current_sensor_data_4g, sizeof(ble_4g_sensor_data_t));
+    
+    APP_LOG_DEBUG("%s BLE query: returning latest sensor data (valid: %s)", 
+                  DEBUG_TAG, s_current_sensor_data_4g.is_valid ? "true" : "false");
     
     return s_current_sensor_data_4g.is_valid;
 }
@@ -648,9 +989,9 @@ void ble_4g_protocol_start_collect_timer(void)
     }
     
     sdk_err_t err_code;
-    uint32_t timeout_ticks = s_param_settings.device_collect_time * 60 * 1000; // 分钟转换为毫秒
+    uint32_t timeout_ms = s_param_settings.device_collect_time * 60 * 1000; // 分钟转换为毫秒
     
-    err_code = app_timer_start(m_sensor_collect_timer, timeout_ticks, NULL);
+    err_code = app_timer_start(m_sensor_collect_timer, timeout_ms, NULL);
     APP_ERROR_CHECK(err_code);
     
     APP_LOG_INFO("%s Started collect timer: %d minutes", DEBUG_TAG, s_param_settings.device_collect_time);
@@ -665,9 +1006,9 @@ void ble_4g_protocol_start_report_timer(void)
     }
     
     sdk_err_t err_code;
-    uint32_t timeout_ticks = s_param_settings.device_updata_time * 60 * 1000; // 分钟转换为毫秒
+    uint32_t timeout_ms = s_param_settings.device_updata_time * 60 * 1000; // 分钟转换为毫秒
     
-    err_code = app_timer_start(m_data_report_timer, timeout_ticks, NULL);
+    err_code = app_timer_start(m_data_report_timer, timeout_ms, NULL);
     APP_ERROR_CHECK(err_code);
     
     APP_LOG_INFO("%s Started report timer: %d minutes", DEBUG_TAG, s_param_settings.device_updata_time);
@@ -710,6 +1051,31 @@ void ble_4g_protocol_update_sensor_data(const ble_4g_sensor_data_t *p_sensor_dat
     if (p_sensor_data != NULL)
     {
         memcpy(&s_current_sensor_data_4g, p_sensor_data, sizeof(ble_4g_sensor_data_t));
+        APP_LOG_DEBUG("%s Sensor data updated externally", DEBUG_TAG);
     }
+}
+
+/**
+ *****************************************************************************************
+ * @brief Get collected data count.
+ * 
+ * @return Number of collected data points.
+ *****************************************************************************************
+ */
+uint8_t ble_4g_protocol_get_collected_data_count(void)
+{
+    return s_collected_data_count;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Clear collected data buffer.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_clear_collected_data(void)
+{
+    s_collected_data_count = 0;
+    s_data_collection_index = 0;
+    APP_LOG_INFO("%s Collected data buffer cleared", DEBUG_TAG);
 }
 

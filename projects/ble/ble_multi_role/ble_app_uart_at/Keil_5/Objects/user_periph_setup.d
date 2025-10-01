@@ -118,5 +118,8 @@
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\hal_flash\hal_flash.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\app_uart_dma.h
+.\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\app_assert\app_assert.h
 .\objects\user_periph_setup.o: ..\Src\user\sensor_data_parser.h
+.\objects\user_periph_setup.o: ..\Src\user\ble_protocol.h
+.\objects\user_periph_setup.o: ..\Src\user\at_cmd_handler.h

@@ -1,9 +1,16 @@
 /**
  *****************************************************************************************
  *
- * @file codeless_handler.c
+ * @file at_cmd_handler.c
  *
- * @brief Codeless Handler Implementation.
+ * @brief AT命令处理器实现 - 串口AT命令解析和执行模块
+ *        
+ * @details 功能概述：
+ *          - 解析和执行各种AT命令（连接、扫描、广播等）
+ *          - 管理BLE GAP参数配置
+ *          - 处理传感器数据查询和清除
+ *          - 实现BLE协议查询和数据上报
+ *          - 提供AT命令响应格式化和错误处理
  *
  *****************************************************************************************
  * @attention
@@ -50,7 +57,6 @@
 #include "app_timer.h"
 #include "grx_hal.h"
 #include <stdlib.h>
-#include "ble_protocol.h"
 #include "uart0_init.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -98,6 +104,10 @@ static ble_gap_role_t              s_curr_gap_role;
 static dev_state_t                 s_curr_dev_state;
 static bool                        s_is_target_found;
 
+// 指令模式管理
+static bool                        s_cmd_mode_enabled = false;   /**< 指令模式状态 */
+// static uint32_t                    s_cmd_mode_enter_time = 0;    /**< 进入指令模式的时间 - 暂未使用 */
+
 static at_cmd_attr_t s_at_cmd_attr_table[] =
 {
     {AT_CMD_INVALID,         "",            0,  NULL},
@@ -131,6 +141,19 @@ static at_cmd_attr_t s_at_cmd_attr_table[] =
     {AT_CMD_SENSOR_RX_CLR,   "SENSOR_RX_CLR",  13, uart_at_sensor_rx_clr},
     {AT_CMD_BLE_QUERY,       "BLE_QUERY",      9,  NULL},
     {AT_CMD_BLE_REPORT,      "BLE_REPORT",     10, NULL},
+    // 超级指令相关AT指令
+    {AT_CMD_IMEI_GET,        "IMEI?",          5,  uart_at_imei_get},
+    {AT_CMD_ICCID_GET,       "ICCID?",         6,  uart_at_iccid_get},
+    {AT_CMD_CSQ_GET,         "CSQ?",           4,  uart_at_csq_get},
+    {AT_CMD_GPS_GET,         "GPS?",           4,  uart_at_gps_get},
+    {AT_CMD_CREG_GET,        "CREG?",          5,  uart_at_creg_get},
+    {AT_CMD_CCLK_GET,        "CCLK?",          5,  uart_at_cclk_get},
+    {AT_CMD_BUILD_GET,       "BUILD?",         6,  uart_at_build_get},
+    {AT_CMD_RUNST_GET,       "RUNST?",         6,  uart_at_runst_get},
+    {AT_CMD_SENSOR_GET,      "SENSOR?",        7,  uart_at_sensor_get},
+    {AT_CMD_STATUS_GET,      "STATUS?",        7,  uart_at_status_get},
+    {AT_CMD_ADMIN,           "adminAT+",       8,  uart_at_admin_cmd},
+    {AT_CMD_ENTM,            "ENTM",           4,  uart_at_exit_cmd_mode},
 };
 
 /*
@@ -897,3 +920,389 @@ void uart_at_ble_report(at_cmd_parse_t *p_cmd_param)
 
 
 
+// ========================================================================
+// 超级指令相关AT指令实现
+// ========================================================================
+
+/**
+ * 获取IMEI号
+ * AT:IMEI?
+ */
+void uart_at_imei_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 从4G模块获取真实IMEI，这里先使用模拟数据
+    const char* imei = "860123456789012";
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+IMEI:%s", imei);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取ICCID (SIM卡号)
+ * AT:ICCID?
+ */
+void uart_at_iccid_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 从4G模块获取真实ICCID，这里先使用模拟数据
+    const char* iccid = "89860123456789012345";
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+ICCID:%s", iccid);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取4G信号质量
+ * AT:CSQ?
+ * 返回格式：+CSQ:<rssi>,<ber>
+ * rssi: 0-31 (99表示未知)
+ * ber: 比特错误率 0-7 (99表示未知)
+ */
+void uart_at_csq_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 从4G模块获取真实信号质量，这里使用模拟数据
+    uint8_t rssi = 25;  // 信号强度 (0-31)
+    uint8_t ber = 0;    // 比特错误率 (0-7)
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+CSQ:%d,%d", rssi, ber);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取GPS状态和坐标
+ * AT:GPS?
+ * 返回格式：+GPS:<status>,<lat>,<lon>,<alt>,<speed>,<course>
+ */
+void uart_at_gps_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 从GPS模块获取真实数据，这里使用模拟数据
+    uint8_t gps_status = 1;  // 0=未定位, 1=已定位
+    float latitude = 39.9042;   // 纬度
+    float longitude = 116.4074; // 经度
+    float altitude = 50.0;      // 海拔(米)
+    float speed = 0.0;          // 速度(km/h)
+    float course = 0.0;         // 航向(度)
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
+        "+GPS:%d,%.6f,%.6f,%.1f,%.1f,%.1f", 
+        gps_status, latitude, longitude, altitude, speed, course);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取网络注册状态
+ * AT:CREG?
+ * 返回格式：+CREG:<n>,<stat>[,<lac>,<ci>]
+ * stat: 0=未搜索, 1=本地网络, 2=搜索中, 3=注册被拒, 5=漫游
+ */
+void uart_at_creg_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 从4G模块获取真实网络状态，这里使用模拟数据
+    uint8_t n = 0;      // 网络注册结果码显示模式
+    uint8_t stat = 1;   // 网络注册状态：1=本地网络
+    uint16_t lac = 0x1234;  // 位置区域码
+    uint32_t ci = 0x12345678; // 小区ID
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
+        "+CREG:%d,%d,%04X,%08X", n, stat, lac, ci);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取系统时钟
+ * AT:CCLK?
+ * 返回格式：+CCLK:"yy/MM/dd,hh:mm:ss±zz"
+ */
+void uart_at_cclk_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 从RTC获取真实时间，这里使用模拟数据
+    const char* datetime = "24/09/24,10:30:25+32";
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+CCLK:\"%s\"", datetime);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取编译时间
+ * AT:BUILD?
+ */
+void uart_at_build_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
+        "+BUILD:%s %s", __DATE__, __TIME__);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取运行时间
+ * AT:RUNST?
+ * 返回格式：+RUNST:<uptime_seconds>
+ */
+void uart_at_runst_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    // TODO: 获取真实的系统运行时间，这里使用模拟数据
+    uint32_t uptime_seconds = 3600; // 假设运行了1小时
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+RUNST:%u", uptime_seconds);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取传感器原始数据 (基于ES100格式)
+ * AT:SENSOR?
+ * 返回29字节ASCII格式："+1008.37 +12.5 0000000 00 3A<CR><LF>"
+ */
+void uart_at_sensor_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    sensor_data_t sensor_data;
+    
+    // 获取最新的传感器数据
+    if (sensor_data_get_latest(&sensor_data) && sensor_data.data_valid)
+    {
+        // 计算校验码 (简化版本，实际应按文档规则计算)
+        uint8_t checksum = (uint8_t)((int)(sensor_data.concentration * 100) + 
+                                    (int)(sensor_data.temperature * 10) + 
+                                    sensor_data.status_code) & 0xFF;
+        
+        // 按ES100格式输出29字节数据
+        cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data,
+            "+SENSOR:+%07.2f +%04.1f %07d %02d %02X",
+            sensor_data.concentration,
+            sensor_data.temperature, 
+            sensor_data.reserved_field,
+            sensor_data.status_code,
+            checksum);
+    }
+    else
+    {
+        // 传感器数据无效时返回默认值
+        cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data,
+            "+SENSOR:+0000.00 +00.0 0000000 56 00");  // 状态码56表示软件异常
+    }
+    
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 获取设备状态码
+ * AT:STATUS?
+ * 返回各种设备状态的汇总
+ */
+void uart_at_status_get(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    sensor_data_t sensor_data;
+    uint8_t device_status = 0;  // 0=正常
+    uint8_t sensor_status = 0;  // 0=正常
+    uint8_t comm_status = 1;    // 1=4G正常
+    
+    // 检查传感器状态
+    if (sensor_data_get_latest(&sensor_data) && sensor_data.data_valid)
+    {
+        // 根据文档状态码表判断传感器状态
+        if (sensor_data.status_code == 0)
+        {
+            sensor_status = 0;  // 正常
+        }
+        else
+        {
+            sensor_status = 1;  // 异常
+        }
+    }
+    else
+    {
+        sensor_status = 1;  // 数据无效，标记为异常
+    }
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data,
+        "+STATUS:DEV=%d,SENSOR=%d,COMM=%d", 
+        device_status, sensor_status, comm_status);
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 超级指令处理
+ * adminAT+<command>
+ * 支持的命令：CSQ?, GPS?, IMEI?, ICCID?, CREG?, CCLK?, SENSOR?, STATUS?
+ */
+void uart_at_admin_cmd(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    if (p_cmd_param->arg_count < 1)
+    {
+        cmd_rsp.error_code = AT_CMD_ERR_INVALID_PARAM;
+        at_cmd_execute_cplt(&cmd_rsp);
+        return;
+    }
+    
+    // 获取adminAT+后面的命令部分
+    uint8_t *cmd_str = &p_cmd_param->p_buff[p_cmd_param->arg_idx[0]];
+    
+    // 解析并执行对应的指令
+    if (strncmp((char*)cmd_str, "CSQ?", 4) == 0)
+    {
+        uart_at_csq_get(p_cmd_param);
+        return;  // 处理函数已调用at_cmd_execute_cplt，直接返回
+    }
+    else if (strncmp((char*)cmd_str, "GPS?", 4) == 0)
+    {
+        uart_at_gps_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "IMEI?", 5) == 0)
+    {
+        uart_at_imei_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "ICCID?", 6) == 0)
+    {
+        uart_at_iccid_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "CREG?", 5) == 0)
+    {
+        uart_at_creg_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "CCLK?", 5) == 0)
+    {
+        uart_at_cclk_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "SENSOR?", 7) == 0)
+    {
+        uart_at_sensor_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "STATUS?", 7) == 0)
+    {
+        uart_at_status_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "BUILD?", 6) == 0)
+    {
+        uart_at_build_get(p_cmd_param);
+        return;
+    }
+    else if (strncmp((char*)cmd_str, "RUNST?", 6) == 0)
+    {
+        uart_at_runst_get(p_cmd_param);
+        return;
+    }
+    else
+    {
+        // 未知的超级指令
+        cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
+            "ERROR:Unsupported admin command");
+        cmd_rsp.error_code = AT_CMD_ERR_UNSUPPORTED_CMD;
+        at_cmd_execute_cplt(&cmd_rsp);
+    }
+}
+
+// ========================================================================
+// 指令模式管理实现
+// ========================================================================
+
+/**
+ * 进入指令模式处理 (接收到"+++")
+ */
+void uart_at_enter_cmd_mode(void)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    s_cmd_mode_enabled = true;
+    // s_cmd_mode_enter_time = 0; // TODO: 获取系统时间戳
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "OK");
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 退出指令模式处理 (AT+ENTM指令)
+ */
+void uart_at_exit_cmd_mode(at_cmd_parse_t *p_cmd_param)
+{
+    AT_CMD_RSP_DEF(cmd_rsp);
+    
+    s_cmd_mode_enabled = false;
+    
+    cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "OK");
+    at_cmd_execute_cplt(&cmd_rsp);
+}
+
+/**
+ * 检查是否处于指令模式
+ */
+bool uart_at_is_cmd_mode_enabled(void)
+{
+    return s_cmd_mode_enabled;
+}
+
+/**
+ * 检查输入是否为进入指令模式的命令 ("+++")
+ */
+bool uart_at_check_enter_cmd_mode(const uint8_t *p_data, uint16_t length)
+{
+    // 检查是否为"+++"
+    if (length >= 3 && 
+        p_data[0] == '+' && p_data[1] == '+' && p_data[2] == '+')
+    {
+        // 根据文档，在发送"+++"之前的1秒内不可发送任何数据
+        // 这里简化处理，直接进入指令模式
+        uart_at_enter_cmd_mode();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * 处理AT指令前的预处理
+ * 检查指令模式状态和超级指令
+ */
+bool uart_at_preprocess_command(at_cmd_src_t cmd_src, const uint8_t *p_data, uint16_t length)
+{
+    // 1. 检查是否为进入指令模式的命令
+    if (uart_at_check_enter_cmd_mode(p_data, length))
+    {
+        return true; // 已处理
+    }
+    
+    // 2. 检查是否为超级指令 (adminAT+)
+    if (length >= 8 && strncmp((char*)p_data, "adminAT+", 8) == 0)
+    {
+        // 超级指令无需指令模式，直接处理
+        return false; // 继续正常AT指令处理流程
+    }
+    
+    // 3. 检查普通AT指令是否需要指令模式
+    if (length >= 3 && strncmp((char*)p_data, "AT:", 3) == 0)
+    {
+        if (!s_cmd_mode_enabled)
+        {
+            // 未进入指令模式，不响应普通AT指令
+            return true; // 已处理(忽略)
+        }
+    }
+    
+    return false; // 继续正常处理
+}
+ 

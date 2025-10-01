@@ -25,11 +25,13 @@
 #include "user_periph_setup.h"     // 用户外设初始化配置，包含GPIO、UART等外设设置
 #include "sensor_data_parser.h"    // 传感器数据解析模块，处理传感器数据格式转换
 #include "transport_scheduler.h"   // 传输调度器，管理数据传输的时序和优先级
+#include "ble_protocol.h"          // BLE协议处理模块，包含协议初始化和数据处理函数
 #include "gr_includes.h"           // GR系列芯片的通用头文件，包含基础定义
 #include "scatter_common.h"        // 内存分散加载通用定义
 #include "flash_scatter_config.h"  // Flash内存分散配置，定义代码和数据在Flash中的布局
 #include "patch.h"                 // 补丁管理模块，用于运行时代码修复
 #include "app_log.h"               // 应用日志模块，提供调试和运行时信息输出
+#include "ble_4g_protocol.h"      // 4G协议处理模块，包含4G协议的初始化和数据处理
 
 /*
  * 本地变量定义
@@ -62,7 +64,7 @@ STACK_HEAP_INIT(heaps_table);
 int main(void)
 {
     // 第一步：初始化用户外设
-    // 配置GPIO引脚、UART通信接口、定时器、中断等硬件资源
+			// 配置GPIO引脚、UART通信接口、定时器、中断等硬件资源
     app_periph_init();
     
 
@@ -72,10 +74,22 @@ int main(void)
     // &heaps_table: 协议栈内存配置，定义各种缓冲区大小
     ble_stack_init(ble_evt_handler, &heaps_table);
 
-    // 第三步：启动时运行传感器数据校验测试
+    // 第三步：初始化BLE协议处理
+    // 初始化协议处理模块，准备接收和处理JSON命令
+    ble_protocol_init();
+    APP_LOG_INFO("BLE protocol initialized");
+
+    // 第四步：启动时运行传感器数据校验测试
     // 验证传感器数据的完整性和校验和算法的正确性
     APP_LOG_INFO("Running sensor checksum validation test...");
     sensor_data_test_checksum();
+
+    // 初始化4G协议 
+     ble_4g_protocol_init();
+
+    // 启动定时器 
+     ble_4g_protocol_start_collect_timer();  // 启动采集定时器
+     ble_4g_protocol_start_report_timer();   // 启动上报定时器
 
     // 第四步：进入主循环 - 系统核心调度循环
     // 这是一个无限循环，系统将在这里处理所有的任务调度

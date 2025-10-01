@@ -1,0 +1,10 @@
+.\objects\cjson_1.o: ..\Src\platform\cJSON.c
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\math.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\limits.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\ctype.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\float.h
+.\objects\cjson_1.o: ..\Src\platform\cJSON.h
+.\objects\cjson_1.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h

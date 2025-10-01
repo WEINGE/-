@@ -1,0 +1,1 @@
+﻿$content = Get-Content "ble_app_uart_at.uvprojx" -Raw; $content = $content -replace "\.\.\\\\Src\\\\platform\\\\cJSON\.c", "..\\Src\\platform\\cJSON.c"; $content | Set-Content "ble_app_uart_at.uvprojx" -Encoding UTF8

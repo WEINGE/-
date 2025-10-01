@@ -1,7 +1,7 @@
 .\objects\ble_protocol_test.o: ..\Src\user\ble_protocol_test.c
 .\objects\ble_protocol_test.o: ..\Src\user\ble_protocol.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\gr_includes.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
 .\objects\ble_protocol_test.o: ..\Src\config\custom_config.h
@@ -12,9 +12,9 @@
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -22,7 +22,7 @@
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
@@ -102,7 +102,7 @@
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\ble_protocol_test.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\ble_protocol_test.o: ..\Src\platform\cJSON.h
-.\objects\ble_protocol_test.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\ble_protocol_test.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdlib.h

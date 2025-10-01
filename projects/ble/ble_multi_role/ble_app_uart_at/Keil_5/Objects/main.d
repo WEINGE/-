@@ -110,7 +110,10 @@
 .\objects\main.o: ..\Src\platform\user_periph_setup.h
 .\objects\main.o: ..\Src\user\sensor_data_parser.h
 .\objects\main.o: ..\Src\user\transport_scheduler.h
+.\objects\main.o: ..\Src\user\ble_protocol.h
 .\objects\main.o: ..\..\..\..\..\platform\include\scatter_common.h
 .\objects\main.o: ..\..\..\..\..\platform\soc\linker\keil\flash_scatter_config.h
 .\objects\main.o: ..\..\..\..\..\components\sdk\patch.h
 .\objects\main.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
+.\objects\main.o: ..\Src\user\ble_4g_protocol.h
+.\objects\main.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h

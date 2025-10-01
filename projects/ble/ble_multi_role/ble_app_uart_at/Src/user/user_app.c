@@ -3,7 +3,14 @@
  *
  * @file user_app.c
  *
- * @brief User function Implementation.
+ * @brief BLE用户应用层实现 - 核心业务逻辑处理模块
+ *        
+ * @details 功能概述：
+ *          - BLE事件处理和状态管理
+ *          - GAP参数配置和连接管理
+ *          - GUS服务和客户端事件处理
+ *          - 数据传输调度和缓冲区管理
+ *          - AT命令与BLE协议的桥接
  *
  *****************************************************************************************
  * @attention
@@ -36,43 +43,53 @@
  */
 
 /*
- * INCLUDE FILES
+ * 头文件包含
  *****************************************************************************************
  */
-#include "user_app.h"
-#include "at_cmd_handler.h"
-#include "user_periph_setup.h"
-#include "transport_scheduler.h"
-#include "app_log.h"
-#include "at_cmd_utils.h"
-#include "utility.h"
-#include "ring_buffer.h"
-#include "ble_protocol.h"
-#include <stdarg.h>
-#include <stdio.h>
-
+#include "user_app.h"           // 用户应用层接口定义
+#include "at_cmd_handler.h"     // AT命令处理器，解析和执行串口AT命令
+#include "user_periph_setup.h"  // 用户外设配置，GPIO、UART等硬件初始化
+#include "transport_scheduler.h" // 传输调度器，管理BLE和UART之间的数据传输
+#include "app_log.h"            // 应用日志系统，提供调试信息输出
+#include "at_cmd_utils.h"       // AT命令工具函数，格式化和解析工具
+#include "utility.h"            // 通用工具函数库
+#include "ring_buffer.h"        // 环形缓冲区实现，用于数据缓存
+#include "ble_protocol.h"       // BLE协议处理模块，处理JSON格式的协议数据
+#include <stdarg.h>             // 可变参数列表支持
+#include <stdio.h>              // 标准输入输出函数
+#include "ble_4g_protocol.h"  // 为了使用 ble_4g_sensor_data_t 类型
+#include "app_uart.h"         // 为了使用 app_uart_transmit_async 函数
+#include "sensor_data_parser.h"  // 传感器数据解析模块
+#include "gr55xx_delay.h"     // 系统延迟函数
 /*
- * DEFINES
+ * 宏定义配置
  *****************************************************************************************
  */
-/**@brief Gapm config data. */
-#define DEVICE_NAME                         "Goodix_UART_AT"   /**< Name of device which will be included in the advertising data. */
-#define APP_ADV_INTERVAL_MIN                160                /**< The advertising min interval (in units of 0.625 ms). */
-#define APP_ADV_INTERVAL_MAX                160                /**< The advertising max interval (in units of 0.625 ms). */
-#define APP_SCAN_INTERVAL                   15                 /**< Determines scan interval(in units of 0.625 ms). */
-#define APP_SCAN_WINDOW                     15                 /**< Determines scan window(in units of 0.625 ms). */
-#define APP_SCAN_DURATION                   0                  /**< Duration of the scanning(in units of 10 ms). */
-#define APP_CONN_INTERVAL_MIN               36                 /**< Minimal connection interval(in unit of 1.25ms). */
-#define APP_CONN_INTERVAL_MAX               36                 /**< Maximal connection interval(in unit of 1.25ms). */
-#define APP_CONN_SLAVE_LATENCY              0                  /**< Slave latency. */
-#define APP_CONN_SUP_TIMEOUT                400                /**< Connection supervisory timeout(in unit of 10 ms). */
-#define APP_CONN_TIMEOUT                    400                /**< Connection timeout(in unit of 10 ms). */
+/**@brief BLE GAP参数配置 - 定义设备的蓝牙行为参数 */
+#define DEVICE_NAME                         "Goodix_UART_AT"   /**< 设备名称，将包含在广播数据中，用于设备识别 */
 
-#define MAX_MTU_DEFUALT                     247                /**< Defualt length of maximal MTU acceptable for device. */
-#define MAX_MPS_DEFUALT                     247                 /**< Defualt length of maximal packet size acceptable for device. */
-#define MAX_NB_LECB_DEFUALT                 1                  /**< Defualt length of maximal number of LE Credit based connection. */
-#define MAX_TX_OCTET_DEFUALT                251                /**< Default maximum transmitted number of payload octets. */
-#define MAX_TX_TIME_DEFUALT                 2120               /**< Defualt maximum packet transmission time. */
+/** 广播参数配置 - 控制设备的可发现性 */
+#define APP_ADV_INTERVAL_MIN                160                /**< 广播最小间隔 (单位: 0.625ms) = 100ms，影响功耗和发现速度 */
+#define APP_ADV_INTERVAL_MAX                160                /**< 广播最大间隔 (单位: 0.625ms) = 100ms，与最小值相同保证稳定间隔 */
+
+/** 扫描参数配置 - 控制设备搜索其他BLE设备的行为 */
+#define APP_SCAN_INTERVAL                   15                 /**< 扫描间隔 (单位: 0.625ms) = 9.375ms，扫描频率 */
+#define APP_SCAN_WINDOW                     15                 /**< 扫描窗口 (单位: 0.625ms) = 9.375ms，每个间隔内的活跃扫描时间 */
+#define APP_SCAN_DURATION                   0                  /**< 扫描持续时间 (单位: 10ms)，0表示持续扫描直到手动停止 */
+
+/** 连接参数配置 - 定义BLE连接的通信特性 */
+#define APP_CONN_INTERVAL_MIN               36                 /**< 连接最小间隔 (单位: 1.25ms) = 45ms，影响数据传输频率和功耗 */
+#define APP_CONN_INTERVAL_MAX               36                 /**< 连接最大间隔 (单位: 1.25ms) = 45ms，与最小值相同保证稳定传输 */
+#define APP_CONN_SLAVE_LATENCY              0                  /**< 从设备延迟，0表示每个连接事件都响应，确保低延迟 */
+#define APP_CONN_SUP_TIMEOUT                400                /**< 连接监督超时 (单位: 10ms) = 4s，连接丢失检测时间 */
+#define APP_CONN_TIMEOUT                    400                /**< 连接超时 (单位: 10ms) = 4s，建立连接的最大等待时间 */
+
+/** L2CAP和数据传输参数配置 - 控制数据包大小和传输能力 */
+#define MAX_MTU_DEFUALT                     247                /**< 默认最大传输单元，单次可传输的最大数据长度 */
+#define MAX_MPS_DEFUALT                     247                /**< 默认最大包大小，L2CAP层的最大包长度 */
+#define MAX_NB_LECB_DEFUALT                 1                  /**< 默认LE信用连接最大数量，并发连接数限制 */
+#define MAX_TX_OCTET_DEFUALT                251                /**< 默认最大发送字节数，物理层单次传输的最大数据量 */
+#define MAX_TX_TIME_DEFUALT                 2120               /**< 默认最大包传输时间 (单位: μs)，数据包传输的最大时间限制 */
 
 /*
  * GLOBAL VARIABLE DEFINITIONS
@@ -404,6 +421,43 @@ void ble_evt_handler(const ble_evt_t *p_evt)
             {
                 uart_at_dev_state_set(STANDBY);
                 APP_LOG_INFO("Disconnected (0x%02X)", p_evt->evt.gapc_evt.params.disconnected.reason);
+                
+                // 重置连接状态标志
+                is_connected = false;
+                
+                // 清理传输缓冲区
+                GLOBAL_EXCEPTION_DISABLE();
+                memset(s_uart_to_ble_buffer.p_buffer, 0, sizeof(s_uart_to_ble_buffer.buffer_size));
+                memset(s_ble_to_uart_buffer.p_buffer, 0, sizeof(s_ble_to_uart_buffer.buffer_size));
+                s_uart_to_ble_buffer.write_index = 0;
+                s_uart_to_ble_buffer.read_index  = 0;
+                s_ble_to_uart_buffer.write_index = 0;
+                s_ble_to_uart_buffer.read_index  = 0;
+                
+                // 重置传输标志
+                transport_flag_set(BLE_TX_CPLT, true);
+                transport_flag_set(GUS_TX_NTF_ENABLE, false);
+                transport_flag_set(BLE_FLOW_CTRL_ENABLE, false);
+                transport_flag_set(BLE_TX_FLOW_ON, true);
+                transport_flag_set(BLE_RX_FLOW_ON, true);
+                GLOBAL_EXCEPTION_ENABLE();
+                
+                APP_LOG_INFO("Connection resources cleaned up");
+                
+                // 延迟重新启动广播以确保完全断开
+                sys_delay_ms(100);
+                
+                // 重新启动广播使设备可以再次被发现和连接
+                sdk_err_t err_code = ble_gap_adv_start(0, &g_gap_adv_time_param);
+                if (BLE_SUCCESS == err_code)
+                {
+                    APP_LOG_INFO("Advertising restarted after disconnection");
+                    uart_at_dev_state_set(ADVERTISING);
+                }
+                else
+                {
+                    APP_LOG_ERROR("Failed to restart advertising: 0x%02X", err_code);
+                }
             }
             at_cmd_execute_cplt(&cmd_rsp);
             break;
@@ -474,3 +528,72 @@ void ble_app_init(void)
     ble_gap_adv_start(0, &g_gap_adv_time_param);
 }
 
+/**
+ *****************************************************************************************
+ * @brief Function for sending JSON data to 4G module via UART1.
+ *****************************************************************************************
+ */
+void uart1_send_json_to_4g(const char* json_data)
+{
+    if (json_data == NULL)
+    {
+        APP_LOG_ERROR("Invalid JSON data");
+        return;
+    }
+    
+    uint16_t data_len = strlen(json_data);
+    APP_LOG_INFO("Sending JSON to 4G module via UART1: %s", json_data);
+    
+    // Send JSON data via UART1 to 4G module using synchronous transmission
+    uart1_tx_data_send((uint8_t*)json_data, data_len);
+}
+
+/**
+ *****************************************************************************************
+ * @brief Update sensor data from sensor parser.
+ * 
+ * This function updates sensor data in both BLE and 4G protocol modules.
+ * It reads the latest sensor data from the parser and updates the corresponding
+ * data structures in both protocol handlers.
+ *****************************************************************************************
+ */
+void update_sensor_data_from_parser(void)
+{
+    sensor_data_t raw_data = {0};
+    
+    if (sensor_data_get_latest(&raw_data))
+    {
+        // Update BLE protocol sensor data
+        ble_sensor_data_t ble_sensor_data = {0};
+        ble_sensor_data.methane_vol = raw_data.concentration;
+        ble_sensor_data.methane_lel = ble_protocol_vol_to_lel(raw_data.concentration);
+        ble_sensor_data.temperature = raw_data.temperature;
+        ble_sensor_data.battery_voltage = 3.3f;  // TODO: 获取真实电池电压
+        ble_sensor_data.battery_percent = 100;   // TODO: 获取真实电池电量
+        ble_sensor_data.is_valid = raw_data.data_valid;
+        
+        // 使用接口函数更新BLE协议数据
+        ble_protocol_update_sensor_data(&ble_sensor_data);
+        
+        // Update 4G protocol sensor data
+        ble_4g_sensor_data_t ble_4g_sensor_data = {0};
+        ble_4g_sensor_data.methane_vol = raw_data.concentration;
+        ble_4g_sensor_data.methane_lel = ble_4g_protocol_vol_to_lel(raw_data.concentration);
+        ble_4g_sensor_data.temperature = (int16_t)raw_data.temperature;
+        ble_4g_sensor_data.battery_voltage = 3.3f;  // TODO: 获取真实电池电压
+        ble_4g_sensor_data.battery_percent = 100;   // TODO: 获取真实电池电量
+        ble_4g_sensor_data.is_valid = raw_data.data_valid;
+        
+        // 生成收集时间字符串 (格式: YYYYMMDDHHMM)
+        // TODO: 获取真实时间戳
+        strcpy(ble_4g_sensor_data.collect_time, "202411141642");
+        
+        // 使用接口函数更新4G协议数据
+        ble_4g_protocol_update_sensor_data(&ble_4g_sensor_data);
+        
+        APP_LOG_INFO("Updated sensor data: CH4=%.2f%%vol/%.2f%%LEL, TEMP=%.1fC", 
+                     ble_sensor_data.methane_vol, 
+                     ble_sensor_data.methane_lel, 
+                     ble_sensor_data.temperature);
+    }
+}

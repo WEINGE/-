@@ -67,6 +67,15 @@ void app_periph_init(void);
  */
 void uart_init(uint32_t baud_rate);
 
+/**
+ *****************************************************************************************
+ * @brief Init UART1 for 4G module communication
+ *
+ * @param[in] baud_rate: Baud rate
+ *****************************************************************************************
+ */
+void uart1_init(uint32_t baud_rate);
+
 void uart_tx_data_send(uint8_t *p_data, uint16_t length);
 /**
  *****************************************************************************************
@@ -90,5 +99,22 @@ void gpio_s_en_set(bool enable);
 void gpio_p_m_en_set(bool enable);
 bool gpio_s_en_get(void);
 bool gpio_p_m_en_get(void);
+
+// 4G module power control functions
+void gpio_4g_power_en_set(bool enable);
+bool gpio_4g_power_en_get(void);
+
+// UART1 (4G module) communication functions
+void uart1_init(uint32_t baud_rate);
+void uart1_tx_data_send(uint8_t *p_data, uint16_t length);
+
+/**
+ * @brief UART1异步发送函数，适用于时钟信号不稳定的环境
+ * @param[in] p_data: 要发送的数据指针
+ * @param[in] size: 数据长度
+ * @param[in] timeout_ms: 等待超时时间(毫秒)，0表示不等待
+ * @return 发送结果
+ */
+
 
 #endif

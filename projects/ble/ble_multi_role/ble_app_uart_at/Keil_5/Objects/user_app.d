@@ -115,3 +115,11 @@
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\utility\utility.h
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
 .\objects\user_app.o: ..\Src\user\ble_protocol.h
+.\objects\user_app.o: ..\Src\user\sensor_data_parser.h
+.\objects\user_app.o: ..\Src\user\ble_4g_protocol.h
+.\objects\user_app.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
+.\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_uart.h
+.\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_io.h
+.\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
+.\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
+.\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_dma.h

@@ -68,13 +68,15 @@
 #define APP_UART_RX_PULL                APP_IO_PULLUP
 
 #define APP_UART1_ID                    APP_UART_ID_1
-#define APP_UART1_BAUDRATE              9600
+#define APP_UART1_BAUDRATE              115200
 #define APP_UART1_TX_IO_TYPE            APP_IO_TYPE_NORMAL
 #define APP_UART1_RX_IO_TYPE            APP_IO_TYPE_NORMAL
-#define APP_UART1_TX_PIN                APP_IO_PIN_7
-#define APP_UART1_RX_PIN                APP_IO_PIN_6
+#define APP_UART1_TX_PIN                APP_IO_PIN_6
+#define APP_UART1_RX_PIN                APP_IO_PIN_7
 #define APP_UART1_TX_PINMUX             APP_IO_MUX_3
 #define APP_UART1_RX_PINMUX             APP_IO_MUX_3
+#define APP_UART1_TX_PULL               APP_IO_PULLUP
+#define APP_UART1_RX_PULL               APP_IO_PULLUP
 
 /*******KEY DRIVER IO CONFIG********************/
 #define APP_KEY_OK_IO_TYPE              APP_IO_TYPE_AON

@@ -113,6 +113,19 @@ typedef enum
     AT_CMD_SENSOR_RX_CLR,      /**< Sensor RX clear AT CMD. */
     AT_CMD_BLE_QUERY,          /**< BLE query AT CMD. */
     AT_CMD_BLE_REPORT,         /**< BLE report AT CMD. */
+    // 超级指令相关AT指令
+    AT_CMD_IMEI_GET,           /**< Get IMEI AT CMD. */
+    AT_CMD_ICCID_GET,          /**< Get ICCID AT CMD. */
+    AT_CMD_CSQ_GET,            /**< Get signal quality AT CMD. */
+    AT_CMD_GPS_GET,            /**< Get GPS status AT CMD. */
+    AT_CMD_CREG_GET,           /**< Get network registration AT CMD. */
+    AT_CMD_CCLK_GET,           /**< Get system clock AT CMD. */
+    AT_CMD_BUILD_GET,          /**< Get build time AT CMD. */
+    AT_CMD_RUNST_GET,          /**< Get runtime AT CMD. */
+    AT_CMD_SENSOR_GET,         /**< Get sensor data AT CMD. */
+    AT_CMD_STATUS_GET,         /**< Get device status AT CMD. */
+    AT_CMD_ADMIN,              /**< Admin super command AT CMD. */
+    AT_CMD_ENTM,               /**< Exit command mode AT CMD. */
     AT_CMD_NB                  /**< Number of supported AT CMD. */
 } at_cmd_id_t;
 

@@ -294,6 +294,39 @@ void uart_at_ble_query(at_cmd_parse_t *p_cmd_param);
 /* BLE协议数据上报 AT:BLE_REPORT */
 void uart_at_ble_report(at_cmd_parse_t *p_cmd_param);
 
+// 超级指令处理函数声明
+/* 获取IMEI号 AT:IMEI? */
+void uart_at_imei_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取ICCID AT:ICCID? */
+void uart_at_iccid_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取4G信号质量 AT:CSQ? */
+void uart_at_csq_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取GPS状态和坐标 AT:GPS? */
+void uart_at_gps_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取网络注册状态 AT:CREG? */
+void uart_at_creg_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取系统时钟 AT:CCLK? */
+void uart_at_cclk_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取编译时间 AT:BUILD? */
+void uart_at_build_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取运行时间 AT:RUNST? */
+void uart_at_runst_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取传感器原始数据 AT:SENSOR? */
+void uart_at_sensor_get(at_cmd_parse_t *p_cmd_param);
+
+/* 获取设备状态码 AT:STATUS? */
+void uart_at_status_get(at_cmd_parse_t *p_cmd_param);
+
+/* 超级指令处理 adminAT+xxx */
+void uart_at_admin_cmd(at_cmd_parse_t *p_cmd_param);
 
 
 /**
@@ -325,6 +358,98 @@ void codeless_disconn_task(uint8_t  conn_idx,  const uint8_t disconnect_reason);
  *****************************************************************************************
  */
 void codeless_mtu_exc_task(uint8_t conn_idx, uint16_t mtu);
+
+/**
+ *****************************************************************************************
+ * @brief 超级指令相关函数声明
+ *****************************************************************************************
+ */
+
+/**
+ * @brief 获取IMEI号
+ */
+void uart_at_imei_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取ICCID (SIM卡号)
+ */
+void uart_at_iccid_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取4G信号质量
+ */
+void uart_at_csq_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取GPS状态和坐标
+ */
+void uart_at_gps_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取网络注册状态
+ */
+void uart_at_creg_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取系统时钟
+ */
+void uart_at_cclk_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取编译时间
+ */
+void uart_at_build_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取运行时间
+ */
+void uart_at_runst_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取传感器原始数据
+ */
+void uart_at_sensor_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 获取设备状态码
+ */
+void uart_at_status_get(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 超级指令处理
+ */
+void uart_at_admin_cmd(at_cmd_parse_t *p_cmd_param);
+
+/**
+ *****************************************************************************************
+ * @brief 指令模式管理函数声明
+ *****************************************************************************************
+ */
+
+/**
+ * @brief 进入指令模式处理
+ */
+void uart_at_enter_cmd_mode(void);
+
+/**
+ * @brief 退出指令模式处理 (AT+ENTM指令)
+ */
+void uart_at_exit_cmd_mode(at_cmd_parse_t *p_cmd_param);
+
+/**
+ * @brief 检查是否处于指令模式
+ */
+bool uart_at_is_cmd_mode_enabled(void);
+
+/**
+ * @brief 检查输入是否为进入指令模式的命令
+ */
+bool uart_at_check_enter_cmd_mode(const uint8_t *p_data, uint16_t length);
+
+/**
+ * @brief 处理AT指令前的预处理
+ */
+bool uart_at_preprocess_command(at_cmd_src_t cmd_src, const uint8_t *p_data, uint16_t length);
 
 #endif
 

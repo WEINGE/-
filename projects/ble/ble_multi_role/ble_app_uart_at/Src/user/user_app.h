@@ -63,5 +63,19 @@ void ble_evt_handler(const ble_evt_t *p_evt);
  */
 void ble_app_init(void);
 
+/**
+ *****************************************************************************************
+ * @brief Function for sending JSON data to 4G module via UART1.
+ *****************************************************************************************
+ */
+void uart1_send_json_to_4g(const char* json_data);
+
+/**
+ *****************************************************************************************
+ * @brief Update sensor data from sensor parser.
+ *****************************************************************************************
+ */
+void update_sensor_data_from_parser(void);
+
 #endif
 
