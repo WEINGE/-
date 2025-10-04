@@ -61,6 +61,7 @@
 #include "app_uart.h"         // 为了使用 app_uart_transmit_async 函数
 #include "sensor_data_parser.h"  // 传感器数据解析模块
 #include "gr55xx_delay.h"     // 系统延迟函数
+#include "shared_params.h"    // 共享参数管理模块
 /*
  * 宏定义配置
  *****************************************************************************************
@@ -557,6 +558,49 @@ void uart1_send_json_to_4g(const char* json_data)
  * data structures in both protocol handlers.
  *****************************************************************************************
  */
+/**
+ * @brief 检查传感器数据是否超出阈值，如果超出则立即触发上传
+ */
+static void check_threshold_and_trigger_upload(const ble_4g_sensor_data_t *p_data)
+{
+    if (!p_data || !p_data->is_valid) {
+        return;
+    }
+    
+    bool threshold_exceeded = false;
+    
+    // 检查甲烷阈值
+    float methane_threshold = shared_params_get_methane_threshold();
+    if (p_data->methane_vol >= methane_threshold) {
+        APP_LOG_WARNING("Methane threshold exceeded: %.2f >= %.2f %%vol", 
+                       p_data->methane_vol, methane_threshold);
+        threshold_exceeded = true;
+    }
+    
+    // 检查温度阈值
+    int16_t temp_high = shared_params_get_temp_high_threshold();
+    int16_t temp_low = shared_params_get_temp_low_threshold();
+    
+    if (p_data->temperature >= temp_high) {
+        APP_LOG_WARNING("High temperature threshold exceeded: %d >= %d °C", 
+                       p_data->temperature, temp_high);
+        threshold_exceeded = true;
+    } else if (p_data->temperature <= temp_low) {
+        APP_LOG_WARNING("Low temperature threshold exceeded: %d <= %d °C", 
+                       p_data->temperature, temp_low);
+        threshold_exceeded = true;
+    }
+    
+    // 如果超出阈值，立即触发数据上传
+    if (threshold_exceeded) {
+        APP_LOG_INFO("Threshold exceeded - triggering immediate upload");
+        
+        // 调用专门的立即上传函数，复用现有的上传逻辑
+        extern void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sensor_data);
+        ble_4g_protocol_trigger_immediate_upload(p_data);
+    }
+}
+
 void update_sensor_data_from_parser(void)
 {
     sensor_data_t raw_data = {0};
@@ -590,6 +634,9 @@ void update_sensor_data_from_parser(void)
         
         // 使用接口函数更新4G协议数据
         ble_4g_protocol_update_sensor_data(&ble_4g_sensor_data);
+        
+        // 检查是否超出阈值，如果超出则立即触发上传
+        check_threshold_and_trigger_upload(&ble_4g_sensor_data);
         
         APP_LOG_INFO("Updated sensor data: CH4=%.2f%%vol/%.2f%%LEL, TEMP=%.1fC", 
                      ble_sensor_data.methane_vol, 

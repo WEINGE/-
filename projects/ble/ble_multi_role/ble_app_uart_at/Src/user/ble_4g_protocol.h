@@ -284,4 +284,29 @@ uint8_t ble_4g_protocol_get_collected_data_count(void);
  */
 void ble_4g_protocol_clear_collected_data(void);
 
+/**
+ *****************************************************************************************
+ * @brief Trigger immediate upload with current sensor data.
+ * 
+ * This function performs an immediate upload of the current sensor data along with
+ * status information, similar to the timer-triggered upload but without delay.
+ * Used for threshold-exceeded scenarios.
+ *
+ * @param[in] p_sensor_data: Pointer to the sensor data to upload immediately
+ *****************************************************************************************
+ */
+void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sensor_data);
+
+/**
+ *****************************************************************************************
+ * @brief Send static information reports.
+ * 
+ * This function sends all static information including:
+ * - Device info report (code 102)
+ * - Parameter info report (code 104) 
+ * - Settings query (code 120)
+ *****************************************************************************************
+ */
+void ble_4g_protocol_send_static_info(void);
+
 #endif /* __BLE_4G_PROTOCOL_H__ */

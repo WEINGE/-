@@ -1229,3 +1229,50 @@ void ble_4g_protocol_clear_collected_data(void)
     APP_LOG_INFO("%s Collected data buffer cleared", DEBUG_TAG);
 }
 
+void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sensor_data)
+{
+    if (!p_sensor_data || !p_sensor_data->is_valid) {
+        APP_LOG_WARNING("%s Invalid sensor data for immediate upload", DEBUG_TAG);
+        return;
+    }
+    
+    APP_LOG_INFO("%s Triggering immediate upload due to threshold exceeded", DEBUG_TAG);
+    
+    // 更新状态信息
+    update_status_info_from_sources();
+    
+    // 发送当前数据报告 (code 105)
+    APP_LOG_INFO("%s Sending immediate sensor data (code 105)", DEBUG_TAG);
+    ble_4g_protocol_send_data_report(p_sensor_data);
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+    
+    // 发送状态信息报告 (code 103)
+    APP_LOG_INFO("%s Sending status info report (code 103) with immediate data", DEBUG_TAG);
+    ble_4g_protocol_send_status_info_report();
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+    
+    // 发送静态信息
+    APP_LOG_INFO("%s Sending static info with immediate upload", DEBUG_TAG);
+    ble_4g_protocol_send_static_info();
+}
+
+void ble_4g_protocol_send_static_info(void)
+{
+    APP_LOG_INFO("%s Sending static information reports", DEBUG_TAG);
+    
+    // 发送设备信息报告 (code 102)
+    APP_LOG_INFO("%s Sending device info report (code 102) - static info", DEBUG_TAG);
+    ble_4g_protocol_send_device_info_report();
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+    
+    // 发送参数信息报告 (code 104)
+    APP_LOG_INFO("%s Sending param info report (code 104) - static info", DEBUG_TAG);
+    ble_4g_protocol_send_param_info_report();
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+    
+    // 发送设置查询 (code 120)
+    APP_LOG_INFO("%s Sending settings query (code 120)", DEBUG_TAG);
+    ble_4g_protocol_send_settings_query();
+    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+}
+

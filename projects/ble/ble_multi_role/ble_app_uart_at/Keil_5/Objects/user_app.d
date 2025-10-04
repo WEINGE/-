@@ -123,3 +123,4 @@
 .\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
 .\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
 .\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_dma.h
+.\objects\user_app.o: ..\Src\user\shared_params.h
