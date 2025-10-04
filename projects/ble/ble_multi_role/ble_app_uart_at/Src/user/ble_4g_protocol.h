@@ -309,4 +309,55 @@ void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sens
  */
 void ble_4g_protocol_send_static_info(void);
 
+/**
+ *****************************************************************************************
+ * @brief Control sensor power (S_EN pin).
+ *
+ * @param[in] enable: true to power on sensor, false to power off.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_sensor_power_control(bool enable);
+
+
+
+/**
+ *****************************************************************************************
+ * @brief Read sensor data with power management.
+ * 
+ * This function:
+ * 1. Powers on sensor (S_EN)
+ * 2. Waits 3 seconds for sensor stabilization
+ * 3. Reads sensor data
+ * 4. Powers off sensor
+ *
+ * @param[out] p_sensor_data: Pointer to store sensor data.
+ *
+ * @return true if data read successfully, false otherwise.
+ *****************************************************************************************
+ */
+bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_data);
+
+/**
+ *****************************************************************************************
+ * @brief Core data upload function (without power management).
+ * 
+ * This function sends all necessary data reports. It assumes the 4G module
+ * is already powered on and initialized.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_upload(void);
+
+/**
+ *****************************************************************************************
+ * @brief Upload data with 4G/DTU power management.
+ * 
+ * This function:
+ * 1. Powers on 4G/DTU module
+ * 2. Waits 2 seconds for module initialization
+ * 3. Sends all required data
+ * 4. Powers off 4G/DTU module
+ *****************************************************************************************
+ */
+void ble_4g_protocol_upload_with_power_mgmt(void);
+
 #endif /* __BLE_4G_PROTOCOL_H__ */

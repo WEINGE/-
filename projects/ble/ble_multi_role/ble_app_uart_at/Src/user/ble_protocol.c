@@ -367,6 +367,23 @@ static void parse_at_command_response(const char* response, uint16_t length)
             }
         }
     }
+    else if (strncmp(response, "+CREG:", 6) == 0)
+    {
+        // 网络注册状态: +CREG:1 (1=已注册, 0=未注册)
+        int reg_status;
+        if (sscanf(response + 6, "%d", &reg_status) == 1)
+        {
+            g_at_collector.network_reg_status = reg_status;
+            APP_LOG_INFO("%s Collected network registration status: %d (%s)", 
+                        DEBUG_TAG, reg_status, 
+                        (reg_status == 1) ? "Registered" : "Not registered");
+        }
+        else
+        {
+            APP_LOG_WARNING("%s Failed to parse CREG response: %s", DEBUG_TAG, response);
+            g_at_collector.network_reg_status = 0; // 默认为未注册
+        }
+    }
 
     else
     {

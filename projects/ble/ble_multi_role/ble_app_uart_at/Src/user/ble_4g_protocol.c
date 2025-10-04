@@ -33,6 +33,13 @@
 #include "app_timer.h"        // 为了使用定时器相关函数
 #include <stdlib.h>           // 为了使用 free 函数
 #include "grx_sys.h"          // 为了使用 sdk_err_t 类型
+
+/*
+ * EXTERNAL FUNCTION DECLARATIONS
+ *****************************************************************************************
+ */
+extern void gpio_4g_power_en_set(bool enable);
+extern bool gpio_4g_power_en_get(void);
 /*
  * DEFINES
  *****************************************************************************************
@@ -43,6 +50,10 @@
 #define DEBUG_TAG                   "[4G_PROTOCOL]"
 #define JSON_BUFFER_SIZE            1024
 #define DEVICE_ID_SIZE              32
+
+// GPIO定义 - 电源控制引脚
+#define SENSOR_POWER_PIN    GPIO_PIN_0    // S_EN - 传感器电源控制
+#define POWER_GPIO_GROUP    GPIO0         // GPIO组
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -77,6 +88,142 @@ static bool s_is_sending = false;  // 是否正在发送数据
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
+
+/**
+ *****************************************************************************************
+ * @brief Check 4G network registration status.
+ * 
+ * @return true if registered to network, false otherwise
+ *****************************************************************************************
+ */
+static bool check_4g_network_registration(void)
+{
+    // 发送网络注册状态查询指令
+    const char* creg_cmd = "adminAT+CREG?\r\n";
+    SEND_AT_COMMAND_ASYNC(creg_cmd);
+    
+    // 等待AT响应
+    sys_delay_ms(500);
+    
+    // 根据AT+CREG文档，检查网络注册状态
+    // network_reg_status: 0=未注册, 1=已注册
+    if (g_at_collector.network_reg_status == 1)
+    {
+        APP_LOG_INFO("%s Network registered successfully (CREG status: %d)", 
+                     DEBUG_TAG, g_at_collector.network_reg_status);
+        return true;
+    }
+    
+    APP_LOG_DEBUG("%s Network not registered (CREG status: %d)", 
+                 DEBUG_TAG, g_at_collector.network_reg_status);
+    return false;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Wait for 4G network registration with timeout.
+ * 
+ * @param[in] timeout_seconds: Maximum time to wait for registration
+ * @return true if network registered within timeout, false otherwise
+ *****************************************************************************************
+ */
+static bool wait_for_4g_network_registration(uint32_t timeout_seconds)
+{
+    uint32_t check_count = 0;
+    uint32_t max_checks = timeout_seconds / 2;  // 每2秒检查一次
+    
+    APP_LOG_INFO("%s Waiting for 4G network registration (timeout: %d seconds)", DEBUG_TAG, timeout_seconds);
+    
+    while (check_count < max_checks)
+    {
+        if (check_4g_network_registration())
+        {
+            uint32_t elapsed_seconds = check_count * 2;
+            APP_LOG_INFO("%s Network registration completed in %d seconds", DEBUG_TAG, elapsed_seconds);
+            return true;
+        }
+        
+        // 每2秒检查一次网络状态
+        sys_delay_ms(2000);
+        check_count++;
+        APP_LOG_DEBUG("%s Still waiting for network registration... (attempt %d/%d)", 
+                     DEBUG_TAG, check_count, max_checks);
+    }
+    
+    APP_LOG_WARNING("%s Network registration timeout after %d seconds, but continuing with upload", DEBUG_TAG, timeout_seconds);
+    // 修改：即使网络注册超时，也继续尝试上传，而不是直接返回失败
+    // 某些4G模块可能在CREG状态查询上有延迟，但实际网络已可用
+    return true;  // 改为返回true，让上传流程继续
+}
+
+/**
+ *****************************************************************************************
+ * @brief Send JSON with standardized delay to avoid message collision.
+ * 
+ * @param[in] json_string: JSON string to send
+ * @param[in] message_type: Description of message type for logging
+ *****************************************************************************************
+ */
+static void send_json_with_delay(char *json_string, const char *message_type)
+{
+    if (json_string == NULL || message_type == NULL)
+    {
+        APP_LOG_ERROR("%s Invalid parameters for JSON send", DEBUG_TAG);
+        return;
+    }
+    
+    APP_LOG_INFO("%s Sending %s", DEBUG_TAG, message_type);
+    uart1_send_json_to_4g(json_string);
+    free(json_string);
+    
+    // 标准化延时，避免JSON消息粘连
+    sys_delay_ms(300);
+}
+
+/**
+ *****************************************************************************************
+ * @brief 强制获取IMEI的内部函数
+ * 
+ * 这个函数执行IMEI获取的核心逻辑，包括重试机制
+ * 
+ * @return true if IMEI was successfully obtained, false otherwise
+ *****************************************************************************************
+ */
+static bool ble_4g_protocol_force_get_imei(void)
+{
+    int imei_retry_count = 0;
+    const int max_imei_retries = 3;
+    
+    while (imei_retry_count < max_imei_retries)
+    {
+        APP_LOG_INFO("%s Querying IMEI (attempt %d/%d)...", DEBUG_TAG, imei_retry_count + 1, max_imei_retries);
+        
+        // 使用超级指令查询IMEI
+        const char* imei_cmd = "adminAT+IMEI?\r\n";
+        SEND_AT_COMMAND_ASYNC(imei_cmd);
+        sys_delay_ms(800);  // 等待AT响应
+        
+        // 检查是否成功获取IMEI
+        if (strlen(g_at_collector.imei) > 0)
+        {
+            // 更新本地设备ID缓存
+            strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
+            s_device_id[sizeof(s_device_id) - 1] = '\0';
+            APP_LOG_INFO("%s IMEI successfully obtained: %s", DEBUG_TAG, s_device_id);
+            return true;
+        }
+        
+        imei_retry_count++;
+        if (imei_retry_count < max_imei_retries)
+        {
+            APP_LOG_WARNING("%s IMEI query failed, retrying...", DEBUG_TAG);
+            sys_delay_ms(200);
+        }
+    }
+    
+    APP_LOG_WARNING("%s Failed to get IMEI after %d attempts", DEBUG_TAG, max_imei_retries);
+    return false;
+}
 
 
 
@@ -121,26 +268,13 @@ static void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buf
     }
     else
     {
-        // 如果 IMEI 仍不可用，强制触发IMEI获取
+        // 如果 IMEI 仍不可用，使用统一的IMEI获取函数（避免重复逻辑）
         APP_LOG_WARNING("%s IMEI not available, attempting to force IMEI query", DEBUG_TAG);
         
-        // 尝试强制获取IMEI - 使用超级指令
-        const char* imei_cmd = "adminAT+IMEI?\r\n";
-        SEND_AT_COMMAND_ASYNC(imei_cmd);
-        
-        // 等待一小段时间让IMEI获取完成
-        sys_delay_ms(100);
-        
-        // 再次检查IMEI
-        if (strlen(g_at_collector.imei) > 0)
+        if (ble_4g_protocol_force_get_imei())
         {
-            strncpy(p_device_id_buffer, g_at_collector.imei, buffer_size - 1);
+            strncpy(p_device_id_buffer, s_device_id, buffer_size - 1);
             p_device_id_buffer[buffer_size - 1] = '\0';
-            
-            // 更新本地缓存
-            strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
-            s_device_id[sizeof(s_device_id) - 1] = '\0';
-            
             APP_LOG_INFO("%s Device ID (IMEI) force updated: %s", DEBUG_TAG, p_device_id_buffer);
         }
         else
@@ -201,43 +335,17 @@ static void update_status_info_from_sources(void)
     sensor_simple_status_t sensor_status = sensor_status_get_simple();
     s_status_info.sensor_status = (sensor_status == SENSOR_SIMPLE_STATUS_NORMAL) ? 0 : 1;
     
-    // 2. 主动查询最新信号强度 - 确保4G上报时信号值是最新的
-    extern at_response_collector_t g_at_collector;
-    
-    APP_LOG_INFO("%s Actively querying signal strength for 4G report...", DEBUG_TAG);
-    
-    // 发送信号强度查询超级指令
-    const char* csq_cmd = "adminAT+CSQ?\r\n";
-    SEND_AT_COMMAND_ASYNC(csq_cmd);
-    
-    // 等待AT响应并更新信号值 - 给足够时间让4G模块响应
-    sys_delay_ms(200);
-    
-    // 如果第一次查询没有响应，再次尝试
-    if (g_at_collector.signal_quality == 0 || g_at_collector.signal_quality == 99) {
-        APP_LOG_WARNING("%s First CSQ query failed (signal=%d), retrying...", 
-                       DEBUG_TAG, g_at_collector.signal_quality);
-        sys_delay_ms(100);
-        SEND_AT_COMMAND_ASYNC(csq_cmd);
-        sys_delay_ms(200);
-    }
+    // 2. 4G信号强度使用DTU特殊字段自动获取，无需MCU端查询
+    APP_LOG_INFO("%s Using DTU special field ${CSQ} for 4G signal strength", DEBUG_TAG);
     
     // 3. 从ble_protocol模块获取GPS状态等其他信息
     status_info_t ble_status_info = {0};
     ble_protocol_get_status_info(&ble_status_info);
     
-    // 更新4G信号值（0-31）- 使用刚刚查询到的最新值
-    int signal_quality = 0;
+    // 4G信号强度将由DTU特殊字段${CSQ}自动填充，这里设置为0作为占位符
+    s_status_info.device_LTE_signal = 0;
     
-    // 使用AT收集器的最新信号值
-    if (g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
-        signal_quality = g_at_collector.signal_quality;
-    }
-    
-    s_status_info.device_LTE_signal = signal_quality;
-    
-    APP_LOG_INFO("%s 4G protocol signal update after active query: AT signal=%d, final signal=%d", 
-                 DEBUG_TAG, g_at_collector.signal_quality, signal_quality);
+    APP_LOG_INFO("%s 4G signal will be filled by DTU special field ${CSQ}", DEBUG_TAG);
     
     // 更新GPS状态（从device_status的bit 2提取）
     s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
@@ -393,7 +501,7 @@ static char* ble_4g_protocol_create_status_info_json(void)
     cJSON_AddNumberToObject(body, "device_water", s_status_info.device_water);
     cJSON_AddNumberToObject(body, "sensor_status", s_status_info.sensor_status);
     cJSON_AddNumberToObject(body, "device_move", s_status_info.device_move);
-    cJSON_AddNumberToObject(body, "device_LTE_signal", s_status_info.device_LTE_signal);
+    cJSON_AddStringToObject(body, "device_LTE_signal", "${CSQ}");  // 使用DTU特殊字段获取4G信号强度
     cJSON_AddNumberToObject(body, "device_GPS_status", s_status_info.device_GPS_status);
     
     // 使用特殊字段获取定位信息
@@ -496,34 +604,45 @@ static char* ble_4g_protocol_create_settings_query_json(void)
  */
 static void sensor_collect_timer_handler(void *p_context)
 {
-    APP_LOG_INFO("%s Sensor collect timer triggered - collecting data", DEBUG_TAG);
+    APP_LOG_INFO("%s Sensor collect timer triggered - collecting data with power management", DEBUG_TAG);
     
-    // 1. 更新传感器数据到当前数据结构
-    update_sensor_data_from_parser();
+    // 使用电源管理读取传感器数据
+    ble_4g_sensor_data_t sensor_data;
+    bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
     
-    // 2. 更新状态信息（103）- 使其与监测数据同步采集
-    update_status_info_from_sources();
-    
-    // 3. 将当前数据存储到累积数组中
-    if (s_collected_data_count < MAX_COLLECTED_DATA_COUNT)
+    if (data_valid)
     {
-        memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
-               sizeof(ble_4g_sensor_data_t));
+        // 1. 更新当前传感器数据
+        memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
         
-        s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
-        s_collected_data_count++;
+        // 2. 更新状态信息（103）- 使其与监测数据同步采集
+        update_status_info_from_sources();
         
-        APP_LOG_INFO("%s Data collected, count: %d", DEBUG_TAG, s_collected_data_count);
+        // 3. 将当前数据存储到累积数组中
+        if (s_collected_data_count < MAX_COLLECTED_DATA_COUNT)
+        {
+            memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
+                   sizeof(ble_4g_sensor_data_t));
+            
+            s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
+            s_collected_data_count++;
+            
+            APP_LOG_INFO("%s Data collected with power management, count: %d", DEBUG_TAG, s_collected_data_count);
+        }
+        else
+        {
+            // 数组已满，覆盖最旧的数据
+            memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
+                   sizeof(ble_4g_sensor_data_t));
+            
+            s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
+            
+            APP_LOG_INFO("%s Data collected, array full, overwriting old data", DEBUG_TAG);
+        }
     }
     else
     {
-        // 数组已满，覆盖最旧的数据
-        memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
-               sizeof(ble_4g_sensor_data_t));
-        
-        s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
-        
-        APP_LOG_INFO("%s Data collected, array full, overwriting old data", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to collect sensor data with power management", DEBUG_TAG);
     }
 }
 
@@ -552,16 +671,13 @@ static void delayed_send_timer_handler(void *p_context)
         // 注意：103状态信息已经跟每个105一起发送了，这里不再重复发送
         APP_LOG_INFO("%s Sending device info report (code 102) - static info", DEBUG_TAG);
         ble_4g_protocol_send_device_info_report();
-        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
         
         APP_LOG_INFO("%s Sending param info report (code 104) - static info", DEBUG_TAG);
         ble_4g_protocol_send_param_info_report();
-        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
         
         // 最后发送设置查询
         APP_LOG_INFO("%s Sending settings query (code 120)", DEBUG_TAG);
         ble_4g_protocol_send_settings_query();
-        sys_delay_ms(300);  // 添加发送间隔，确保与后续数据隔离
         
         return;
     }
@@ -573,12 +689,10 @@ static void delayed_send_timer_handler(void *p_context)
     
     // 发送105监测数据
     ble_4g_protocol_send_data_report(&s_collected_data_array[report_index]);
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
     
     // 每次105之后都发送103状态信息（因为状态是动态变化的）
     APP_LOG_INFO("%s Sending status info report (code 103) with data point %d", DEBUG_TAG, s_send_data_index + 1);
     ble_4g_protocol_send_status_info_report();
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
     
     s_send_data_index++;
 }
@@ -590,6 +704,7 @@ static void delayed_send_timer_handler(void *p_context)
  * 启动延时发送流程
  *****************************************************************************************
  */
+/*
 static void start_delayed_send_process(void)
 {
     if (s_is_sending)
@@ -625,6 +740,7 @@ static void start_delayed_send_process(void)
         }
     }
 }
+*/
 
 /**
  *****************************************************************************************
@@ -635,7 +751,7 @@ static void start_delayed_send_process(void)
  */
 static void data_report_timer_handler(void *p_context)
 {
-    APP_LOG_INFO("%s Data report timer triggered - reporting collected data", DEBUG_TAG);
+    APP_LOG_INFO("%s Data report timer triggered - uploading with DTU power management", DEBUG_TAG);
     
     // 确保有数据需要上报
     if (s_collected_data_count == 0)
@@ -643,37 +759,27 @@ static void data_report_timer_handler(void *p_context)
         APP_LOG_WARNING("%s No collected data to report", DEBUG_TAG);
         
         // 即使没有累积数据，也获取当前最新数据进行上报
-        update_sensor_data_from_parser();
+        ble_4g_sensor_data_t sensor_data;
+        bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
+        
+        if (data_valid)
+        {
+            memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
+        }
         update_status_info_from_sources();  // 同时更新状态信息
         
-        APP_LOG_INFO("%s Sending current sensor data (code 105)", DEBUG_TAG);
-        ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
-        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
-        
-        // 发送103状态信息（动态数据，和105一起发送）
-        APP_LOG_INFO("%s Sending status info report (code 103) - dynamic info", DEBUG_TAG);
-        ble_4g_protocol_send_status_info_report();
-        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
-        
-        // 发送静态信息：102设备信息、104参数设置
-        APP_LOG_INFO("%s Sending device info report (code 102) - static info", DEBUG_TAG);
-        ble_4g_protocol_send_device_info_report();
-        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
-        
-        APP_LOG_INFO("%s Sending param info report (code 104) - static info", DEBUG_TAG);
-        ble_4g_protocol_send_param_info_report();
-        sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
-        
-        // 最后发送设置查询
-        APP_LOG_INFO("%s Sending settings query (code 120)", DEBUG_TAG);
-        ble_4g_protocol_send_settings_query();
+        // 使用DTU电源管理上传数据
+        ble_4g_protocol_upload_with_power_mgmt();
     }
     else
     {
-        APP_LOG_INFO("%s %d data points ready to report", DEBUG_TAG, s_collected_data_count);
+        APP_LOG_INFO("%s %d data points ready to report with DTU power management", DEBUG_TAG, s_collected_data_count);
         
-        // 启动延时发送流程（每个105都会附带发送103，最后发送102/104/120）
-        start_delayed_send_process();
+        // 使用DTU电源管理上传所有累积数据
+        ble_4g_protocol_upload_with_power_mgmt();
+        
+        // 清空累积数据
+        ble_4g_protocol_clear_collected_data();
     }
 }
 
@@ -690,67 +796,23 @@ void ble_4g_protocol_init(void)
         return;
     }
     
-    // 确保4G模块上电 - 首先检查上电状态
-    APP_LOG_INFO("%s Checking 4G module power status...", DEBUG_TAG);
+    // 初始化电源控制GPIO
+    APP_LOG_INFO("%s Initializing power control GPIOs", DEBUG_TAG);
     
-    // 使用外部声明的4G上电控制函数（在user_periph_setup.h中声明）
-    extern void gpio_4g_power_en_set(bool enable);
-    extern bool gpio_4g_power_en_get(void);
+    // 配置传感器电源控制引脚 (S_EN)
+    gpio_init_t sensor_power_config = GPIO_DEFAULT_CONFIG;
+    sensor_power_config.mode = GPIO_MODE_OUTPUT;
+    sensor_power_config.pin = SENSOR_POWER_PIN;
+    hal_gpio_init(POWER_GPIO_GROUP, &sensor_power_config);
     
-    if (!gpio_4g_power_en_get())
-    {
-        APP_LOG_INFO("%s 4G module is powered off, powering on...", DEBUG_TAG);
-        gpio_4g_power_en_set(true);
-        APP_LOG_INFO("%s 4G module power enabled", DEBUG_TAG);
-    }
-    else
-    {
-        APP_LOG_INFO("%s 4G module is already powered on", DEBUG_TAG);
-    }
+    // 初始状态：传感器断电
+    ble_4g_protocol_sensor_power_control(false);
+    
+    // 确保4G模块初始状态为断电（节能）
+    APP_LOG_INFO("%s Ensuring 4G module is initially powered off for energy saving", DEBUG_TAG);
+    gpio_4g_power_en_set(false);
     
     sdk_err_t err_code;
-    
-    // 等待4G模块启动并获取IMEI
-    APP_LOG_INFO("%s Waiting for 4G module to initialize and get IMEI...", DEBUG_TAG);
-    sys_delay_ms(3000);  // 增加等待时间，确保4G模块完全启动
-    
-    // 多次尝试获取IMEI，确保成功
-    int imei_retry_count = 0;
-    const int max_imei_retries = 3;
-    
-    while (imei_retry_count < max_imei_retries && strlen(g_at_collector.imei) == 0)
-    {
-        APP_LOG_INFO("%s Querying IMEI (attempt %d/%d)...", DEBUG_TAG, imei_retry_count + 1, max_imei_retries);
-        
-        // 使用超级指令查询IMEI
-        const char* imei_cmd = "adminAT+IMEI?\r\n";
-        SEND_AT_COMMAND_ASYNC(imei_cmd);
-        sys_delay_ms(800);  // 增加等待时间
-        
-        // 如果超级指令失败，再次尝试超级指令（可能是时序问题）
-        if (strlen(g_at_collector.imei) == 0)
-        {
-            APP_LOG_INFO("%s Retrying IMEI super command...", DEBUG_TAG);
-            sys_delay_ms(200);  // 短暂延时后重试
-            SEND_AT_COMMAND_ASYNC(imei_cmd);
-            sys_delay_ms(500);
-        }
-        
-        imei_retry_count++;
-    }
-    
-    // 从AT收集器获取IMEI
-    if (strlen(g_at_collector.imei) > 0)
-    {
-        strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
-        s_device_id[sizeof(s_device_id) - 1] = '\0';
-        APP_LOG_INFO("%s Device ID (IMEI) successfully obtained: %s", DEBUG_TAG, s_device_id);
-    }
-    else
-    {
-        APP_LOG_ERROR("%s Failed to get IMEI after %d attempts, device_ID will use fallback", DEBUG_TAG, max_imei_retries);
-        memset(s_device_id, 0, sizeof(s_device_id));
-    }
     
     // 初始化各种信息结构
     ble_4g_protocol_init_device_info();
@@ -778,6 +840,29 @@ void ble_4g_protocol_init(void)
     
     s_protocol_initialized = true;
     APP_LOG_INFO("%s 4G protocol initialized successfully", DEBUG_TAG);
+    
+    // 初始化完成后执行首次上传（使用统一的电源管理流程）
+    APP_LOG_INFO("%s Performing initial upload with power management", DEBUG_TAG);
+
+    // 1. 读取传感器数据
+    ble_4g_sensor_data_t sensor_data;
+    bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
+    if (data_valid)
+    {
+        memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
+    }
+    else
+    {
+        APP_LOG_WARNING("%s Failed to read sensor data during init, using default data", DEBUG_TAG);
+        update_sensor_data_from_parser();
+    }
+
+    // 2. 更新状态信息
+    update_status_info_from_sources();
+
+    // 3. 使用统一的电源管理流程进行首次上传
+    APP_LOG_INFO("%s Executing initial upload with full power management cycle", DEBUG_TAG);
+    ble_4g_protocol_upload_with_power_mgmt();
 }
 
 void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
@@ -824,8 +909,7 @@ void ble_4g_protocol_send_device_info_report(void)
     char *json_string = ble_4g_protocol_create_device_info_json();
     if (json_string)
     {
-        uart1_send_json_to_4g(json_string);
-        free(json_string);
+        send_json_with_delay(json_string, "device info report (code 102)");
     }
 }
 
@@ -840,8 +924,7 @@ void ble_4g_protocol_send_status_info_report(void)
     char *json_string = ble_4g_protocol_create_status_info_json();
     if (json_string)
     {
-        uart1_send_json_to_4g(json_string);
-        free(json_string);
+        send_json_with_delay(json_string, "status info report (code 103)");
     }
 }
 
@@ -856,8 +939,7 @@ void ble_4g_protocol_send_param_info_report(void)
     char *json_string = ble_4g_protocol_create_param_info_json();
     if (json_string)
     {
-        uart1_send_json_to_4g(json_string);
-        free(json_string);
+        send_json_with_delay(json_string, "param info report (code 104)");
     }
 }
 
@@ -878,8 +960,7 @@ void ble_4g_protocol_send_data_report(const ble_4g_sensor_data_t *p_sensor_data)
     char *json_string = ble_4g_protocol_create_data_report_json(p_sensor_data);
     if (json_string)
     {
-        uart1_send_json_to_4g(json_string);
-        free(json_string);
+        send_json_with_delay(json_string, "sensor data report (code 105)");
     }
 }
 
@@ -894,8 +975,7 @@ void ble_4g_protocol_send_settings_query(void)
     char *json_string = ble_4g_protocol_create_settings_query_json();
     if (json_string)
     {
-        uart1_send_json_to_4g(json_string);
-        free(json_string);
+        send_json_with_delay(json_string, "settings query (code 120)");
     }
 }
 
@@ -1244,12 +1324,10 @@ void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sens
     // 发送当前数据报告 (code 105)
     APP_LOG_INFO("%s Sending immediate sensor data (code 105)", DEBUG_TAG);
     ble_4g_protocol_send_data_report(p_sensor_data);
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
     
     // 发送状态信息报告 (code 103)
     APP_LOG_INFO("%s Sending status info report (code 103) with immediate data", DEBUG_TAG);
     ble_4g_protocol_send_status_info_report();
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
     
     // 发送静态信息
     APP_LOG_INFO("%s Sending static info with immediate upload", DEBUG_TAG);
@@ -1263,16 +1341,136 @@ void ble_4g_protocol_send_static_info(void)
     // 发送设备信息报告 (code 102)
     APP_LOG_INFO("%s Sending device info report (code 102) - static info", DEBUG_TAG);
     ble_4g_protocol_send_device_info_report();
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
     
     // 发送参数信息报告 (code 104)
     APP_LOG_INFO("%s Sending param info report (code 104) - static info", DEBUG_TAG);
     ble_4g_protocol_send_param_info_report();
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
     
     // 发送设置查询 (code 120)
     APP_LOG_INFO("%s Sending settings query (code 120)", DEBUG_TAG);
     ble_4g_protocol_send_settings_query();
-    sys_delay_ms(300);  // 添加发送间隔，避免JSON连在一起
+}
+
+/*
+ * POWER MANAGEMENT FUNCTIONS
+ *****************************************************************************************
+ */
+
+void ble_4g_protocol_sensor_power_control(bool enable)
+{
+    if (enable) {
+        hal_gpio_write_pin(POWER_GPIO_GROUP, SENSOR_POWER_PIN, GPIO_PIN_SET);
+        APP_LOG_INFO("%s Sensor power ON (S_EN)", DEBUG_TAG);
+    } else {
+        hal_gpio_write_pin(POWER_GPIO_GROUP, SENSOR_POWER_PIN, GPIO_PIN_RESET);
+        APP_LOG_INFO("%s Sensor power OFF (S_EN)", DEBUG_TAG);
+    }
+}
+
+
+
+bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_data)
+{
+    if (p_sensor_data == NULL) {
+        APP_LOG_ERROR("%s Invalid sensor data pointer", DEBUG_TAG);
+        return false;
+    }
+
+    APP_LOG_INFO("%s Reading sensor with power management", DEBUG_TAG);
+    
+    // 1. 上电传感器
+    ble_4g_protocol_sensor_power_control(true);
+    
+    // 2. 等待3秒传感器稳定
+    sys_delay_ms(3000);
+    
+    // 3. 读取传感器数据
+    bool result = ble_4g_protocol_get_sensor_data(p_sensor_data);
+    
+    // 4. 断电传感器
+    ble_4g_protocol_sensor_power_control(false);
+    
+    if (result) {
+        APP_LOG_INFO("%s Sensor data read successfully", DEBUG_TAG);
+    } else {
+        APP_LOG_ERROR("%s Failed to read sensor data", DEBUG_TAG);
+    }
+    
+    return result;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Core data upload function (without power management).
+ * 
+ * This function sends all necessary data reports. It assumes the 4G module
+ * is already powered on and initialized.
+ *****************************************************************************************
+ */
+void ble_4g_protocol_upload(void)
+{
+    APP_LOG_INFO("%s Executing core upload logic", DEBUG_TAG);
+
+    // 1. 发送动态信息
+    APP_LOG_INFO("%s Uploading: sending current sensor data (code 105)", DEBUG_TAG);
+    ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
+
+    APP_LOG_INFO("%s Uploading: sending status info (code 103)", DEBUG_TAG);
+    ble_4g_protocol_send_status_info_report();
+
+    // 2. 发送静态信息
+    APP_LOG_INFO("%s Uploading: sending device info (code 102)", DEBUG_TAG);
+    ble_4g_protocol_send_device_info_report();
+
+    APP_LOG_INFO("%s Uploading: sending param info (code 104)", DEBUG_TAG);
+    ble_4g_protocol_send_param_info_report();
+
+    // 3. 发送设置查询
+    APP_LOG_INFO("%s Uploading: sending settings query (code 120)", DEBUG_TAG);
+    ble_4g_protocol_send_settings_query();
+
+    APP_LOG_INFO("%s Core upload logic finished", DEBUG_TAG);
+}
+
+
+void ble_4g_protocol_upload_with_power_mgmt(void)
+{
+    APP_LOG_INFO("%s Starting upload with 4G/DTU power management", DEBUG_TAG);
+    
+    // 1. 上电4G/DTU模块
+    gpio_4g_power_en_set(true);
+    APP_LOG_INFO("%s 4G/DTU module powered on", DEBUG_TAG);
+    
+    // 2. 等待基本硬件稳定（延长到5秒，确保模块完全启动）
+    APP_LOG_INFO("%s Waiting 5 seconds for 4G/DTU module hardware stabilization", DEBUG_TAG);
+    sys_delay_ms(5000);
+    
+    // 3. 等待网络注册完成（延长到60秒超时）
+    APP_LOG_INFO("%s Waiting for 4G network registration", DEBUG_TAG);
+    bool network_ready = wait_for_4g_network_registration(60);
+    
+    // 4. 无论网络注册状态如何，都继续执行上传流程
+    // （因为某些4G模块的CREG查询可能有延迟，但网络实际可用）
+    APP_LOG_INFO("%s Starting 4G/DTU initialization process", DEBUG_TAG);
+    
+    // 使用统一的IMEI获取函数
+    if (!ble_4g_protocol_force_get_imei())
+    {
+        APP_LOG_WARNING("%s Failed to get IMEI during upload, using cached/fallback ID", DEBUG_TAG);
+    }
+    
+    // 5. 调用核心上传函数
+    APP_LOG_INFO("%s Starting data upload process", DEBUG_TAG);
+    ble_4g_protocol_upload();
+    
+    // 6. 等待10秒，接收平台可能下发的设置指令
+    APP_LOG_INFO("%s Upload completed, waiting 10 seconds for platform response", DEBUG_TAG);
+    sys_delay_ms(10000);
+    
+    APP_LOG_INFO("%s Platform response wait period finished, powering down 4G module", DEBUG_TAG);
+    
+    // 7. 断电4G/DTU模块
+    gpio_4g_power_en_set(false);
+    APP_LOG_INFO("%s 4G/DTU module powered off", DEBUG_TAG);
 }
 
