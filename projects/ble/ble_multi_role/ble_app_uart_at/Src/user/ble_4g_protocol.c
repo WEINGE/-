@@ -201,22 +201,42 @@ static void update_status_info_from_sources(void)
     sensor_simple_status_t sensor_status = sensor_status_get_simple();
     s_status_info.sensor_status = (sensor_status == SENSOR_SIMPLE_STATUS_NORMAL) ? 0 : 1;
     
-    // 2. 从ble_protocol模块获取4G信号强度和GPS状态
+    // 2. 主动查询最新信号强度 - 确保4G上报时信号值是最新的
+    extern at_response_collector_t g_at_collector;
+    
+    APP_LOG_INFO("%s Actively querying signal strength for 4G report...", DEBUG_TAG);
+    
+    // 发送信号强度查询超级指令
+    const char* csq_cmd = "adminAT+CSQ?\r\n";
+    SEND_AT_COMMAND_ASYNC(csq_cmd);
+    
+    // 等待AT响应并更新信号值 - 给足够时间让4G模块响应
+    sys_delay_ms(200);
+    
+    // 如果第一次查询没有响应，再次尝试
+    if (g_at_collector.signal_quality == 0 || g_at_collector.signal_quality == 99) {
+        APP_LOG_WARNING("%s First CSQ query failed (signal=%d), retrying...", 
+                       DEBUG_TAG, g_at_collector.signal_quality);
+        sys_delay_ms(100);
+        SEND_AT_COMMAND_ASYNC(csq_cmd);
+        sys_delay_ms(200);
+    }
+    
+    // 3. 从ble_protocol模块获取GPS状态等其他信息
     status_info_t ble_status_info = {0};
     ble_protocol_get_status_info(&ble_status_info);
     
-    // 更新4G信号值（0-31）- 使用与蓝牙协议完全相同的逻辑
-    extern at_response_collector_t g_at_collector;
+    // 更新4G信号值（0-31）- 使用刚刚查询到的最新值
     int signal_quality = 0;
     
-    // 优先使用AT收集器的信号值，与蓝牙协议保持一致
+    // 使用AT收集器的最新信号值
     if (g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
         signal_quality = g_at_collector.signal_quality;
     }
     
     s_status_info.device_LTE_signal = signal_quality;
     
-    APP_LOG_INFO("%s 4G protocol signal update: AT signal=%d, final signal=%d", 
+    APP_LOG_INFO("%s 4G protocol signal update after active query: AT signal=%d, final signal=%d", 
                  DEBUG_TAG, g_at_collector.signal_quality, signal_quality);
     
     // 更新GPS状态（从device_status的bit 2提取）

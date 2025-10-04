@@ -3,9 +3,9 @@
 <title>Static Call Graph - [.\Objects\ble_app_uart_at.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\ble_app_uart_at.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Oct 01 16:50:48 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Sat Oct 04 10:15:33 2025
 <BR><P>
-<H3>Maximum Stack Usage =       2280 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =       2288 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 <P>
@@ -2622,6 +2622,7 @@ Global Symbols
 <LI><a href="#[259]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 <LI><a href="#[10f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 <LI><a href="#[23a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
+<LI><a href="#[331]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler
 <LI><a href="#[227]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
@@ -4024,6 +4025,7 @@ Global Symbols
 <LI><a href="#[4dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_offset
 <LI><a href="#[4dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_value
 <LI><a href="#[196]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_strdup
+<LI><a href="#[331]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[227]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
 <LI><a href="#[1a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_send_json_response
 <LI><a href="#[2b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
@@ -5953,7 +5955,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[2b2]"></a>ble_protocol_data_process</STRONG> (Thumb, 198 bytes, Stack size 1056 bytes, ble_protocol.o(i.ble_protocol_data_process))
-<BR><BR>[Stack]<UL><LI>Max Depth = 2016<LI>Call Chain = ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
+<BR><BR>[Stack]<UL><LI>Max Depth = 2024<LI>Call Chain = ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[2b3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_parse_json_command
@@ -5977,8 +5979,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[130]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_uart1_evt_handler
 </UL>
 
-<P><STRONG><a name="[2b6]"></a>ble_protocol_handle_param_set</STRONG> (Thumb, 1794 bytes, Stack size 72 bytes, ble_protocol.o(i.ble_protocol_handle_param_set))
-<BR><BR>[Stack]<UL><LI>Max Depth = 872<LI>Call Chain = ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
+<P><STRONG><a name="[2b6]"></a>ble_protocol_handle_param_set</STRONG> (Thumb, 1864 bytes, Stack size 80 bytes, ble_protocol.o(i.ble_protocol_handle_param_set))
+<BR><BR>[Stack]<UL><LI>Max Depth = 880<LI>Call Chain = ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[1f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
@@ -9421,6 +9423,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[243]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart1_send_json_to_4g
 <LI><a href="#[259]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 <LI><a href="#[23a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
+<LI><a href="#[331]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[227]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
 <LI><a href="#[19b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;analyze_and_send_super_command
 </UL>
@@ -10755,7 +10758,7 @@ Local Symbols
 <BR>[Address Reference Count : 1]<UL><LI> user_app.o(i.ble_app_init)
 </UL>
 <P><STRONG><a name="[129]"></a>gus_service_process_event</STRONG> (Thumb, 198 bytes, Stack size 264 bytes, user_app.o(i.gus_service_process_event))
-<BR><BR>[Stack]<UL><LI>Max Depth = 2280<LI>Call Chain = gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
+<BR><BR>[Stack]<UL><LI>Max Depth = 2288<LI>Call Chain = gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_parse
 <LI><a href="#[283]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_flag_set
@@ -10927,8 +10930,8 @@ Local Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[259]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 </UL>
 
-<P><STRONG><a name="[2b3]"></a>ble_protocol_parse_json_command</STRONG> (Thumb, 2100 bytes, Stack size 88 bytes, ble_protocol.o(i.ble_protocol_parse_json_command))
-<BR><BR>[Stack]<UL><LI>Max Depth = 960<LI>Call Chain = ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
+<P><STRONG><a name="[2b3]"></a>ble_protocol_parse_json_command</STRONG> (Thumb, 2118 bytes, Stack size 88 bytes, ble_protocol.o(i.ble_protocol_parse_json_command))
+<BR><BR>[Stack]<UL><LI>Max Depth = 968<LI>Call Chain = ble_protocol_parse_json_command &rArr; ble_protocol_handle_param_set &rArr; ble_4g_protocol_handle_param_set &rArr; shared_params_set_temp_thresholds &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[164]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ui2d
@@ -11171,12 +11174,15 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler
 </UL>
 
-<P><STRONG><a name="[331]"></a>update_status_info_from_sources</STRONG> (Thumb, 140 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.update_status_info_from_sources))
-<BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = update_status_info_from_sources &rArr; app_log_output &rArr; __2snprintf
+<P><STRONG><a name="[331]"></a>update_status_info_from_sources</STRONG> (Thumb, 246 bytes, Stack size 56 bytes, ble_4g_protocol.o(i.update_status_info_from_sources))
+<BR><BR>[Stack]<UL><LI>Max Depth = 144<LI>Call Chain = update_status_info_from_sources &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
+<LI><a href="#[1a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sys_delay_ms
+<LI><a href="#[19f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart1_tx_data_send
 <LI><a href="#[543]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_get_status_info
 <LI><a href="#[542]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_status_get_simple
+<LI><a href="#[19e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 </UL>
 <BR>[Called By]<UL><LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler

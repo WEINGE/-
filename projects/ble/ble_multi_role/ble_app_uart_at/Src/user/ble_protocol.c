@@ -866,14 +866,14 @@ static void ble_protocol_parse_json_command(const char* json_str)
             }
             
             float methane_threshold = (float)methane_item->valuedouble;
-            int temp_h_threshold = temp_h_item->valueint;
-            int temp_l_threshold = temp_l_item->valueint;
+            int16_t temp_h_threshold = (int16_t)temp_h_item->valueint;
+            int16_t temp_l_threshold = (int16_t)temp_l_item->valueint;
             
-            uint8_t data[12];
+            uint8_t data[8];
             memcpy(&data[0], &methane_threshold, 4);
-            memcpy(&data[4], &temp_h_threshold, 4);
-            memcpy(&data[8], &temp_l_threshold, 4);
-            ble_protocol_handle_param_set(cmd_code, data, 12);
+            memcpy(&data[4], &temp_h_threshold, 2);
+            memcpy(&data[6], &temp_l_threshold, 2);
+            ble_protocol_handle_param_set(cmd_code, data, 8);
             break;
         }
         
@@ -1310,18 +1310,23 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
         case PROTOCOL_CMD_THRESHOLD_SET:
             if (length >= 8)
             {
-                // 解析甲烷和温度阈值 (4字节浮点数)
-                float methane_thresh, temp_thresh;
+                // 解析甲烷和温度阈值
+                float methane_thresh;
+                int16_t temp_high, temp_low;
                 memcpy(&methane_thresh, &p_data[0], 4);
-                memcpy(&temp_thresh, &p_data[4], 4);
+                memcpy(&temp_high, &p_data[4], 2);
+                memcpy(&temp_low, &p_data[6], 2);
+                
+                APP_LOG_DEBUG("%s Received thresholds: CH4=%.2f, TEMP_H=%d, TEMP_L=%d", 
+                             DEBUG_TAG, methane_thresh, temp_high, temp_low);
                 
                 // 使用共享参数API设置阈值
                 if (shared_params_set_methane_threshold(methane_thresh) && 
-                    shared_params_set_temp_thresholds((int16_t)(temp_thresh + 10), (int16_t)(temp_thresh - 10)))
+                    shared_params_set_temp_thresholds(temp_high, temp_low))
                 {
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP=%.1f°C", 
-                               DEBUG_TAG, methane_thresh, temp_thresh);
+                    APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP_H=%d°C, TEMP_L=%d°C", 
+                               DEBUG_TAG, methane_thresh, temp_high, temp_low);
                 }
                 else
                 {
