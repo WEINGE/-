@@ -52,8 +52,8 @@ extern bool gpio_4g_power_en_get(void);
 #define DEVICE_ID_SIZE              32
 
 // GPIO定义 - 电源控制引脚
-#define SENSOR_POWER_PIN    GPIO_PIN_0    // S_EN - 传感器电源控制
-#define POWER_GPIO_GROUP    GPIO0         // GPIO组
+#define SENSOR_POWER_PIN    APP_IO_PIN_25 // S_EN - 传感器电源控制
+#define POWER_GPIO_TYPE     APP_IO_TYPE_NORMAL // GPIO类型
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -799,11 +799,7 @@ void ble_4g_protocol_init(void)
     // 初始化电源控制GPIO
     APP_LOG_INFO("%s Initializing power control GPIOs", DEBUG_TAG);
     
-    // 配置传感器电源控制引脚 (S_EN)
-    gpio_init_t sensor_power_config = GPIO_DEFAULT_CONFIG;
-    sensor_power_config.mode = GPIO_MODE_OUTPUT;
-    sensor_power_config.pin = SENSOR_POWER_PIN;
-    hal_gpio_init(POWER_GPIO_GROUP, &sensor_power_config);
+    // 传感器电源控制引脚 (S_EN) 已在user_periph_setup.c中配置
     
     // 初始状态：传感器断电
     ble_4g_protocol_sensor_power_control(false);
@@ -1359,10 +1355,10 @@ void ble_4g_protocol_send_static_info(void)
 void ble_4g_protocol_sensor_power_control(bool enable)
 {
     if (enable) {
-        hal_gpio_write_pin(POWER_GPIO_GROUP, SENSOR_POWER_PIN, GPIO_PIN_SET);
+        app_io_write_pin(POWER_GPIO_TYPE, SENSOR_POWER_PIN, APP_IO_PIN_SET);
         APP_LOG_INFO("%s Sensor power ON (S_EN)", DEBUG_TAG);
     } else {
-        hal_gpio_write_pin(POWER_GPIO_GROUP, SENSOR_POWER_PIN, GPIO_PIN_RESET);
+        app_io_write_pin(POWER_GPIO_TYPE, SENSOR_POWER_PIN, APP_IO_PIN_RESET);
         APP_LOG_INFO("%s Sensor power OFF (S_EN)", DEBUG_TAG);
     }
 }
@@ -1381,17 +1377,52 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
     // 1. 上电传感器
     ble_4g_protocol_sensor_power_control(true);
     
-    // 2. 等待3秒传感器稳定
-    sys_delay_ms(3000);
+    // 2. 等待传感器稳定和初始化
+    APP_LOG_INFO("%s Waiting for sensor stabilization...", DEBUG_TAG);
+    sys_delay_ms(5000);  // 增加稳定时间到5秒
     
-    // 3. 读取传感器数据
-    bool result = ble_4g_protocol_get_sensor_data(p_sensor_data);
+    // 3. 清除旧的传感器数据标志，准备接收新数据
+    sensor_data_clear_flag();
     
-    // 4. 断电传感器
+    // 4. 等待接收新的传感器数据（传感器会自动发送数据）
+    APP_LOG_INFO("%s Waiting for fresh sensor data...", DEBUG_TAG);
+    bool data_received = false;
+    
+    // 等待最多10秒接收新数据，每100ms检查一次
+    for (int i = 0; i < 100; i++)  // 100 * 100ms = 10秒
+    {
+        // 检查是否收到新的有效传感器数据
+        sensor_data_t raw_data = {0};
+        if (sensor_data_get_latest(&raw_data) && raw_data.data_valid)
+        {
+            // 更新协议层数据
+            update_sensor_data_from_parser();
+            data_received = true;
+            APP_LOG_INFO("%s Fresh sensor data received after %d00ms", DEBUG_TAG, i+1);
+            break;
+        }
+        sys_delay_ms(100);  // 每100ms检查一次
+    }
+    
+    // 5. 读取传感器数据
+    bool result = false;
+    if (data_received)
+    {
+        result = ble_4g_protocol_get_sensor_data(p_sensor_data);
+    }
+    else
+    {
+        APP_LOG_WARNING("%s Timeout waiting for sensor data, using cached data", DEBUG_TAG);
+        result = ble_4g_protocol_get_sensor_data(p_sensor_data);
+    }
+    
+    // 6. 断电传感器
     ble_4g_protocol_sensor_power_control(false);
     
-    if (result) {
-        APP_LOG_INFO("%s Sensor data read successfully", DEBUG_TAG);
+    if (result && data_received) {
+        APP_LOG_INFO("%s Fresh sensor data read successfully", DEBUG_TAG);
+    } else if (result) {
+        APP_LOG_WARNING("%s Using cached sensor data", DEBUG_TAG);
     } else {
         APP_LOG_ERROR("%s Failed to read sensor data", DEBUG_TAG);
     }
