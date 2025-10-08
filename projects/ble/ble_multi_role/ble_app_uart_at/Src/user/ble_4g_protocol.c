@@ -151,7 +151,7 @@ static void rtc_debug_test(void)
  * @return true: 获取成功, false: 获取失败
  *****************************************************************************************
  */
-static bool get_collection_timestamp_for_4g(char *timestamp_buffer)
+bool get_collection_timestamp_for_4g(char *timestamp_buffer)
 {
     if (timestamp_buffer == NULL) {
         APP_LOG_ERROR("%s Invalid timestamp buffer pointer", DEBUG_TAG);
@@ -1435,22 +1435,17 @@ void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sens
         return;
     }
     
-    APP_LOG_INFO("%s Triggering immediate upload due to threshold exceeded", DEBUG_TAG);
+    APP_LOG_INFO("%s Triggering immediate alarm upload due to threshold exceeded", DEBUG_TAG);
+    
+    // 更新当前传感器数据为报警数据
+    memcpy(&s_current_sensor_data_4g, p_sensor_data, sizeof(ble_4g_sensor_data_t));
     
     // 更新状态信息
     update_status_info_from_sources();
     
-    // 发送当前数据报告 (code 105)
-    APP_LOG_INFO("%s Sending immediate sensor data (code 105)", DEBUG_TAG);
-    ble_4g_protocol_send_data_report(p_sensor_data);
-    
-    // 发送状态信息报告 (code 103)
-    APP_LOG_INFO("%s Sending status info report (code 103) with immediate data", DEBUG_TAG);
-    ble_4g_protocol_send_status_info_report();
-    
-    // 发送静态信息
-    APP_LOG_INFO("%s Sending static info with immediate upload", DEBUG_TAG);
-    ble_4g_protocol_send_static_info();
+    // 直接复用定时上传功能，包含完整的电源管理
+    APP_LOG_INFO("%s Reusing scheduled upload function with power management for alarm", DEBUG_TAG);
+    ble_4g_protocol_upload_with_power_mgmt();
 }
 
 void ble_4g_protocol_send_static_info(void)
@@ -1635,11 +1630,11 @@ void ble_4g_protocol_upload_with_power_mgmt(void)
     else
     {
         // 没有累积数据，发送当前数据
-        APP_LOG_INFO("%s No collected data, sending current snapshot", DEBUG_TAG);
+     //   APP_LOG_INFO("%s No collected data, sending current snapshot", DEBUG_TAG);
         ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
-        sys_delay_ms(300);  // 等待数据发送完成
+      sys_delay_ms(300);  // 等待数据发送完成
         ble_4g_protocol_send_status_info_report();
-        sys_delay_ms(300);  // 等待状态信息发送完成
+       sys_delay_ms(300);  // 等待状态信息发送完成
     }
 
     // 4. 发送静态信息与参数信息、设置查询

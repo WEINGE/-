@@ -339,6 +339,17 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
 
 /**
  *****************************************************************************************
+ * @brief Get collection timestamp for 4G protocol
+ * 
+ * @param[out] timestamp_buffer Buffer to store the timestamp string (format: YYYYMMDDHHMMSS)
+ * 
+ * @return true if timestamp obtained successfully, false otherwise
+ *****************************************************************************************
+ */
+bool get_collection_timestamp_for_4g(char *timestamp_buffer);
+
+/**
+ *****************************************************************************************
  * @brief Core data upload function (without power management).
  * 
  * This function sends all necessary data reports. It assumes the 4G module

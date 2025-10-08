@@ -55,6 +55,7 @@
 #include "utility.h"            // 通用工具函数库
 #include "ring_buffer.h"        // 环形缓冲区实现，用于数据缓存
 #include "ble_protocol.h"       // BLE协议处理模块，处理JSON格式的协议数据
+#include "bm8563_rtc.h"         // RTC时间管理模块，用于获取实时时间戳
 #include <stdarg.h>             // 可变参数列表支持
 #include <stdio.h>              // 标准输入输出函数
 #include "ble_4g_protocol.h"  // 为了使用 ble_4g_sensor_data_t 类型
@@ -628,9 +629,16 @@ void update_sensor_data_from_parser(void)
         ble_4g_sensor_data.battery_percent = 100;   // TODO: 获取真实电池电量
         ble_4g_sensor_data.is_valid = raw_data.data_valid;
         
-        // 生成收集时间字符串 (格式: YYYYMMDDHHMM)
-        // TODO: 获取真实时间戳
-        strcpy(ble_4g_sensor_data.collect_time, "202411141642");
+        // 生成收集时间字符串 (格式: YYYYMMDDHHMMSS)
+        char timestamp[RTC_TIME_STRING_LEN];
+        extern bool get_collection_timestamp_for_4g(char *timestamp_buffer);
+        if (get_collection_timestamp_for_4g(timestamp)) {
+            strncpy(ble_4g_sensor_data.collect_time, timestamp, sizeof(ble_4g_sensor_data.collect_time) - 1);
+            ble_4g_sensor_data.collect_time[sizeof(ble_4g_sensor_data.collect_time) - 1] = '\0';
+        } else {
+            // 如果RTC获取失败，使用默认时间戳
+            strcpy(ble_4g_sensor_data.collect_time, "20000101000000");
+        }
         
         // 使用接口函数更新4G协议数据
         ble_4g_protocol_update_sensor_data(&ble_4g_sensor_data);

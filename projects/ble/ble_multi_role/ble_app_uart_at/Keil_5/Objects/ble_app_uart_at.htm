@@ -3,11 +3,11 @@
 <title>Static Call Graph - [.\Objects\ble_app_uart_at.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\ble_app_uart_at.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Oct 08 15:51:21 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Oct 08 16:54:09 2025
 <BR><P>
-<H3>Maximum Stack Usage =       2400 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =       2464 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
-gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 <P>
 <H3>
 Mutually Recursive functions
@@ -3819,6 +3819,7 @@ Global Symbols
 <LI><a href="#[1b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_io_init
 <LI><a href="#[2d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_update_sensor_data
 <LI><a href="#[258]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_update_sensor_data
+<LI><a href="#[257]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
 <LI><a href="#[4c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_test_checksum
 <LI><a href="#[256]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_start_report_timer
 <LI><a href="#[255]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_start_collect_timer
@@ -4006,7 +4007,8 @@ Global Symbols
 <P><STRONG><a name="[234]"></a>strncpy</STRONG> (Thumb, 24 bytes, Stack size 8 bytes, strncpy.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = strncpy
 </UL>
-<BR>[Called By]<UL><LI><a href="#[22f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
+<BR>[Called By]<UL><LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[22f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
 <LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_force_get_imei
 <LI><a href="#[2c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 <LI><a href="#[40f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;parse_at_command_response
@@ -4023,6 +4025,7 @@ Global Symbols
 <LI><a href="#[208]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_execute_cplt
 <LI><a href="#[1f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_parse
 <LI><a href="#[1e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_4g_data
+<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[530]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart1_send_json_to_4g
 <LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 <LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
@@ -4031,7 +4034,6 @@ Global Symbols
 <LI><a href="#[502]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_value
 <LI><a href="#[196]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_strdup
 <LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
-<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[22f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
 <LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_force_get_imei
 <LI><a href="#[1a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_send_json_response
@@ -4071,10 +4073,10 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[249]"></a>strcpy</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, strcpy.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR><BR>[Called By]<UL><LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
+<LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[502]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_value
 <LI><a href="#[508]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_string_ptr
-<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[242]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init_device_info
 <LI><a href="#[1a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_and_send_collected_response
 <LI><a href="#[2c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init_device_info
@@ -4085,10 +4087,10 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[1f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_preprocess_command
 <LI><a href="#[133]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_uart_evt_handler
+<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[330]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;skip_utf8_bom
 <LI><a href="#[332]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;parse_value
-<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[40f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;parse_at_command_response
 <LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_admin_cmd
 </UL>
@@ -4991,6 +4993,7 @@ Global Symbols
 <LI><a href="#[1e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_4g_data
 <LI><a href="#[1c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_periph_init
 <LI><a href="#[130]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_uart1_evt_handler
+<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[2bf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_data_process
 <LI><a href="#[258]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_update_sensor_data
 <LI><a href="#[257]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
@@ -5008,7 +5011,6 @@ Global Symbols
 <LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[24f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
-<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler
 <LI><a href="#[22f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_device_id
@@ -5439,7 +5441,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[235]"></a>ble_4g_protocol_get_sensor_data</STRONG> (Thumb, 76 bytes, Stack size 24 bytes, ble_4g_protocol.o(i.ble_4g_protocol_get_sensor_data))
-<BR><BR>[Stack]<UL><LI>Max Depth = 768<LI>Call Chain = ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 832<LI>Call Chain = ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
@@ -5470,7 +5472,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[23f]"></a>ble_4g_protocol_init</STRONG> (Thumb, 412 bytes, Stack size 72 bytes, ble_4g_protocol.o(i.ble_4g_protocol_init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 896<LI>Call Chain = ble_4g_protocol_init &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 960<LI>Call Chain = ble_4g_protocol_init &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
 <LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -5492,14 +5494,14 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[246]"></a>ble_4g_protocol_read_sensor_with_power_mgmt</STRONG> (Thumb, 458 bytes, Stack size 56 bytes, ble_4g_protocol.o(i.ble_4g_protocol_read_sensor_with_power_mgmt))
-<BR><BR>[Stack]<UL><LI>Max Depth = 824<LI>Call Chain = ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 888<LI>Call Chain = ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[1a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sys_delay_ms
 <LI><a href="#[24b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_clear_flag
 <LI><a href="#[24c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
-<LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
+<LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_sensor_power_control
 <LI><a href="#[235]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_sensor_data
 <LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncpy
@@ -5542,8 +5544,7 @@ Global Symbols
 <LI><a href="#[24f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[227]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_data_report_json
 </UL>
-<BR>[Called By]<UL><LI><a href="#[257]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
-<LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
+<BR>[Called By]<UL><LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
 <LI><a href="#[248]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
@@ -5588,8 +5589,7 @@ Global Symbols
 <LI><a href="#[251]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_param_info_report
 <LI><a href="#[250]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_device_info_report
 </UL>
-<BR>[Called By]<UL><LI><a href="#[257]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
-<LI><a href="#[248]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[248]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
 <P><STRONG><a name="[254]"></a>ble_4g_protocol_send_status_info_report</STRONG> (Thumb, 58 bytes, Stack size 16 bytes, ble_4g_protocol.o(i.ble_4g_protocol_send_status_info_report))
@@ -5599,8 +5599,7 @@ Global Symbols
 <LI><a href="#[24f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_status_info_json
 </UL>
-<BR>[Called By]<UL><LI><a href="#[257]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
-<LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
+<BR>[Called By]<UL><LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
 <LI><a href="#[248]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
@@ -5636,14 +5635,13 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[257]"></a>ble_4g_protocol_trigger_immediate_upload</STRONG> (Thumb, 170 bytes, Stack size 24 bytes, ble_4g_protocol.o(i.ble_4g_protocol_trigger_immediate_upload))
-<BR><BR>[Stack]<UL><LI>Max Depth = 552<LI>Call Chain = ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<P><STRONG><a name="[257]"></a>ble_4g_protocol_trigger_immediate_upload</STRONG> (Thumb, 118 bytes, Stack size 24 bytes, ble_4g_protocol.o(i.ble_4g_protocol_trigger_immediate_upload))
+<BR><BR>[Stack]<UL><LI>Max Depth = 600<LI>Call Chain = ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
-<LI><a href="#[254]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_status_info_report
-<LI><a href="#[253]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_static_info
-<LI><a href="#[24e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_data_report
+<LI><a href="#[248]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[247]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[336]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
 </UL>
@@ -5657,7 +5655,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 </UL>
 
-<P><STRONG><a name="[248]"></a>ble_4g_protocol_upload_with_power_mgmt</STRONG> (Thumb, 260 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.ble_4g_protocol_upload_with_power_mgmt))
+<P><STRONG><a name="[248]"></a>ble_4g_protocol_upload_with_power_mgmt</STRONG> (Thumb, 234 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.ble_4g_protocol_upload_with_power_mgmt))
 <BR><BR>[Stack]<UL><LI>Max Depth = 576<LI>Call Chain = ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -5668,7 +5666,8 @@ Global Symbols
 <LI><a href="#[24e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_data_report
 <LI><a href="#[226]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_clear_collected_data
 </UL>
-<BR>[Called By]<UL><LI><a href="#[23f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
+<BR>[Called By]<UL><LI><a href="#[257]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
+<LI><a href="#[23f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler
 </UL>
 
@@ -6073,7 +6072,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[2bf]"></a>ble_protocol_data_process</STRONG> (Thumb, 202 bytes, Stack size 1056 bytes, ble_protocol.o(i.ble_protocol_data_process))
-<BR><BR>[Stack]<UL><LI>Max Depth = 2136<LI>Call Chain = ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 2200<LI>Call Chain = ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[2c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_parse_json_command
@@ -6128,7 +6127,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[2c7]"></a>ble_protocol_handle_query</STRONG> (Thumb, 80 bytes, Stack size 24 bytes, ble_protocol.o(i.ble_protocol_handle_query))
-<BR><BR>[Stack]<UL><LI>Max Depth = 992<LI>Call Chain = ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 1056<LI>Call Chain = ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[19b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;analyze_and_send_super_command
@@ -6380,9 +6379,9 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[318]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_read_time
 <LI><a href="#[1c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
-<BR>[Called By]<UL><LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<BR>[Called By]<UL><LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
+<LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
-<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 </UL>
 
 <P><STRONG><a name="[1cd]"></a>bm8563_init</STRONG> (Thumb, 188 bytes, Stack size 32 bytes, bm8563_rtc.o(i.bm8563_init))
@@ -6405,8 +6404,8 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[31f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_read_regs
 </UL>
-<BR>[Called By]<UL><LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
-<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
+<BR>[Called By]<UL><LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
+<LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
 </UL>
 
 <P><STRONG><a name="[318]"></a>bm8563_read_time</STRONG> (Thumb, 210 bytes, Stack size 32 bytes, bm8563_rtc.o(i.bm8563_read_time))
@@ -6447,8 +6446,8 @@ Global Symbols
 <LI><a href="#[31f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_read_regs
 </UL>
 <BR>[Called By]<UL><LI><a href="#[1cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_init
-<LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
 <LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
+<LI><a href="#[245]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
 </UL>
 
 <P><STRONG><a name="[22b]"></a>cJSON_AddItemToObject</STRONG> (Thumb, 14 bytes, Stack size 8 bytes, cjson.o(i.cJSON_AddItemToObject))
@@ -7201,6 +7200,23 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble_profile_patch.o(.data)
 </UL>
+<P><STRONG><a name="[24d]"></a>get_collection_timestamp_for_4g</STRONG> (Thumb, 328 bytes, Stack size 32 bytes, ble_4g_protocol.o(i.get_collection_timestamp_for_4g))
+<BR><BR>[Stack]<UL><LI>Max Depth = 312<LI>Call Chain = get_collection_timestamp_for_4g &rArr; bm8563_get_time_string &rArr; bm8563_read_time &rArr; bm8563_read_regs &rArr; i2c_wait_ack &rArr; i2c_stop &rArr; sda_out &rArr; app_io_init &rArr; hal_aon_gpio_init &rArr; hal_aon_gpio_init_ext &rArr; ll_aon_gpio_init &rArr; ll_aon_gpio_set_pin_mode
+</UL>
+<BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
+<LI><a href="#[317]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_get_time_string
+<LI><a href="#[31d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_start
+<LI><a href="#[31e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_is_running
+<LI><a href="#[1f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncmp
+<LI><a href="#[249]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[19e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
+<LI><a href="#[3cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcat
+</UL>
+<BR>[Called By]<UL><LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[246]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
+<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
+</UL>
+
 <P><STRONG><a name="[3cc]"></a>get_data_from_adc</STRONG> (Thumb, 230 bytes, Stack size 72 bytes, platform_adc_1.o(i.get_data_from_adc))
 <BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = get_data_from_adc &rArr; __aeabi_dmul &rArr; _double_epilogue &rArr; _double_round
 </UL>
@@ -7776,20 +7792,20 @@ Global Symbols
 <P><STRONG><a name="[3c]"></a>hci_le_cmd_cmp_evt_init_handler_patch</STRONG> (Thumb, 66 bytes, Stack size 16 bytes, gapm_init_patch.o(i.hci_le_cmd_cmp_evt_init_handler_patch))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = hci_le_cmd_cmp_evt_init_handler_patch &rArr; init_hci_le_cmd_cmp_evt_starting_handler_patch
 </UL>
-<BR>[Calls]<UL><LI><a href="#[41d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gapm_actv_retrieve_cmd_cmp_evt (via Veneer)
-<LI><a href="#[41e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init_hci_le_cmd_cmp_evt_starting_handler_patch
+<BR>[Calls]<UL><LI><a href="#[41e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init_hci_le_cmd_cmp_evt_starting_handler_patch
 <LI><a href="#[420]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init_hci_le_cmd_cmp_evt_stopping_handler
 <LI><a href="#[41f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init_hci_le_cmd_cmp_evt_started_handler
+<LI><a href="#[41d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gapm_actv_retrieve_cmd_cmp_evt (via Veneer)
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble.o(.data)
 </UL>
 <P><STRONG><a name="[3d]"></a>hci_le_cmd_cmp_evt_scan_handler_patch</STRONG> (Thumb, 56 bytes, Stack size 16 bytes, gapm_scan_patch.o(i.hci_le_cmd_cmp_evt_scan_handler_patch))
 <BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = hci_le_cmd_cmp_evt_scan_handler_patch &rArr; scan_hci_le_cmd_cmp_evt_starting_handler_patch &rArr; gapm_scan_send_hci_le_set_ext_scan_en_cmd_patch
 </UL>
-<BR>[Calls]<UL><LI><a href="#[41d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gapm_actv_retrieve_cmd_cmp_evt (via Veneer)
-<LI><a href="#[422]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_hci_le_cmd_cmp_evt_stopping_handler
+<BR>[Calls]<UL><LI><a href="#[422]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_hci_le_cmd_cmp_evt_stopping_handler
 <LI><a href="#[421]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scan_hci_le_cmd_cmp_evt_starting_handler_patch
 <LI><a href="#[395]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gapm_adv_filter_list_clear
+<LI><a href="#[41d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gapm_actv_retrieve_cmd_cmp_evt (via Veneer)
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble.o(.data)
 </UL>
@@ -10126,18 +10142,20 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[10f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 </UL>
 
-<P><STRONG><a name="[236]"></a>update_sensor_data_from_parser</STRONG> (Thumb, 230 bytes, Stack size 136 bytes, user_app.o(i.update_sensor_data_from_parser))
-<BR><BR>[Stack]<UL><LI>Max Depth = 744<LI>Call Chain = update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<P><STRONG><a name="[236]"></a>update_sensor_data_from_parser</STRONG> (Thumb, 254 bytes, Stack size 152 bytes, user_app.o(i.update_sensor_data_from_parser))
+<BR><BR>[Stack]<UL><LI>Max Depth = 808<LI>Call Chain = update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[1f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
 <LI><a href="#[24c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
+<LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[565]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_vol_to_lel
 <LI><a href="#[2d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_update_sensor_data
 <LI><a href="#[566]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_vol_to_lel
 <LI><a href="#[258]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_update_sensor_data
 <LI><a href="#[336]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
 <LI><a href="#[249]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncpy
 <LI><a href="#[19d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[23f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
@@ -10941,7 +10959,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[336]"></a>check_threshold_and_trigger_upload</STRONG> (Thumb, 218 bytes, Stack size 56 bytes, user_app.o(i.check_threshold_and_trigger_upload))
-<BR><BR>[Stack]<UL><LI>Max Depth = 608<LI>Call Chain = check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 656<LI>Call Chain = check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[1f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
@@ -10979,7 +10997,7 @@ Local Symbols
 <BR>[Address Reference Count : 1]<UL><LI> user_app.o(i.ble_app_init)
 </UL>
 <P><STRONG><a name="[129]"></a>gus_service_process_event</STRONG> (Thumb, 198 bytes, Stack size 264 bytes, user_app.o(i.gus_service_process_event))
-<BR><BR>[Stack]<UL><LI>Max Depth = 2400<LI>Call Chain = gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 2464<LI>Call Chain = gus_service_process_event &rArr; ble_protocol_data_process &rArr; ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_parse
 <LI><a href="#[291]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_flag_set
@@ -11067,7 +11085,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[19b]"></a>analyze_and_send_super_command</STRONG> (Thumb, 526 bytes, Stack size 32 bytes, ble_protocol.o(i.analyze_and_send_super_command))
-<BR><BR>[Stack]<UL><LI>Max Depth = 968<LI>Call Chain = analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 1032<LI>Call Chain = analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[1a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sys_delay_ms
@@ -11101,7 +11119,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[1a2]"></a>ble_protocol_create_query_response</STRONG> (Thumb, 792 bytes, Stack size 192 bytes, ble_protocol.o(i.ble_protocol_create_query_response))
-<BR><BR>[Stack]<UL><LI>Max Depth = 936<LI>Call Chain = ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 1000<LI>Call Chain = ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[164]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ui2d
@@ -11152,7 +11170,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[2c0]"></a>ble_protocol_parse_json_command</STRONG> (Thumb, 2118 bytes, Stack size 88 bytes, ble_protocol.o(i.ble_protocol_parse_json_command))
-<BR><BR>[Stack]<UL><LI>Max Depth = 1080<LI>Call Chain = ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 1144<LI>Call Chain = ble_protocol_parse_json_command &rArr; ble_protocol_handle_query &rArr; analyze_and_send_super_command &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[164]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ui2d
@@ -11352,7 +11370,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[c7]"></a>data_report_timer_handler</STRONG> (Thumb, 132 bytes, Stack size 56 bytes, ble_4g_protocol.o(i.data_report_timer_handler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 880<LI>Call Chain = data_report_timer_handler &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 944<LI>Call Chain = data_report_timer_handler &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[248]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
@@ -11375,22 +11393,6 @@ Local Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble_4g_protocol.o(i.ble_4g_protocol_init)
 </UL>
-<P><STRONG><a name="[24d]"></a>get_collection_timestamp_for_4g</STRONG> (Thumb, 328 bytes, Stack size 32 bytes, ble_4g_protocol.o(i.get_collection_timestamp_for_4g))
-<BR><BR>[Stack]<UL><LI>Max Depth = 312<LI>Call Chain = get_collection_timestamp_for_4g &rArr; bm8563_get_time_string &rArr; bm8563_read_time &rArr; bm8563_read_regs &rArr; i2c_wait_ack &rArr; i2c_stop &rArr; sda_out &rArr; app_io_init &rArr; hal_aon_gpio_init &rArr; hal_aon_gpio_init_ext &rArr; ll_aon_gpio_init &rArr; ll_aon_gpio_set_pin_mode
-</UL>
-<BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
-<LI><a href="#[317]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_get_time_string
-<LI><a href="#[31d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_start
-<LI><a href="#[31e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_is_running
-<LI><a href="#[1f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncmp
-<LI><a href="#[249]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
-<LI><a href="#[19e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
-<LI><a href="#[3cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcat
-</UL>
-<BR>[Called By]<UL><LI><a href="#[246]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
-<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
-</UL>
-
 <P><STRONG><a name="[245]"></a>rtc_debug_test</STRONG> (Thumb, 394 bytes, Stack size 80 bytes, ble_4g_protocol.o(i.rtc_debug_test))
 <BR><BR>[Stack]<UL><LI>Max Depth = 360<LI>Call Chain = rtc_debug_test &rArr; bm8563_get_time_string &rArr; bm8563_read_time &rArr; bm8563_read_regs &rArr; i2c_wait_ack &rArr; i2c_stop &rArr; sda_out &rArr; app_io_init &rArr; hal_aon_gpio_init &rArr; hal_aon_gpio_init_ext &rArr; ll_aon_gpio_init &rArr; ll_aon_gpio_set_pin_mode
 </UL>
@@ -11420,7 +11422,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[c6]"></a>sensor_collect_timer_handler</STRONG> (Thumb, 318 bytes, Stack size 80 bytes, ble_4g_protocol.o(i.sensor_collect_timer_handler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 904<LI>Call Chain = sensor_collect_timer_handler &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
+<BR><BR>[Stack]<UL><LI>Max Depth = 968<LI>Call Chain = sensor_collect_timer_handler &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; ble_4g_protocol_get_sensor_data &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_data_report &rArr; ble_4g_protocol_create_data_report_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g

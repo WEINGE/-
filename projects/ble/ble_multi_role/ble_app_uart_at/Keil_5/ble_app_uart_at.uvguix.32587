@@ -1974,8 +1974,8 @@
       <Doc>
         <Name>..\Src\user\ble_4g_protocol.c</Name>
         <ColumnNumber>0</ColumnNumber>
-        <TopLine>241</TopLine>
-        <CurrentLine>244</CurrentLine>
+        <TopLine>212</TopLine>
+        <CurrentLine>213</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
