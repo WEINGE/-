@@ -510,13 +510,9 @@ static char* ble_4g_protocol_create_data_report_json(const ble_4g_sensor_data_t 
         return NULL;
     }
     
-    // 动态获取设备 ID (IMEI)
-    char device_id[DEVICE_ID_SIZE] = {0};
-    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
-    
-    // 构建header
+    // 构建header（使用DTU特殊字段替换IMEI）
     cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_DATA_REPORT);
-    cJSON_AddStringToObject(header, "device_ID", device_id);
+    cJSON_AddStringToObject(header, "device_ID", "${IMEI}");
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body - 使用特殊字段让4G模块自动转换
@@ -877,6 +873,9 @@ static void data_report_timer_handler(void *p_context)
 {
     APP_LOG_INFO("%s Data report timer triggered - uploading with DTU power management", DEBUG_TAG);
     
+    // 更新状态信息
+    update_status_info_from_sources();
+    
     // 确保有数据需要上报
     if (s_collected_data_count == 0)
     {
@@ -890,20 +889,16 @@ static void data_report_timer_handler(void *p_context)
         {
             memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
         }
-        update_status_info_from_sources();  // 同时更新状态信息
         
-        // 使用DTU电源管理上传数据
+        // 使用DTU电源管理上传单条数据
         ble_4g_protocol_upload_with_power_mgmt();
     }
     else
     {
         APP_LOG_INFO("%s %d data points ready to report with DTU power management", DEBUG_TAG, s_collected_data_count);
         
-        // 使用DTU电源管理上传所有累积数据
+        // 使用DTU电源管理上传所有累积数据（不在这里清空，在上传函数内部处理）
         ble_4g_protocol_upload_with_power_mgmt();
-        
-        // 清空累积数据
-        ble_4g_protocol_clear_collected_data();
     }
 }
 
@@ -1608,40 +1603,52 @@ void ble_4g_protocol_upload(void)
 void ble_4g_protocol_upload_with_power_mgmt(void)
 {
     APP_LOG_INFO("%s Starting upload with 4G/DTU power management", DEBUG_TAG);
-    
-    // 1. 上电4G/DTU模块
+
+    // 1. 上电4G/DTU模块并等待稳定
     gpio_4g_power_en_set(true);
-    APP_LOG_INFO("%s 4G/DTU module powered on", DEBUG_TAG);
-    
-    // 2. 等待基本硬件稳定（延长到5秒，确保模块完全启动）
-    APP_LOG_INFO("%s Waiting 5 seconds for 4G/DTU module hardware stabilization", DEBUG_TAG);
-    sys_delay_ms(5000);
-    
-    // 3. 等待网络注册完成（延长到60秒超时）
-    APP_LOG_INFO("%s Waiting for 4G network registration", DEBUG_TAG);
-    bool network_ready = wait_for_4g_network_registration(60);
-    
-    // 4. 无论网络注册状态如何，都继续执行上传流程
-    // （因为某些4G模块的CREG查询可能有延迟，但网络实际可用）
-    APP_LOG_INFO("%s Starting 4G/DTU initialization process", DEBUG_TAG);
-    
-    // 使用统一的IMEI获取函数
-    if (!ble_4g_protocol_force_get_imei())
-    {
-        APP_LOG_WARNING("%s Failed to get IMEI during upload, using cached/fallback ID", DEBUG_TAG);
-    }
-    
-    // 5. 调用核心上传函数
-    APP_LOG_INFO("%s Starting data upload process", DEBUG_TAG);
-    ble_4g_protocol_upload();
-    
-    // 6. 等待10秒，接收平台可能下发的设置指令
-    APP_LOG_INFO("%s Upload completed, waiting 10 seconds for platform response", DEBUG_TAG);
     sys_delay_ms(10000);
-    
-    APP_LOG_INFO("%s Platform response wait period finished, powering down 4G module", DEBUG_TAG);
-    
-    // 7. 断电4G/DTU模块
+
+    // 2. 等待网络注册并获取IMEI
+//    (void)wait_for_4g_network_registration(60);
+ //   (void)ble_4g_protocol_force_get_imei();
+
+    // 3. 批量发送采集数据（先发动态，再发静态与查询）
+    if (s_collected_data_count > 0)
+    {
+        // 从最旧的数据开始上报
+        uint8_t total = s_collected_data_count;
+        uint8_t start_index = (s_data_collection_index + MAX_COLLECTED_DATA_COUNT - s_collected_data_count) % MAX_COLLECTED_DATA_COUNT;
+        APP_LOG_INFO("%s Uploading %d collected data points", DEBUG_TAG, total);
+        for (uint8_t i = 0; i < total; i++)
+        {
+            uint8_t current_index = (start_index + i) % MAX_COLLECTED_DATA_COUNT;
+            // 发送 105 监测数据
+            ble_4g_protocol_send_data_report(&s_collected_data_array[current_index]);
+            sys_delay_ms(300);  // 每条数据发送后等待2秒，确保传输完成
+            // 每次105后都跟一个103状态信息
+            ble_4g_protocol_send_status_info_report();
+            sys_delay_ms(300);  // 状态信息发送后也等待2秒
+        }
+        // 发送完批量数据后清空缓冲
+        ble_4g_protocol_clear_collected_data();
+    }
+    else
+    {
+        // 没有累积数据，发送当前数据
+        APP_LOG_INFO("%s No collected data, sending current snapshot", DEBUG_TAG);
+        ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
+        sys_delay_ms(300);  // 等待数据发送完成
+        ble_4g_protocol_send_status_info_report();
+        sys_delay_ms(300);  // 等待状态信息发送完成
+    }
+
+    // 4. 发送静态信息与参数信息、设置查询
+    ble_4g_protocol_send_static_info();
+
+    // 5. 等待平台可能下发的设置指令
+    sys_delay_ms(10000);
+
+    // 6. 断电4G/DTU模块
     gpio_4g_power_en_set(false);
     APP_LOG_INFO("%s 4G/DTU module powered off", DEBUG_TAG);
 }

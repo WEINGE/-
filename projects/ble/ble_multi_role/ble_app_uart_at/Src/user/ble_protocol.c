@@ -336,27 +336,12 @@ static void parse_at_command_response(const char* response, uint16_t length)
     else if (strncmp(response, "+CCLK:", 6) == 0)
     {
         // 固定格式: +CCLK:YYYY/MM/DD,HH:MM:SS （无引号、无时区）
-        APP_LOG_INFO("%s Received DTU time response: %s", DEBUG_TAG, response);
+
 
         const char* time_data = response + 6; // 跳过“+CCLK:”
 
         // 直接使用 bm8563_set_time_from_network 函数解析并设置时间
-        if (bm8563_set_time_from_network(time_data))
-        {
-            APP_LOG_INFO("%s Successfully synchronized RTC time from DTU", DEBUG_TAG);
-            
-            // 验证时间同步结果
-            char rtc_time_str[RTC_TIME_STRING_LEN];
-            if (bm8563_get_time_string(rtc_time_str))
-            {
-                APP_LOG_INFO("%s RTC time after sync: %s", DEBUG_TAG, rtc_time_str);
-            }
-            else
-            {
-                APP_LOG_WARNING("%s Failed to read RTC time after sync", DEBUG_TAG);
-            }
-        }
-        else
+        if (!bm8563_set_time_from_network(time_data))
         {
             APP_LOG_ERROR("%s Failed to synchronize RTC time from DTU: %s", DEBUG_TAG, time_data);
         }
