@@ -57,6 +57,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "at_cmd_handler.h"
+#include "bm8563_rtc.h"
 
 /*
  * DEFINES
@@ -449,6 +450,13 @@ void app_periph_init(void)
         app_io_init(APP_IO_TYPE_AON, &io_init);
         // Set initial state to OFF (low)
         app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6, APP_IO_PIN_SET);
+    }
+
+    // 初始化BM8563 RTC模块
+    if (bm8563_init()) {
+        APP_LOG_INFO("BM8563 RTC initialized successfully");
+    } else {
+        APP_LOG_ERROR("BM8563 RTC initialization failed");
     }
 
     pwr_mgmt_mode_set(PMR_MGMT_ACTIVE_MODE);

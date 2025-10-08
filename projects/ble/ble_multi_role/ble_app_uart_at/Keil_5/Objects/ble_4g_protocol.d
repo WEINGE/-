@@ -126,3 +126,4 @@
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\libraries\app_key\app_key_core.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
 .\objects\ble_4g_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\ble_4g_protocol.o: ..\Src\user\bm8563_rtc.h

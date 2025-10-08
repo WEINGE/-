@@ -117,3 +117,4 @@
 .\objects\main.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\main.o: ..\Src\user\ble_4g_protocol.h
 .\objects\main.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
+.\objects\main.o: ..\Src\user\bm8563_rtc.h

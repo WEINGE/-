@@ -33,6 +33,7 @@
 #include "app_timer.h"        // 为了使用定时器相关函数
 #include <stdlib.h>           // 为了使用 free 函数
 #include "grx_sys.h"          // 为了使用 sdk_err_t 类型
+#include "bm8563_rtc.h"       // 为了使用RTC时间读取功能
 
 /*
  * EXTERNAL FUNCTION DECLARATIONS
@@ -88,6 +89,119 @@ static bool s_is_sending = false;  // 是否正在发送数据
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
+
+/**
+ *****************************************************************************************
+ * @brief RTC调试和测试函数
+ * 
+ * @details 测试RTC的各项功能并输出调试信息
+ *****************************************************************************************
+ */
+static void rtc_debug_test(void)
+{
+    APP_LOG_INFO("%s === RTC Debug Test Start ===", DEBUG_TAG);
+    
+    // 1. 检查RTC是否运行
+    bool is_running = bm8563_is_running();
+    APP_LOG_INFO("%s RTC is running: %s", DEBUG_TAG, is_running ? "YES" : "NO");
+    
+    // 2. 尝试读取原始时间数据
+    rtc_time_t rtc_time;
+    bool read_success = bm8563_read_time(&rtc_time);
+    APP_LOG_INFO("%s Raw time read success: %s", DEBUG_TAG, read_success ? "YES" : "NO");
+    
+    if (read_success) {
+        APP_LOG_INFO("%s Raw time: %04d-%02d-%02d %02d:%02d:%02d (weekday: %d)",
+                     DEBUG_TAG, rtc_time.year, rtc_time.month, rtc_time.day,
+                     rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.weekday);
+    }
+    
+    // 3. 测试格式化时间字符串
+    char time_str[RTC_TIME_STRING_LEN];
+    bool format_success = bm8563_get_time_string(time_str);
+    APP_LOG_INFO("%s Formatted time success: %s", DEBUG_TAG, format_success ? "YES" : "NO");
+    
+    if (format_success) {
+        APP_LOG_INFO("%s Formatted time: %s (length: %d)", DEBUG_TAG, time_str, strlen(time_str));
+    }
+    
+    // 4. 如果RTC没有运行，尝试启动
+    if (!is_running) {
+        APP_LOG_INFO("%s Attempting to start RTC...", DEBUG_TAG);
+        bool start_success = bm8563_start();
+        APP_LOG_INFO("%s RTC start result: %s", DEBUG_TAG, start_success ? "SUCCESS" : "FAILED");
+        
+        // 重新检查状态
+        is_running = bm8563_is_running();
+        APP_LOG_INFO("%s RTC is now running: %s", DEBUG_TAG, is_running ? "YES" : "NO");
+    }
+    
+    APP_LOG_INFO("%s === RTC Debug Test End ===", DEBUG_TAG);
+}
+
+/**
+ *****************************************************************************************
+ * @brief 为4G上传获取采集时间戳（方案1实现）
+ * 
+ * @details 使用bm8563_get_time_string()函数直接获取格式化的时间字符串
+ *          格式: "YYYYMMDDHHmmss" (如: "20241114164235")
+ * 
+ * @param[out] timestamp_buffer 时间戳缓冲区 (至少15字节)
+ * 
+ * @return true: 获取成功, false: 获取失败
+ *****************************************************************************************
+ */
+static bool get_collection_timestamp_for_4g(char *timestamp_buffer)
+{
+    if (timestamp_buffer == NULL) {
+        APP_LOG_ERROR("%s Invalid timestamp buffer pointer", DEBUG_TAG);
+        return false;
+    }
+    
+    // 首先检查RTC是否正常工作
+    if (!bm8563_is_running()) {
+        APP_LOG_WARNING("%s RTC is not running, attempting to start", DEBUG_TAG);
+        if (!bm8563_start()) {
+            APP_LOG_ERROR("%s Failed to start RTC, using default timestamp", DEBUG_TAG);
+            strcpy(timestamp_buffer, "20240101000000");
+            return false;
+        }
+    }
+    
+    // 直接获取格式化的时间字符串 "YYYYMMDDHHmmss"
+    if (!bm8563_get_time_string(timestamp_buffer)) {
+        APP_LOG_ERROR("%s Failed to get RTC time for 4G upload", DEBUG_TAG);
+        strcpy(timestamp_buffer, "20000101000000");
+        return false;
+    }
+    
+    // 如果时间为默认值，记录警告但继续使用
+    if (strncmp(timestamp_buffer, "2000", 4) == 0) {
+        APP_LOG_WARNING("%s RTC time is default (%s), using default timestamp", DEBUG_TAG, timestamp_buffer);
+    }
+    
+    // 验证时间戳格式和长度
+    size_t len = strlen(timestamp_buffer);
+    if (len != 14) {
+        APP_LOG_WARNING("%s Invalid timestamp length: %d, expected 14. Timestamp: %s", 
+                        DEBUG_TAG, len, timestamp_buffer);
+        
+        // 如果长度不对，尝试补零或截断
+        if (len < 14) {
+            // 长度不足，补零
+            while (strlen(timestamp_buffer) < 14) {
+                strcat(timestamp_buffer, "0");
+            }
+        } else if (len > 14) {
+            // 长度过长，截断
+            timestamp_buffer[14] = '\0';
+        }
+        APP_LOG_INFO("%s Corrected timestamp: %s", DEBUG_TAG, timestamp_buffer);
+    }
+    
+    APP_LOG_INFO("%s Collection timestamp for 4G: %s", DEBUG_TAG, timestamp_buffer);
+    return true;
+}
 
 /**
  *****************************************************************************************
@@ -615,10 +729,20 @@ static void sensor_collect_timer_handler(void *p_context)
         // 1. 更新当前传感器数据
         memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
         
-        // 2. 更新状态信息（103）- 使其与监测数据同步采集
+        // 2. 为当前传感器数据添加采集时间戳
+        char timestamp[RTC_TIME_STRING_LEN];
+        if (get_collection_timestamp_for_4g(timestamp)) {
+            strncpy(s_current_sensor_data_4g.collect_time, timestamp, sizeof(s_current_sensor_data_4g.collect_time) - 1);
+            s_current_sensor_data_4g.collect_time[sizeof(s_current_sensor_data_4g.collect_time) - 1] = '\0';
+            APP_LOG_INFO("%s Collection timer: timestamp updated: %s", DEBUG_TAG, s_current_sensor_data_4g.collect_time);
+        } else {
+            APP_LOG_WARNING("%s Collection timer: failed to get RTC timestamp", DEBUG_TAG);
+        }
+        
+        // 3. 更新状态信息（103）- 使其与监测数据同步采集
         update_status_info_from_sources();
         
-        // 3. 将当前数据存储到累积数组中
+        // 4. 将当前数据存储到累积数组中
         if (s_collected_data_count < MAX_COLLECTED_DATA_COUNT)
         {
             memcpy(&s_collected_data_array[s_data_collection_index], &s_current_sensor_data_4g, 
@@ -627,7 +751,7 @@ static void sensor_collect_timer_handler(void *p_context)
             s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
             s_collected_data_count++;
             
-            APP_LOG_INFO("%s Data collected with power management, count: %d", DEBUG_TAG, s_collected_data_count);
+            APP_LOG_INFO("%s Data collected with power management and timestamp, count: %d", DEBUG_TAG, s_collected_data_count);
         }
         else
         {
@@ -637,7 +761,7 @@ static void sensor_collect_timer_handler(void *p_context)
             
             s_data_collection_index = (s_data_collection_index + 1) % MAX_COLLECTED_DATA_COUNT;
             
-            APP_LOG_INFO("%s Data collected, array full, overwriting old data", DEBUG_TAG);
+            APP_LOG_INFO("%s Data collected with timestamp, array full, overwriting old data", DEBUG_TAG);
         }
     }
     else
@@ -836,6 +960,10 @@ void ble_4g_protocol_init(void)
     
     s_protocol_initialized = true;
     APP_LOG_INFO("%s 4G protocol initialized successfully", DEBUG_TAG);
+    
+    // 执行RTC调试测试
+    APP_LOG_INFO("%s Running RTC debug test during 4G protocol initialization", DEBUG_TAG);
+    rtc_debug_test();
     
     // 初始化完成后执行首次上传（使用统一的电源管理流程）
     APP_LOG_INFO("%s Performing initial upload with power management", DEBUG_TAG);
@@ -1416,13 +1544,26 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         result = ble_4g_protocol_get_sensor_data(p_sensor_data);
     }
     
-    // 6. 断电传感器
+    // 6. 获取采集时间戳并更新到传感器数据中
+    if (result && p_sensor_data != NULL) {
+        char timestamp[RTC_TIME_STRING_LEN];
+        if (get_collection_timestamp_for_4g(timestamp)) {
+            // 将时间戳复制到传感器数据结构中
+            strncpy(p_sensor_data->collect_time, timestamp, sizeof(p_sensor_data->collect_time) - 1);
+            p_sensor_data->collect_time[sizeof(p_sensor_data->collect_time) - 1] = '\0';
+            APP_LOG_INFO("%s Sensor data timestamp updated: %s", DEBUG_TAG, p_sensor_data->collect_time);
+        } else {
+            APP_LOG_WARNING("%s Failed to get RTC timestamp, using default", DEBUG_TAG);
+        }
+    }
+    
+    // 7. 断电传感器
     ble_4g_protocol_sensor_power_control(false);
     
     if (result && data_received) {
-        APP_LOG_INFO("%s Fresh sensor data read successfully", DEBUG_TAG);
+        APP_LOG_INFO("%s Fresh sensor data read successfully with timestamp", DEBUG_TAG);
     } else if (result) {
-        APP_LOG_WARNING("%s Using cached sensor data", DEBUG_TAG);
+        APP_LOG_WARNING("%s Using cached sensor data with timestamp", DEBUG_TAG);
     } else {
         APP_LOG_ERROR("%s Failed to read sensor data", DEBUG_TAG);
     }

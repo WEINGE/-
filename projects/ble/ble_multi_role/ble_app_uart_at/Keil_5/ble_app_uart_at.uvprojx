@@ -649,6 +649,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\user\shared_params.c</FilePath>
             </File>
+            <File>
+              <FileName>bm8563_rtc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\bm8563_rtc.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

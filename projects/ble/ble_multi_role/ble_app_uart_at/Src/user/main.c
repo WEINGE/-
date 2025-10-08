@@ -32,6 +32,9 @@
 #include "patch.h"                 // 补丁管理模块，用于运行时代码修复
 #include "app_log.h"               // 应用日志模块，提供调试和运行时信息输出
 #include "ble_4g_protocol.h"      // 4G协议处理模块，包含4G协议的初始化和数据处理
+#include "bm8563_rtc.h"           // RTC时间管理模块，用于时间同步功能
+#include "gr55xx_delay.h"         // 延时函数，用于时间同步等待
+#include "user_periph_setup.h"    // 外设设置，包含UART发送函数
 
 /*
  * 本地变量定义
@@ -78,6 +81,55 @@ int main(void)
     // 初始化协议处理模块，准备接收和处理JSON命令
     ble_protocol_init();
     APP_LOG_INFO("BLE protocol initialized");
+
+    // 第3.5步：时间同步 - 向DTU发送超级指令获取网络时间并同步到RTC
+    // 首先初始化RTC芯片
+    if (!bm8563_init()) {
+        APP_LOG_ERROR("Failed to initialize RTC chip");
+    } else {
+        APP_LOG_INFO("RTC chip initialized successfully");
+    }
+    
+    // 等待DTU完全初始化完成
+    delay_ms(3000);
+    APP_LOG_INFO("Starting time synchronization with DTU...");
+    
+    // 多次尝试时间同步，确保成功
+    bool time_sync_success = false;
+    for (int retry = 0; retry < 3 && !time_sync_success; retry++) {
+        APP_LOG_INFO("Time sync attempt %d/3", retry + 1);
+        
+        // 向DTU发送获取网络时间的超级指令
+        const char* time_sync_cmd = "adminAT+CCLK?\r\n";
+        uart1_tx_data_send((uint8_t*)time_sync_cmd, strlen(time_sync_cmd));
+        APP_LOG_INFO("Sent time sync command to DTU: %s", time_sync_cmd);
+        
+        // 等待DTU响应并处理时间同步（响应将在UART接收中断中处理）
+        delay_ms(10000);  // 增加等待时间
+        
+        // 检查时间同步是否成功
+        char rtc_time_check[RTC_TIME_STRING_LEN];
+        if (bm8563_get_time_string(rtc_time_check)) {
+            // 检查是否不再是默认的2000年时间
+            if (strncmp(rtc_time_check, "2000", 4) != 0) {
+                time_sync_success = true;
+                APP_LOG_INFO("Time synchronization successful! RTC time: %s", rtc_time_check);
+                break;
+            } else {
+                APP_LOG_WARNING("Time sync attempt %d failed, RTC still shows default time: %s", retry + 1, rtc_time_check);
+            }
+        } else {
+            APP_LOG_WARNING("Time sync attempt %d failed, cannot read RTC time", retry + 1);
+        }
+        
+        if (retry < 2) {
+            delay_ms(2000);  // 重试前等待
+        }
+    }
+    
+    if (!time_sync_success) {
+        APP_LOG_ERROR("Time synchronization failed after 3 attempts, continuing with default time");
+    }
 
     // 第四步：启动时运行传感器数据校验测试
     // 验证传感器数据的完整性和校验和算法的正确性

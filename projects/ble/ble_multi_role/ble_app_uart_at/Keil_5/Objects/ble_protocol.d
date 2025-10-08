@@ -126,4 +126,5 @@
 .\objects\ble_protocol.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
 .\objects\ble_protocol.o: ..\Src\user\transport_scheduler.h
 .\objects\ble_protocol.o: ..\Src\platform\user_periph_setup.h
+.\objects\ble_protocol.o: ..\Src\user\bm8563_rtc.h
 .\objects\ble_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h

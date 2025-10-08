@@ -123,3 +123,4 @@
 .\objects\user_periph_setup.o: ..\Src\user\sensor_data_parser.h
 .\objects\user_periph_setup.o: ..\Src\user\ble_protocol.h
 .\objects\user_periph_setup.o: ..\Src\user\at_cmd_handler.h
+.\objects\user_periph_setup.o: ..\Src\user\bm8563_rtc.h
