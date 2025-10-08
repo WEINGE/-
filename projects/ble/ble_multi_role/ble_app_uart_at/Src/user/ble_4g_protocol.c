@@ -1246,6 +1246,31 @@ bool ble_4g_protocol_get_sensor_data(ble_4g_sensor_data_t *p_sensor_data)
     return s_current_sensor_data_4g.is_valid;
 }
 
+/**
+ *****************************************************************************************
+ * @brief Get sensor data without triggering threshold check (for timer upload).
+ *
+ * @param[out] p_sensor_data: Pointer to store sensor data.
+ *
+ * @return true if data is valid, false otherwise.
+ *****************************************************************************************
+ */
+static bool ble_4g_protocol_get_sensor_data_no_threshold_check(ble_4g_sensor_data_t *p_sensor_data)
+{
+    if (p_sensor_data == NULL)
+    {
+        return false;
+    }
+    
+    // 直接返回当前缓存的传感器数据，不触发阈值检查
+    memcpy(p_sensor_data, &s_current_sensor_data_4g, sizeof(ble_4g_sensor_data_t));
+    
+    APP_LOG_DEBUG("%s Timer upload: returning cached sensor data (valid: %s)", 
+                  DEBUG_TAG, s_current_sensor_data_4g.is_valid ? "true" : "false");
+    
+    return s_current_sensor_data_4g.is_valid;
+}
+
 void ble_4g_protocol_get_device_info(ble_4g_device_info_t *p_device_info)
 {
     if (p_device_info != NULL)
@@ -1522,16 +1547,16 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         sys_delay_ms(100);  // 每100ms检查一次
     }
     
-    // 5. 读取传感器数据
+    // 5. 读取传感器数据 - 使用不触发阈值检查的版本，避免重复上传
     bool result = false;
     if (data_received)
     {
-        result = ble_4g_protocol_get_sensor_data(p_sensor_data);
+        result = ble_4g_protocol_get_sensor_data_no_threshold_check(p_sensor_data);
     }
     else
     {
         APP_LOG_WARNING("%s Timeout waiting for sensor data, using cached data", DEBUG_TAG);
-        result = ble_4g_protocol_get_sensor_data(p_sensor_data);
+        result = ble_4g_protocol_get_sensor_data_no_threshold_check(p_sensor_data);
     }
     
     // 6. 获取采集时间戳并更新到传感器数据中
