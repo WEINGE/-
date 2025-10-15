@@ -205,73 +205,6 @@ bool get_collection_timestamp_for_4g(char *timestamp_buffer)
 
 /**
  *****************************************************************************************
- * @brief Check 4G network registration status.
- * 
- * @return true if registered to network, false otherwise
- *****************************************************************************************
- */
-static bool check_4g_network_registration(void)
-{
-    // 发送网络注册状态查询指令
-    const char* creg_cmd = "adminAT+CREG?\r\n";
-    SEND_AT_COMMAND_ASYNC(creg_cmd);
-    
-    // 等待AT响应
-    sys_delay_ms(500);
-    
-    // 根据AT+CREG文档，检查网络注册状态
-    // network_reg_status: 0=未注册, 1=已注册
-    if (g_at_collector.network_reg_status == 1)
-    {
-        APP_LOG_INFO("%s Network registered successfully (CREG status: %d)", 
-                     DEBUG_TAG, g_at_collector.network_reg_status);
-        return true;
-    }
-    
-    APP_LOG_DEBUG("%s Network not registered (CREG status: %d)", 
-                 DEBUG_TAG, g_at_collector.network_reg_status);
-    return false;
-}
-
-/**
- *****************************************************************************************
- * @brief Wait for 4G network registration with timeout.
- * 
- * @param[in] timeout_seconds: Maximum time to wait for registration
- * @return true if network registered within timeout, false otherwise
- *****************************************************************************************
- */
-static bool wait_for_4g_network_registration(uint32_t timeout_seconds)
-{
-    uint32_t check_count = 0;
-    uint32_t max_checks = timeout_seconds / 2;  // 每2秒检查一次
-    
-    APP_LOG_INFO("%s Waiting for 4G network registration (timeout: %d seconds)", DEBUG_TAG, timeout_seconds);
-    
-    while (check_count < max_checks)
-    {
-        if (check_4g_network_registration())
-        {
-            uint32_t elapsed_seconds = check_count * 2;
-            APP_LOG_INFO("%s Network registration completed in %d seconds", DEBUG_TAG, elapsed_seconds);
-            return true;
-        }
-        
-        // 每2秒检查一次网络状态
-        sys_delay_ms(2000);
-        check_count++;
-        APP_LOG_DEBUG("%s Still waiting for network registration... (attempt %d/%d)", 
-                     DEBUG_TAG, check_count, max_checks);
-    }
-    
-    APP_LOG_WARNING("%s Network registration timeout after %d seconds, but continuing with upload", DEBUG_TAG, timeout_seconds);
-    // 修改：即使网络注册超时，也继续尝试上传，而不是直接返回失败
-    // 某些4G模块可能在CREG状态查询上有延迟，但实际网络已可用
-    return true;  // 改为返回true，让上传流程继续
-}
-
-/**
- *****************************************************************************************
  * @brief Send JSON with standardized delay to avoid message collision.
  * 
  * @param[in] json_string: JSON string to send
@@ -449,17 +382,14 @@ static void update_status_info_from_sources(void)
     sensor_simple_status_t sensor_status = sensor_status_get_simple();
     s_status_info.sensor_status = (sensor_status == SENSOR_SIMPLE_STATUS_NORMAL) ? 0 : 1;
     
-    // 2. 4G信号强度使用DTU特殊字段自动获取，无需MCU端查询
-    APP_LOG_INFO("%s Using DTU special field ${CSQ} for 4G signal strength", DEBUG_TAG);
+    // 2. 从AT收集器获取缓存的4G信号强度
+    // 这个值会在DTU上电时通过 ble_4g_protocol_update_dtu_info_cache() 更新
+    s_status_info.device_LTE_signal = g_at_collector.signal_quality;
+    APP_LOG_INFO("%s Using cached 4G signal strength (CSQ): %d", DEBUG_TAG, s_status_info.device_LTE_signal);
     
     // 3. 从ble_protocol模块获取GPS状态等其他信息
     status_info_t ble_status_info = {0};
-    ble_protocol_get_status_info(&ble_status_info);
-    
-    // 4G信号强度将由DTU特殊字段${CSQ}自动填充，这里设置为0作为占位符
-    s_status_info.device_LTE_signal = 0;
-    
-    APP_LOG_INFO("%s 4G signal will be filled by DTU special field ${CSQ}", DEBUG_TAG);
+    // ble_protocol_get_status_info(&ble_status_info);
     
     // 更新GPS状态（从device_status的bit 2提取）
     s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
@@ -611,7 +541,17 @@ static char* ble_4g_protocol_create_status_info_json(void)
     cJSON_AddNumberToObject(body, "device_water", s_status_info.device_water);
     cJSON_AddNumberToObject(body, "sensor_status", s_status_info.sensor_status);
     cJSON_AddNumberToObject(body, "device_move", s_status_info.device_move);
-    cJSON_AddStringToObject(body, "device_LTE_signal", "${CSQ}");  // 使用DTU特殊字段获取4G信号强度
+    // 优先使用缓存的信号强度，如果无效则回退到DTU特殊字段
+    if (s_status_info.device_LTE_signal > 0 && s_status_info.device_LTE_signal != 99) 
+    {
+        char csq_str[4];
+        snprintf(csq_str, sizeof(csq_str), "%d", s_status_info.device_LTE_signal);
+        cJSON_AddStringToObject(body, "device_LTE_signal", csq_str);
+    } 
+    else 
+    {
+        cJSON_AddStringToObject(body, "device_LTE_signal", "${CSQ}"); // 回退方案
+    }
     cJSON_AddNumberToObject(body, "device_GPS_status", s_status_info.device_GPS_status);
     
     // 使用特殊字段获取定位信息
@@ -973,7 +913,7 @@ void ble_4g_protocol_init(void)
     else
     {
         APP_LOG_WARNING("%s Failed to read sensor data during init, using default data", DEBUG_TAG);
-        update_sensor_data_from_parser();
+        // update_sensor_data_from_parser();
     }
 
     // 2. 更新状态信息
@@ -1620,6 +1560,35 @@ void ble_4g_protocol_upload(void)
 }
 
 
+/**
+ *****************************************************************************************
+ * @brief Query and cache key DTU information like IMEI and CSQ.
+ * 
+ * This function should only be called when the 4G module is powered on.
+ *****************************************************************************************
+ */
+static void ble_4g_protocol_update_dtu_info_cache(void)
+{
+    APP_LOG_INFO("%s Updating DTU info cache (IMEI, CSQ)...", DEBUG_TAG);
+
+    // 1. 强制获取并缓存IMEI
+    (void)ble_4g_protocol_force_get_imei();
+
+    // 2. 查询并缓存信号强度 (CSQ)
+     const char* csq_cmd = "adminAT+CSQ\r\n";
+     SEND_AT_COMMAND_ASYNC(csq_cmd);
+     sys_delay_ms(500); // 等待AT响应
+
+    // g_at_collector.signal_quality 会被AT命令处理器更新
+    APP_LOG_INFO("%s CSQ updated to: %d", DEBUG_TAG, g_at_collector.signal_quality);
+
+    // 3. 查询并缓存ICCID
+     const char* iccid_cmd = "adminAT+ICCID?\r\n";
+     SEND_AT_COMMAND_ASYNC(iccid_cmd);
+     sys_delay_ms(500); // 等待AT响应
+    APP_LOG_INFO("%s ICCID updated to: %s", DEBUG_TAG, g_at_collector.iccid);
+}
+
 void ble_4g_protocol_upload_with_power_mgmt(void)
 {
     APP_LOG_INFO("%s Starting upload with 4G/DTU power management", DEBUG_TAG);
@@ -1628,9 +1597,8 @@ void ble_4g_protocol_upload_with_power_mgmt(void)
     gpio_4g_power_en_set(true);
     sys_delay_ms(10000);
 
-    // 2. 等待网络注册并获取IMEI
-//    (void)wait_for_4g_network_registration(60);
- //   (void)ble_4g_protocol_force_get_imei();
+    // 2. 更新并缓存DTU关键信息（IMEI, CSQ）
+    ble_4g_protocol_update_dtu_info_cache();
 
     // 3. 批量发送采集数据（先发动态，再发静态与查询）
     if (s_collected_data_count > 0)

@@ -45,7 +45,7 @@
 static void parse_at_command_response(const char* response, uint16_t length);
 static char* ble_protocol_create_query_response(uint8_t query_type);
 
-static void check_and_send_collected_response(void);
+
 void ble_protocol_send_json_response(const char *p_json_str);
 
 /*
@@ -556,7 +556,12 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
                 cJSON_AddStringToObject(body, "IMEI", "0");
                 cJSON_AddStringToObject(body, "device_ID", s_device_info.device_id);  // 降级使用MAC地址
             }
-            cJSON_AddStringToObject(body, "SIM_ID", "Not Available");
+            // 使用AT收集器中的ICCID，如果没有则使用默认值"0"
+            if (strlen(g_at_collector.iccid) > 0) {
+                cJSON_AddStringToObject(body, "SIM_ID", g_at_collector.iccid);
+            } else {
+                cJSON_AddStringToObject(body, "SIM_ID", "0");
+            }
             cJSON_AddStringToObject(body, "device_ver", s_device_info.firmware_version);
             // 组合经纬度字符串
             char location_str[64];
@@ -992,40 +997,6 @@ void ble_protocol_init(void)
     memset(&s_current_sensor_data, 0, sizeof(s_current_sensor_data));
     
     s_protocol_initialized = true;
-    APP_LOG_INFO("%s BLE protocol initialized successfully", DEBUG_TAG);
-    
-    // 主动查询 IMEI 和 ICCID（在初始化后延迟执行，确保4G模块已准备好）
-    APP_LOG_INFO("%s Querying IMEI and ICCID from 4G module...", DEBUG_TAG);
-    sys_delay_ms(1000);  // 等待4G模块启动
-    
-    // 查询 IMEI
-    const char* imei_cmd = "adminAT+IMEI?\r\n";
-    SEND_AT_COMMAND_ASYNC(imei_cmd);
-    sys_delay_ms(500);  // 等待IMEI响应
-    
-    // 查询 ICCID (SIM卡号)
-    const char* iccid_cmd = "adminAT+ICCID?\r\n";
-    SEND_AT_COMMAND_ASYNC(iccid_cmd);
-    sys_delay_ms(500);  // 等待ICCID响应
-    
-    // 检查 IMEI 和 ICCID 是否获取成功
-    if (strlen(g_at_collector.imei) > 0)
-    {
-        APP_LOG_INFO("%s IMEI retrieved: %s", DEBUG_TAG, g_at_collector.imei);
-    }
-    else
-    {
-        APP_LOG_WARNING("%s IMEI not retrieved, will use fallback device ID", DEBUG_TAG);
-    }
-    
-    if (strlen(g_at_collector.iccid) > 0)
-    {
-        APP_LOG_INFO("%s ICCID retrieved: %s", DEBUG_TAG, g_at_collector.iccid);
-    }
-    else
-    {
-        APP_LOG_WARNING("%s ICCID not retrieved", DEBUG_TAG);
-    }
 }
 
 void ble_protocol_data_process(const uint8_t *p_data, uint16_t length)
@@ -1061,115 +1032,7 @@ void ble_protocol_data_process(const uint8_t *p_data, uint16_t length)
     ble_protocol_parse_json_command(json_str);
 }
 
-/**
- *****************************************************************************************
- * @brief 分析JSON请求并发送相应的超级指令查询数据
- *****************************************************************************************
- */
-static void analyze_and_send_super_command(uint8_t query_type)
-{
-    APP_LOG_INFO("%s Analyzing query type %d and sending super command", DEBUG_TAG, query_type);
-    
-    switch (query_type)
-    {
-        case PROTOCOL_QUERY_TYPE_DEVICE_INFO:
-        {
-            // 启动AT响应收集
-            memset(&g_at_collector, 0, sizeof(g_at_collector));
-            g_at_collector.pending_query_type = query_type;
-            g_at_collector.is_collecting = true;
-            
-            APP_LOG_INFO("%s Starting device info query with super commands", DEBUG_TAG);
-            
-            // 查询设备信息：IMEI、ICCID、GPS位置
-            const char* super_cmd = "adminAT+IMEI?\r\n";
-            APP_LOG_INFO("%s Sending: %s", DEBUG_TAG, super_cmd);
-            SEND_AT_COMMAND_ASYNC(super_cmd);
-            sys_delay_ms(500); // 增加延时确保响应完整
-            
-            super_cmd = "adminAT+ICCID?\r\n";
-            APP_LOG_INFO("%s Sending: %s", DEBUG_TAG, super_cmd);
-            SEND_AT_COMMAND_ASYNC(super_cmd);
-            sys_delay_ms(500);
-            
-            super_cmd = "adminAT+GPS?\r\n";
-            APP_LOG_INFO("%s Sending: %s", DEBUG_TAG, super_cmd);
-            SEND_AT_COMMAND_ASYNC(super_cmd);
-            sys_delay_ms(500);
-            
-            // 等待4G模块响应收集完成
-            sys_delay_ms(1500); // 增加等待时间
-            
-            // 超时保护：强制发送响应
-            if (g_at_collector.is_collecting)
-            {
-                APP_LOG_WARNING("%s 4G module timeout for device info query, sending collected response", DEBUG_TAG);
-                check_and_send_collected_response();
-            }
-            break;
-        }
-        
-        case PROTOCOL_QUERY_TYPE_STATUS_INFO:
-        {
-            // 启动AT响应收集
-            memset(&g_at_collector, 0, sizeof(g_at_collector));
-            g_at_collector.pending_query_type = query_type;
-            g_at_collector.is_collecting = true;
-            
-            // 查询状态信息：4G信号强度和GPS状态
-            const char* super_cmd = "adminAT+CSQ?\r\n";
-            SEND_AT_COMMAND_ASYNC(super_cmd);
-            sys_delay_ms(200);
-            
-            super_cmd = "adminAT+GPS?\r\n";
-            SEND_AT_COMMAND_ASYNC(super_cmd);
-            sys_delay_ms(200);
-            
-            // 等待4G模块响应收集完成
-            sys_delay_ms(1000);
-            
-            // 超时保护：强制发送响应
-            if (g_at_collector.is_collecting)
-            {
-                APP_LOG_WARNING("%s 4G module timeout for status info query, sending default response", DEBUG_TAG);
-                check_and_send_collected_response();
-            }
-            break;
-        }
-        
-        case PROTOCOL_QUERY_TYPE_CURRENT_DATA:
-        {
-            // 监测数据从本地传感器获取，不需要4G模块
-            char *json_string = ble_protocol_create_query_response(query_type);
-            if (json_string)
-            {
-                ble_protocol_send_json_response(json_string);
-                free(json_string);
-            }
-            break;
-        }
-        
-        case PROTOCOL_QUERY_TYPE_PARAM_INFO:
-        {
-            // 参数信息从本地配置获取，不需要4G模块
-            char *json_string = ble_protocol_create_query_response(query_type);
-            if (json_string)
-            {
-                ble_protocol_send_json_response(json_string);
-                free(json_string);
-            }
-            break;
-        }
-        
-        default:
-        {
-            APP_LOG_ERROR("%s Unknown query type: %d", DEBUG_TAG, query_type);
-            // 仅记录日志，不再退回到 "+++" AT 指令模式
-            APP_LOG_WARNING("%s AT fallback disabled, ignoring query type %d", DEBUG_TAG, query_type);
-            break;
-        }
-    }
-}
+
 
 /**
  *****************************************************************************************
@@ -1186,10 +1049,20 @@ void ble_protocol_handle_query(uint8_t query_type)
         return;
     }
     
-    APP_LOG_INFO("%s Handling query type: %d", DEBUG_TAG, query_type);
+    APP_LOG_INFO("%s Handling query type: %d by reading from cache", DEBUG_TAG, query_type);
     
-    // 优先使用超级指令查询数据
-    analyze_and_send_super_command(query_type);
+    // 直接从缓存创建响应，不再实时查询4G模块
+    char *json_string = ble_protocol_create_query_response(query_type);
+    if (json_string)
+    {
+        ble_protocol_send_json_response(json_string);
+        free(json_string);
+        APP_LOG_INFO("%s Sent cached response for query type %d", DEBUG_TAG, query_type);
+    }
+    else
+    {
+        APP_LOG_ERROR("%s Failed to create response for query type %d", DEBUG_TAG, query_type);
+    }
 }
 
 void ble_protocol_send_data_report(const ble_sensor_data_t *p_sensor_data)
@@ -1536,137 +1409,7 @@ void ble_protocol_update_sensor_data(const ble_sensor_data_t *p_sensor_data)
     }
 }
 
-/**
- *****************************************************************************************
- * @brief 检查AT响应收集状态并生成最终JSON响应
- *****************************************************************************************
- */
-static void check_and_send_collected_response(void)
-{
-    if (!g_at_collector.is_collecting)
-    {
-        return;
-    }
-    
-    // 检查是否收集到足够的信息来响应查询
-    bool can_respond = false;
-    
-    if (g_at_collector.pending_query_type == PROTOCOL_QUERY_TYPE_DEVICE_INFO)
-    {
-        // 设备信息查询：有IMEI/ICCID时使用真实数据，否则使用默认数据
-        can_respond = true;  // 总是可以响应，使用默认值或真实值
-    }
-    else if (g_at_collector.pending_query_type == PROTOCOL_QUERY_TYPE_STATUS_INFO)
-    {
-        // 状态信息查询：有信号质量时使用真实数据，否则使用默认数据
-        can_respond = true;  // 总是可以响应，使用默认值或真实值
-    }
-    
-    if (can_respond)
-    {
-        // 初始化本地固定数据
-        // device_id 优先使用IMEI，如果没有则使用MAC地址
-        if (strlen(g_at_collector.imei) > 0) {
-            strncpy(g_at_collector.device_id, g_at_collector.imei, sizeof(g_at_collector.device_id) - 1);
-            g_at_collector.device_id[sizeof(g_at_collector.device_id) - 1] = '\0';
-        } else {
-            strcpy(g_at_collector.device_id, "12:34:56:78:9A:BC");  // 降级使用MAC地址
-        }
-        strcpy(g_at_collector.device_version, "1.0.0");         // 固件版本
-        strcpy(g_at_collector.installation_location, "113.743806,34.843256"); // 预设安装坐标
-        
-        // 根据协议生成响应
-        cJSON *response = cJSON_CreateObject();
-        cJSON *header = cJSON_CreateObject();
-        cJSON *body = cJSON_CreateObject();
-        
-        if (g_at_collector.pending_query_type == PROTOCOL_QUERY_TYPE_DEVICE_INFO)
-        {
-            // 设备信息上报 (code 102)
-            cJSON_AddNumberToObject(header, "code", 102);
-            
-            // IMEI (4G IMEI号)
-            if (strlen(g_at_collector.imei) > 0)
-                cJSON_AddStringToObject(body, "IMEI", g_at_collector.imei);
-            else
-                cJSON_AddStringToObject(body, "IMEI", "0");
-                
-            // SIM_ID (物联卡卡号ICCID)
-            if (strlen(g_at_collector.iccid) > 0)
-                cJSON_AddStringToObject(body, "SIM_ID", g_at_collector.iccid);
-            else
-                cJSON_AddStringToObject(body, "SIM_ID", "0");
-                
-            // device_ID (设备ID - IMEI)
-            cJSON_AddStringToObject(body, "device_ID", g_at_collector.device_id);
-            
-            // device_ver (设备固件版本号)
-            cJSON_AddStringToObject(body, "device_ver", g_at_collector.device_version);
-            
-            // device_location (设备定位信息 - 经纬度)
-            if (strlen(g_at_collector.latitude) > 0 && strlen(g_at_collector.longitude) > 0)
-            {
-                char location[64];
-                snprintf(location, sizeof(location), "%s,%s", g_at_collector.longitude, g_at_collector.latitude);
-                cJSON_AddStringToObject(body, "device_location", location);
-            }
-            else
-            {
-                cJSON_AddStringToObject(body, "device_location", g_at_collector.installation_location);
-            }
-        }
-        else if (g_at_collector.pending_query_type == PROTOCOL_QUERY_TYPE_STATUS_INFO)
-        {
-            // 状态信息上报 (code 103)
-            cJSON_AddNumberToObject(header, "code", 103);
-            
-            // device_water (水浸状态：1水浸，0未水浸)
-            cJSON_AddNumberToObject(body, "device_water", 0);  // 固定值：未水浸
-            
-            // sensor_status (激光传感器状态：0正常，1异常)  
-            cJSON_AddNumberToObject(body, "sensor_status", 0); // 固定值：正常
-            
-            // device_move (防盗状态：0定位与安装坐标一致，1不一致)
-            cJSON_AddNumberToObject(body, "device_move", 0);   // 固定值：一致
-            
-            // device_LTE_signal (4G信号值，0-31) - 使用与4G协议相同的数据源
-            // 优先从4G协议模块获取已更新的信号值，确保数据一致性
-            ble_4g_status_info_t ble_4g_status = {0};
-            ble_4g_protocol_get_status_info(&ble_4g_status);
-            int lte_signal = ble_4g_status.device_LTE_signal;
-            // 如果4G模块的信号值为0，尝试使用AT收集器的值作为备用
-            if (lte_signal == 0 && g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
-                lte_signal = g_at_collector.signal_quality;
-                APP_LOG_INFO("%s Using AT collector signal as fallback: %d", DEBUG_TAG, lte_signal);
-            }
-            APP_LOG_INFO("%s Collected response - 4G signal: %d, AT signal: %d, final: %d", 
-                        DEBUG_TAG, ble_4g_status.device_LTE_signal, g_at_collector.signal_quality, lte_signal);
-            cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
-            
-            // device_GPS_status (GPS信号状态：0正常，1异常)
-            cJSON_AddNumberToObject(body, "device_GPS_status", g_at_collector.gps_status);
-        }
-        
-        // result (0:自动上报信息，1:查询指令回文)
-        cJSON_AddNumberToObject(response, "result", 1);
-        
-        cJSON_AddItemToObject(response, "header", header);
-        cJSON_AddItemToObject(response, "body", body);
-        
-        char *json_string = cJSON_Print(response);
-        if (json_string)
-        {
-            ble_protocol_send_json_response(json_string);
-            free(json_string);
-            APP_LOG_INFO("%s Sent protocol-compliant response for query type %d", DEBUG_TAG, g_at_collector.pending_query_type);
-        }
-        
-        cJSON_Delete(response);
-        
-        // 重置收集状态
-        g_at_collector.is_collecting = false;
-    }
-}
+
 
 /**
  *****************************************************************************************
