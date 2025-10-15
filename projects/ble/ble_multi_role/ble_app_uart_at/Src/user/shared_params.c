@@ -309,3 +309,34 @@ float shared_params_get_methane_threshold(void) { return g_shared_params.methane
 int16_t shared_params_get_temp_high_threshold(void) { return g_shared_params.temp_high_threshold; }
 int16_t shared_params_get_temp_low_threshold(void) { return g_shared_params.temp_low_threshold; }
 uint16_t shared_params_get_water_threshold(void) { return g_shared_params.water_threshold; }
+
+// 状态设置函数实现 (不保存到Flash)
+void shared_params_set_sensor_status(uint8_t status)
+{
+    if (g_shared_params.sensor_status != status)
+    {
+        g_shared_params.sensor_status = status;
+        APP_LOG_INFO("%s Set sensor status: %d", DEBUG_TAG, status);
+        notify_param_change(PARAM_TYPE_SENSOR_STATUS, &status);
+    }
+}
+
+void shared_params_set_device_water(uint8_t status)
+{
+    if (g_shared_params.device_water != status)
+    {
+        g_shared_params.device_water = status;
+        APP_LOG_INFO("%s Set device water status: %d", DEBUG_TAG, status);
+        notify_param_change(PARAM_TYPE_DEVICE_WATER, &status);
+    }
+}
+
+void shared_params_set_device_move(uint8_t status)
+{
+    if (g_shared_params.device_move != status)
+    {
+        g_shared_params.device_move = status;
+        APP_LOG_INFO("%s Set device move status: %d", DEBUG_TAG, status);
+        notify_param_change(PARAM_TYPE_DEVICE_MOVE, &status);
+    }
+}

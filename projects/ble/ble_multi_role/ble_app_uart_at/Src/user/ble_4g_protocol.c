@@ -378,33 +378,28 @@ static void ble_4g_protocol_init_status_info(void)
  */
 static void update_status_info_from_sources(void)
 {
-    // 1. 从传感器状态管理器获取传感器状态
-    sensor_simple_status_t sensor_status = sensor_status_get_simple();
-    s_status_info.sensor_status = (sensor_status == SENSOR_SIMPLE_STATUS_NORMAL) ? 0 : 1;
-    
+    // 1. 传感器状态 (sensor_status) 在 ble_4g_protocol_read_sensor_with_power_mgmt 中更新
+
     // 2. 从AT收集器获取缓存的4G信号强度
-    // 这个值会在DTU上电时通过 ble_4g_protocol_update_dtu_info_cache() 更新
     s_status_info.device_LTE_signal = g_at_collector.signal_quality;
     APP_LOG_INFO("%s Using cached 4G signal strength (CSQ): %d", DEBUG_TAG, s_status_info.device_LTE_signal);
-    
+
     // 3. 从ble_protocol模块获取GPS状态等其他信息
     status_info_t ble_status_info = {0};
     // ble_protocol_get_status_info(&ble_status_info);
-    
+
     // 更新GPS状态（从device_status的bit 2提取）
     s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
-    
-    // 更新水浸状态（从device_status的bit 0提取）
-    s_status_info.device_water = ble_status_info.device_status & 0x01;
-    
-    // 更新防盗状态（从device_status的bit 1提取）
-    s_status_info.device_move = (ble_status_info.device_status >> 1) & 0x01;
-    
+
+    // 更新水浸状态和移动状态到共享参数
+    shared_params_set_device_water(ble_status_info.device_status & 0x01);
+    shared_params_set_device_move((ble_status_info.device_status >> 1) & 0x01);
+
     APP_LOG_INFO("%s Status info updated: water=%d, sensor=%d, move=%d, signal=%d, gps=%d", 
                  DEBUG_TAG,
-                 s_status_info.device_water,
-                 s_status_info.sensor_status,
-                 s_status_info.device_move,
+                 g_shared_params.device_water,
+                 g_shared_params.sensor_status,
+                 g_shared_params.device_move,
                  s_status_info.device_LTE_signal,
                  s_status_info.device_GPS_status);
 }
@@ -537,10 +532,10 @@ static char* ble_4g_protocol_create_status_info_json(void)
     cJSON_AddStringToObject(header, "device_ID", device_id);
     cJSON_AddItemToObject(json, "header", header);
     
-    // 构建body - 使用特殊字段
-    cJSON_AddNumberToObject(body, "device_water", s_status_info.device_water);
-    cJSON_AddNumberToObject(body, "sensor_status", s_status_info.sensor_status);
-    cJSON_AddNumberToObject(body, "device_move", s_status_info.device_move);
+    // 构建body - 从共享参数获取状态信息
+    cJSON_AddNumberToObject(body, "device_water", g_shared_params.device_water);
+    cJSON_AddNumberToObject(body, "sensor_status", g_shared_params.sensor_status);
+    cJSON_AddNumberToObject(body, "device_move", g_shared_params.device_move);
     // 优先使用缓存的信号强度，如果无效则回退到DTU特殊字段
     if (s_status_info.device_LTE_signal > 0 && s_status_info.device_LTE_signal != 99) 
     {
@@ -1491,11 +1486,22 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
     bool result = false;
     if (data_received)
     {
+        // 根据状态码更新传感器状态
+        sensor_data_t raw_data = {0};
+        sensor_data_get_latest(&raw_data);
+        if (raw_data.data_valid && raw_data.status_code == 0) {
+            shared_params_set_sensor_status(0); // 传感器正常
+        } else {
+            shared_params_set_sensor_status(1); // 传感器异常
+            APP_LOG_WARNING("%s Sensor status ERROR (status code: %d, valid: %d)", 
+                            DEBUG_TAG, raw_data.status_code, raw_data.data_valid);
+        }
         result = ble_4g_protocol_get_sensor_data_no_threshold_check(p_sensor_data);
     }
     else
     {
-        APP_LOG_WARNING("%s Timeout waiting for sensor data, using cached data", DEBUG_TAG);
+        APP_LOG_WARNING("%s Timeout waiting for sensor data, setting status to error", DEBUG_TAG);
+        shared_params_set_sensor_status(1); // 无数据，传感器异常
         result = ble_4g_protocol_get_sensor_data_no_threshold_check(p_sensor_data);
     }
     

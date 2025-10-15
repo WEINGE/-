@@ -38,6 +38,11 @@ typedef struct {
     char     imei[16];                  /**< IMEI号 */
     char     sim_id[32];                /**< SIM卡ID */
     
+    // 实时状态信息 (蓝牙同步，不存Flash)
+    uint8_t  sensor_status;             /**< 传感器状态: 0=正常, 1=异常 */
+    uint8_t  device_water;              /**< 水浸状态: 0=正常, 1=水浸 */
+    uint8_t  device_move;               /**< 移动状态: 0=正常, 1=移动 */
+
     // 参数有效性标志
     bool     params_initialized;        /**< 参数是否已初始化 */
     uint32_t params_checksum;           /**< 参数校验和 */
@@ -63,6 +68,11 @@ bool shared_params_set_water_threshold(uint16_t threshold);
 bool shared_params_set_location(float lat, float lon);
 bool shared_params_set_install_location(float lat, float lon);
 
+// 状态设置函数 (不保存到Flash, 只更新内存并通知)
+void shared_params_set_sensor_status(uint8_t status);
+void shared_params_set_device_water(uint8_t status);
+void shared_params_set_device_move(uint8_t status);
+
 // 参数获取函数
 uint16_t shared_params_get_collect_time(void);
 uint16_t shared_params_get_update_time(void);
@@ -85,5 +95,9 @@ void shared_params_register_callback(param_change_callback_t callback);
 #define PARAM_TYPE_WATER_THRESH     0x0005
 #define PARAM_TYPE_LOCATION         0x0006
 #define PARAM_TYPE_INSTALL_LOC      0x0007
+
+#define PARAM_TYPE_SENSOR_STATUS    0x0101
+#define PARAM_TYPE_DEVICE_WATER     0x0102
+#define PARAM_TYPE_DEVICE_MOVE      0x0103
 
 #endif // SHARED_PARAMS_H

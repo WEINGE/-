@@ -573,9 +573,9 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
         case PROTOCOL_QUERY_TYPE_STATUS_INFO:
             response_code = 103; // 状态信息上报
             // 按照蓝牙协议文档3.3的字段名称
-            cJSON_AddNumberToObject(body, "device_water", s_status_info.device_status & 0x01); // 水浸状态
-            cJSON_AddNumberToObject(body, "sensor_status", s_status_info.sensor_status);
-            cJSON_AddNumberToObject(body, "device_move", (s_status_info.device_status >> 1) & 0x01); // 防盗状态
+            cJSON_AddNumberToObject(body, "device_water", g_shared_params.device_water); // 水浸状态
+            cJSON_AddNumberToObject(body, "sensor_status", g_shared_params.sensor_status);
+            cJSON_AddNumberToObject(body, "device_move", g_shared_params.device_move); // 防盗状态
             // 使用与4G协议相同的信号值获取逻辑，确保数据一致性
             // 优先从4G协议模块获取已更新的信号值
             ble_4g_protocol_get_status_info(&ble_4g_status);
