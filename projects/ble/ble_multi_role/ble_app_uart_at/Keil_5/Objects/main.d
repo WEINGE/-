@@ -118,3 +118,14 @@
 .\objects\main.o: ..\Src\user\ble_4g_protocol.h
 .\objects\main.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
 .\objects\main.o: ..\Src\user\bm8563_rtc.h
+.\objects\main.o: ..\Src\user\battery_voltage_reader.h
+.\objects\main.o: ..\..\..\..\..\drivers\inc\app_io.h
+.\objects\main.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
+.\objects\main.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
+.\objects\main.o: ..\..\..\..\..\platform\boards\board_SK.h
+.\objects\main.o: ..\..\..\..\..\components\libraries\app_key\app_key.h
+.\objects\main.o: ..\..\..\..\..\components\libraries\app_key\app_key_core.h
+.\objects\main.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
+.\objects\main.o: ..\..\..\..\..\drivers\inc\app_uart.h
+.\objects\main.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
+.\objects\main.o: ..\..\..\..\..\drivers\inc\app_dma.h

@@ -63,6 +63,7 @@
 #include "sensor_data_parser.h"  // 传感器数据解析模块
 #include "gr55xx_delay.h"     // 系统延迟函数
 #include "shared_params.h"    // 共享参数管理模块
+#include "battery_voltage_reader.h"  // 电池电压读取模块
 /*
  * 宏定义配置
  *****************************************************************************************
@@ -608,13 +609,29 @@ void update_sensor_data_from_parser(void)
     
     if (sensor_data_get_latest(&raw_data))
     {
+        // 读取实际电池电压和电量
+        battery_voltage_data_t battery_data = {0};
+        float battery_voltage = 3.3f;  // 默认值
+        uint8_t battery_percent = 100; // 默认值
+        
+        if (battery_voltage_reader_get_voltage(&battery_data) && battery_data.is_valid)
+        {
+            battery_voltage = battery_data.battery_voltage;
+            battery_percent = battery_data.battery_percent;
+            APP_LOG_DEBUG("Battery data updated: %.3fV, %d%%", battery_voltage, battery_percent);
+        }
+        else
+        {
+            APP_LOG_WARNING("Failed to read battery voltage, using default values");
+        }
+        
         // Update BLE protocol sensor data
         ble_sensor_data_t ble_sensor_data = {0};
         ble_sensor_data.methane_vol = raw_data.concentration;
         ble_sensor_data.methane_lel = ble_protocol_vol_to_lel(raw_data.concentration);
         ble_sensor_data.temperature = raw_data.temperature;
-        ble_sensor_data.battery_voltage = 3.3f;  // TODO: 获取真实电池电压
-        ble_sensor_data.battery_percent = 100;   // TODO: 获取真实电池电量
+        ble_sensor_data.battery_voltage = battery_voltage;
+        ble_sensor_data.battery_percent = battery_percent;
         ble_sensor_data.is_valid = raw_data.data_valid;
         
         // 使用接口函数更新BLE协议数据
@@ -625,8 +642,8 @@ void update_sensor_data_from_parser(void)
         ble_4g_sensor_data.methane_vol = raw_data.concentration;
         ble_4g_sensor_data.methane_lel = ble_4g_protocol_vol_to_lel(raw_data.concentration);
         ble_4g_sensor_data.temperature = (int16_t)raw_data.temperature;
-        ble_4g_sensor_data.battery_voltage = 3.3f;  // TODO: 获取真实电池电压
-        ble_4g_sensor_data.battery_percent = 100;   // TODO: 获取真实电池电量
+        ble_4g_sensor_data.battery_voltage = battery_voltage;
+        ble_4g_sensor_data.battery_percent = battery_percent;
         ble_4g_sensor_data.is_valid = raw_data.data_valid;
         
         // 生成收集时间字符串 (格式: YYYYMMDDHHMMSS)

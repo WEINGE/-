@@ -21,7 +21,6 @@
 #include "shared_params.h"
 #include "user_app.h"
 #include "sensor_data_parser.h"
-#include "sensor_status_manager.h"  // 为了使用传感器状态管理器
 #include "cJSON.h"
 #include "app_log.h"
 #include "app_error.h"
@@ -388,8 +387,9 @@ static void update_status_info_from_sources(void)
     status_info_t ble_status_info = {0};
     // ble_protocol_get_status_info(&ble_status_info);
 
-    // 更新GPS状态（从device_status的bit 2提取）
-    s_status_info.device_GPS_status = (ble_status_info.device_status >> 2) & 0x01;
+    // 更新GPS状态（从AT收集器获取）
+    shared_params_set_device_gps_status(g_at_collector.gps_status);
+    s_status_info.device_GPS_status = g_shared_params.device_GPS_status;
 
     // 更新水浸状态和移动状态到共享参数
     shared_params_set_device_water(ble_status_info.device_status & 0x01);
@@ -547,7 +547,7 @@ static char* ble_4g_protocol_create_status_info_json(void)
     {
         cJSON_AddStringToObject(body, "device_LTE_signal", "${CSQ}"); // 回退方案
     }
-    cJSON_AddNumberToObject(body, "device_GPS_status", s_status_info.device_GPS_status);
+    cJSON_AddNumberToObject(body, "device_GPS_status", g_shared_params.device_GPS_status);
     
     // 使用特殊字段获取定位信息
     cJSON_AddStringToObject(body, "device_location", SPECIAL_FIELD_LON "," SPECIAL_FIELD_LAT);
@@ -1593,6 +1593,12 @@ static void ble_4g_protocol_update_dtu_info_cache(void)
      SEND_AT_COMMAND_ASYNC(iccid_cmd);
      sys_delay_ms(500); // 等待AT响应
     APP_LOG_INFO("%s ICCID updated to: %s", DEBUG_TAG, g_at_collector.iccid);
+
+    // 4. 查询并缓存GPS坐标
+     const char* gps_cmd = "adminAT+GPS\r\n";
+     SEND_AT_COMMAND_ASYNC(gps_cmd);
+     sys_delay_ms(500); // 等待AT响应
+    APP_LOG_INFO("%s GPS coordinate query sent.", DEBUG_TAG);
 }
 
 void ble_4g_protocol_upload_with_power_mgmt(void)

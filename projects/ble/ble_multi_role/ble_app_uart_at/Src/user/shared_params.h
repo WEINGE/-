@@ -42,6 +42,7 @@ typedef struct {
     uint8_t  sensor_status;             /**< 传感器状态: 0=正常, 1=异常 */
     uint8_t  device_water;              /**< 水浸状态: 0=正常, 1=水浸 */
     uint8_t  device_move;               /**< 移动状态: 0=正常, 1=移动 */
+    uint8_t  device_GPS_status;         /**< GPS状态: 0=正常, 1=异常 */
 
     // 参数有效性标志
     bool     params_initialized;        /**< 参数是否已初始化 */
@@ -72,6 +73,7 @@ bool shared_params_set_install_location(float lat, float lon);
 void shared_params_set_sensor_status(uint8_t status);
 void shared_params_set_device_water(uint8_t status);
 void shared_params_set_device_move(uint8_t status);
+void shared_params_set_device_gps_status(uint8_t status);
 
 // 参数获取函数
 uint16_t shared_params_get_collect_time(void);
@@ -99,5 +101,6 @@ void shared_params_register_callback(param_change_callback_t callback);
 #define PARAM_TYPE_SENSOR_STATUS    0x0101
 #define PARAM_TYPE_DEVICE_WATER     0x0102
 #define PARAM_TYPE_DEVICE_MOVE      0x0103
+#define PARAM_TYPE_DEVICE_GPS_STATUS 0x0104
 
 #endif // SHARED_PARAMS_H

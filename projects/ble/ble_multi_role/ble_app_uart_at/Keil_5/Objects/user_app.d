@@ -125,3 +125,8 @@
 .\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
 .\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_dma.h
 .\objects\user_app.o: ..\Src\user\shared_params.h
+.\objects\user_app.o: ..\Src\user\battery_voltage_reader.h
+.\objects\user_app.o: ..\..\..\..\..\platform\boards\board_SK.h
+.\objects\user_app.o: ..\..\..\..\..\components\libraries\app_key\app_key.h
+.\objects\user_app.o: ..\..\..\..\..\components\libraries\app_key\app_key_core.h
+.\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_gpiote.h

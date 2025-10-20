@@ -450,6 +450,16 @@
               <FilePath>..\..\..\..\..\drivers\src\app_dma.c</FilePath>
             </File>
             <File>
+              <FileName>app_adc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\drivers\src\app_adc.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_adc_dma.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\drivers\src\app_adc_dma.c</FilePath>
+            </File>
+            <File>
               <FileName>app_gpiote.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\..\..\drivers\src\app_gpiote.c</FilePath>
@@ -640,11 +650,6 @@
               <FilePath>..\Src\user\ble_4g_protocol.c</FilePath>
             </File>
             <File>
-              <FileName>sensor_status_manager.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\user\sensor_status_manager.c</FilePath>
-            </File>
-            <File>
               <FileName>shared_params.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\user\shared_params.c</FilePath>
@@ -653,6 +658,11 @@
               <FileName>bm8563_rtc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\user\bm8563_rtc.c</FilePath>
+            </File>
+            <File>
+              <FileName>battery_voltage_reader.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\battery_voltage_reader.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -665,14 +675,5 @@
     <components/>
     <files/>
   </RTE>
-
-  <LayerInfo>
-    <Layers>
-      <Layer>
-        <LayName>ble_app_uart_at</LayName>
-        <LayPrjMark>1</LayPrjMark>
-      </Layer>
-    </Layers>
-  </LayerInfo>
 
 </Project>

@@ -588,7 +588,7 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             APP_LOG_INFO("%s Status query - 4G signal: %d, AT signal: %d, final: %d", 
                         DEBUG_TAG, ble_4g_status.device_LTE_signal, g_at_collector.signal_quality, lte_signal);
             cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
-            cJSON_AddNumberToObject(body, "device_GPS_status", (s_status_info.device_status >> 2) & 0x01); // GPS状态
+            cJSON_AddNumberToObject(body, "device_GPS_status", g_shared_params.device_GPS_status); // GPS状态
             break;
             
         case PROTOCOL_QUERY_TYPE_PARAM_INFO:
@@ -613,10 +613,10 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
                     s_current_sensor_data.methane_vol, s_current_sensor_data.methane_lel);
             cJSON_AddStringToObject(body, "sensor_methane", methane_str);
             cJSON_AddNumberToObject(body, "sensor_TEMP", (int)s_current_sensor_data.temperature);
-            // 组合电池信息字符串 "电压,百分比"
+            // 组合电池信息字符串 "电压,百分比" - 使用update_sensor_data_from_parser()中已更新的真实电池数据
             char battery_str[32];
             snprintf(battery_str, sizeof(battery_str), "%.3f,%d", 
-                    3.7f, 80);
+                    s_current_sensor_data.battery_voltage, s_current_sensor_data.battery_percent);
             cJSON_AddStringToObject(body, "sensor_battery", battery_str);
             break;
             

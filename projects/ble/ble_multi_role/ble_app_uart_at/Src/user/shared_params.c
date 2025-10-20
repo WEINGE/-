@@ -22,7 +22,7 @@ static const shared_device_params_t default_params = {
     .methane_threshold = 5.0f,          // 默认5%vol甲烷阈值
     .temp_high_threshold = 50,          // 默认50℃高温阈值
     .temp_low_threshold = -20,          // 默认-20℃低温阈值
-    .water_threshold = 1000,            // 默认水浸阈值
+    .water_threshold = 1,               // 默认水浸阈值
     .location_lat = 0.0f,
     .location_lon = 0.0f,
     .install_lat = 0.0f,
@@ -89,6 +89,14 @@ bool shared_params_init(void)
     // 尝试从Flash加载参数
     if (shared_params_load_from_flash()) {
         if (shared_params_validate()) {
+            // 规范化仅允许的取值范围（例如：water_threshold 只能为0或1）
+            uint16_t normalized_wt = (g_shared_params.water_threshold != 0) ? 1 : 0;
+            if (g_shared_params.water_threshold != normalized_wt) {
+                g_shared_params.water_threshold = normalized_wt;
+                shared_params_save_to_flash();
+                APP_LOG_INFO("%s Normalized water_threshold to %d", DEBUG_TAG, normalized_wt);
+            }
+
             APP_LOG_INFO("%s Parameters loaded from Flash", DEBUG_TAG);
             return true;
         } else {
@@ -258,13 +266,15 @@ bool shared_params_set_temp_thresholds(int16_t high, int16_t low)
  */
 bool shared_params_set_water_threshold(uint16_t threshold)
 {
-    g_shared_params.water_threshold = threshold;
-    
-    APP_LOG_INFO("%s Set water threshold: %d", DEBUG_TAG, threshold);
-    
-    // 通知变更
-    notify_param_change(PARAM_TYPE_WATER_THRESH, &threshold);
-    
+    // 仅允许0或1
+    uint16_t normalized = (threshold != 0) ? 1 : 0;
+    g_shared_params.water_threshold = normalized;
+
+    APP_LOG_INFO("%s Set water threshold: %d (normalized from %d)", DEBUG_TAG, normalized, threshold);
+
+    // 通知变更（按归一化后的值通知）
+    notify_param_change(PARAM_TYPE_WATER_THRESH, &normalized);
+
     return shared_params_save_to_flash();
 }
 
@@ -338,5 +348,15 @@ void shared_params_set_device_move(uint8_t status)
         g_shared_params.device_move = status;
         APP_LOG_INFO("%s Set device move status: %d", DEBUG_TAG, status);
         notify_param_change(PARAM_TYPE_DEVICE_MOVE, &status);
+    }
+}
+
+void shared_params_set_device_gps_status(uint8_t status)
+{
+    if (g_shared_params.device_GPS_status != status)
+    {
+        g_shared_params.device_GPS_status = status;
+        APP_LOG_INFO("%s Set device GPS status: %d", DEBUG_TAG, status);
+        notify_param_change(PARAM_TYPE_DEVICE_GPS_STATUS, &status);
     }
 }

@@ -30,11 +30,14 @@
 #include "scatter_common.h"        // 内存分散加载通用定义
 #include "flash_scatter_config.h"  // Flash内存分散配置，定义代码和数据在Flash中的布局
 #include "patch.h"                 // 补丁管理模块，用于运行时代码修复
+#include <string.h>                 // strlen/strncmp
 #include "app_log.h"               // 应用日志模块，提供调试和运行时信息输出
 #include "ble_4g_protocol.h"      // 4G协议处理模块，包含4G协议的初始化和数据处理
 #include "bm8563_rtc.h"           // RTC时间管理模块，用于时间同步功能
 #include "gr55xx_delay.h"         // 延时函数，用于时间同步等待
 #include "user_periph_setup.h"    // 外设设置，包含UART发送函数
+#include "battery_voltage_reader.h" // 电池电压读取模块
+#include "app_timer.h"            // 应用定时器模块
 
 /*
  * 本地变量定义
@@ -135,6 +138,31 @@ int main(void)
     // 验证传感器数据的完整性和校验和算法的正确性
     APP_LOG_INFO("Running sensor checksum validation test...");
     sensor_data_test_checksum();
+
+    // 第五步：初始化电池电压读取模块
+    APP_LOG_INFO("Initializing battery voltage reader...");
+    if (battery_voltage_reader_init()) {
+        APP_LOG_INFO("Battery voltage reader initialized successfully");
+        
+        // 读取并显示初始电池电压
+        battery_voltage_data_t battery_data = {0};
+        if (battery_voltage_reader_get_voltage(&battery_data) && battery_data.is_valid) {
+            // 通过APP_LOG记录到调试日志（如果可用）
+            APP_LOG_INFO("Initial battery: %.2fV (ADC=%d, %.3fV, %d%%)", 
+                         battery_data.battery_voltage,
+                         battery_data.adc_raw_value,
+                         battery_data.raw_voltage,
+                         battery_data.battery_percent);
+            
+            // 通过蓝牙发送电池电压日志
+            delay_ms(1000);
+            battery_voltage_send_ble_log(&battery_data);
+        } else {
+            APP_LOG_WARNING("Failed to read initial battery voltage");
+        }
+    } else {
+        APP_LOG_ERROR("Failed to initialize battery voltage reader");
+    }
 
     // 初始化4G协议 
      ble_4g_protocol_init();

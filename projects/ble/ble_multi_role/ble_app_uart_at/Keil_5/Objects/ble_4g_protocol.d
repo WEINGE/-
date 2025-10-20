@@ -111,7 +111,6 @@
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\profiles\gus\gus.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\profiles\common\ble_prf_types.h
-.\objects\ble_4g_protocol.o: ..\Src\user\sensor_status_manager.h
 .\objects\ble_4g_protocol.o: ..\Src\platform\cJSON.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\libraries\app_error\app_error.h

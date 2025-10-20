@@ -29,6 +29,8 @@ PRJ_C_SRC_FILES:=   \
 ../../../../../platform/soc/src/gr_soc.c  \
 ../../../../../platform/boards/board_SK.c  \
 ../../../../../drivers/src/app_dma.c  \
+../../../../../drivers/src/app_adc.c  \
+../../../../../drivers/src/app_adc_dma.c  \
 ../../../../../drivers/src/app_gpiote.c  \
 ../../../../../drivers/src/app_io.c  \
 ../../../../../drivers/src/app_pwr_mgmt.c  \
@@ -61,6 +63,7 @@ PRJ_C_SRC_FILES:=   \
 ../Src/user/uart0_init.c  \
 ../Src/platform/cJSON.c  \
 ../Src/user/ble_protocol_test.c  \
+../Src/user/battery_voltage_reader.c  \
 
 
 PRJ_ASM_SRC_FILES :=   \
