@@ -165,5 +165,23 @@ void water_sensor_deinit(void);
  */
 void water_sensor_print_status(const water_sensor_data_t *p_sensor_data);
 
+/**
+ *****************************************************************************************
+ * @brief 带电源管理的水浸状态读取（推荐使用）
+ *
+ * @details 自动管理电源：
+ *          1. 上电传感器
+ *          2. 等待稳定
+ *          3. 读取状态
+ *          4. 断电传感器
+ *
+ * @return 0: 未浸水（DRY）
+ *         1: 浸水（WET）或未连接
+ *
+ * @note 这是推荐的读取接口，自动处理电源管理，节省功耗
+ *****************************************************************************************
+ */
+uint8_t water_sensor_read_with_power_mgmt(void);
+
 #endif /* __WATER_SENSOR_H__ */
 

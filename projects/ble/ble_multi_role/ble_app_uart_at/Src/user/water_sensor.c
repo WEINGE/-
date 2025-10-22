@@ -56,17 +56,17 @@ static void water_sensor_gpio_init(void)
     app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
 
     // 配置 W_EN (GPIO24) - 电源控制引脚
-    // 推挽输出模式，固定高电平（电源常开，不控制断电）
+    // 推挽输出模式，支持动态上电/断电控制
     io_init.mode = APP_IO_MODE_OUTPUT;
     io_init.pull = APP_IO_NOPULL;
     io_init.mux  = APP_IO_MUX_7;  // GPIO功能
     io_init.pin  = WATER_SENSOR_W_EN_PIN;
     app_io_init(WATER_SENSOR_W_EN_PIN_TYPE, &io_init);
     
-    // 设置为高电平（电源常开）
-    app_io_write_pin(WATER_SENSOR_W_EN_PIN_TYPE, WATER_SENSOR_W_EN_PIN, APP_IO_PIN_SET);
+    // 初始状态：断电（节能模式）
+    app_io_write_pin(WATER_SENSOR_W_EN_PIN_TYPE, WATER_SENSOR_W_EN_PIN, APP_IO_PIN_RESET);
     
-    APP_LOG_INFO("[WATER_SENSOR] W_EN (GPIO24) initialized: OUTPUT, fixed HIGH (Power Always ON)");
+    APP_LOG_INFO("[WATER_SENSOR] W_EN (GPIO24) initialized: OUTPUT, initial state OFF (Power Saving)");
 
     // 配置 WATER (AON_GPIO_7) - 水浸状态检测引脚
     // 输入模式，带下拉电阻（默认低电平，传感器未连接时为低电平）
@@ -128,21 +128,14 @@ bool water_sensor_init(void)
     // 初始化GPIO引脚
     water_sensor_gpio_init();
 
-    // 电源已在GPIO初始化时设置为常开，此处无需再次设置
-
-    // 延时等待传感器稳定
-    sys_delay_ms(10);
-
-    // 读取初始状态
-    water_sensor_update_data();
+    // 电源已在GPIO初始化时设置为断电（节能模式）
+    // 需要读取状态时，调用者需要先调用 water_sensor_set_power(true)
 
     // 标记已初始化
     s_water_sensor_initialized = true;
 
-    APP_LOG_INFO("[WATER_SENSOR] Initialization complete");
-    APP_LOG_INFO("[WATER_SENSOR] Initial status: %s, Power: %s",
-                 s_sensor_data.water_status == WATER_SENSOR_STATUS_DRY ? "DRY" : "WET",
-                 s_sensor_data.power_enabled ? "ON" : "OFF");
+    APP_LOG_INFO("[WATER_SENSOR] Initialization complete (Power OFF for energy saving)");
+    APP_LOG_INFO("[WATER_SENSOR] Call water_sensor_set_power(true) before reading status");
 
     return true;
 }
@@ -290,5 +283,37 @@ void water_sensor_print_status(const water_sensor_data_t *p_sensor_data)
     APP_LOG_INFO("  Last Update Time: %u ms", 
                  p_sensor_data->last_update_time);
     APP_LOG_INFO("=========================================");
+}
+
+uint8_t water_sensor_read_with_power_mgmt(void)
+{
+    if (!s_water_sensor_initialized)
+    {
+        APP_LOG_ERROR("[WATER_SENSOR] Not initialized, returning default WET status");
+        return WATER_SENSOR_STATUS_WET;  // 未初始化时返回报警状态
+    }
+
+    APP_LOG_INFO("[WATER_SENSOR] Reading with power management...");
+
+    // 1. 上电传感器
+    water_sensor_set_power(true);
+    APP_LOG_DEBUG("[WATER_SENSOR] Power ON");
+
+    // 2. 等待传感器稳定（水浸传感器响应很快，50ms足够）
+    sys_delay_ms(100);
+
+    // 3. 读取状态
+    water_sensor_update_data();
+    uint8_t status = s_sensor_data.water_status;
+
+    APP_LOG_INFO("[WATER_SENSOR] Status read: %s (%d)", 
+                 status == WATER_SENSOR_STATUS_DRY ? "DRY" : "WET", 
+                 status);
+
+    // 4. 断电传感器（节能）
+    water_sensor_set_power(false);
+    APP_LOG_DEBUG("[WATER_SENSOR] Power OFF");
+
+    return status;
 }
 

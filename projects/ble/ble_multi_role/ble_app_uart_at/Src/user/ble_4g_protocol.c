@@ -675,9 +675,10 @@ static void sensor_collect_timer_handler(void *p_context)
         }
         
         // 2.5. 读取水浸传感器状态（在甲烷传感器采集之后）
-        uint8_t water_status = water_sensor_get_status();
+        // 使用带电源管理的读取接口（自动上电/断电）
+        uint8_t water_status = water_sensor_read_with_power_mgmt();
         shared_params_set_device_water(water_status);
-        APP_LOG_INFO("%s Water sensor status collected: %s (%d)", 
+        APP_LOG_INFO("%s Water sensor status collected with power mgmt: %s (%d)", 
                      DEBUG_TAG, 
                      water_status == 0 ? "DRY" : "WET", 
                      water_status);
@@ -881,14 +882,14 @@ void ble_4g_protocol_init(void)
     ble_4g_protocol_init_status_info();
     ble_4g_protocol_init_param_settings();
     
-    // 初始化水浸传感器（电源保持常开）
+    // 初始化水浸传感器（初始状态断电，节能模式）
     APP_LOG_INFO("%s Initializing water sensor", DEBUG_TAG);
     if (water_sensor_init()) {
-        APP_LOG_INFO("%s Water sensor initialized successfully", DEBUG_TAG);
-        // 读取初始状态并更新到共享参数
-        uint8_t initial_water_status = water_sensor_get_status();
+        APP_LOG_INFO("%s Water sensor initialized successfully (power saving mode)", DEBUG_TAG);
+        // 读取初始状态并更新到共享参数（使用电源管理接口）
+        uint8_t initial_water_status = water_sensor_read_with_power_mgmt();
         shared_params_set_device_water(initial_water_status);
-        APP_LOG_INFO("%s Initial water sensor status: %s (%d)", 
+        APP_LOG_INFO("%s Initial water sensor status (with power mgmt): %s (%d)", 
                      DEBUG_TAG, 
                      initial_water_status == 0 ? "DRY" : "WET", 
                      initial_water_status);
@@ -1531,6 +1532,16 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         shared_params_set_sensor_status(1); // 无数据，传感器异常
         result = ble_4g_protocol_get_sensor_data_no_threshold_check(p_sensor_data);
     }
+    
+    // 5.5. 读取水浸传感器状态（在甲烷传感器读取之后）
+    // 使用带电源管理的读取接口（自动上电/断电）
+    APP_LOG_INFO("%s Reading water sensor with power management", DEBUG_TAG);
+    uint8_t water_status = water_sensor_read_with_power_mgmt();
+    shared_params_set_device_water(water_status);
+    APP_LOG_INFO("%s Water sensor status read with power mgmt: %s (%d)", 
+                 DEBUG_TAG, 
+                 water_status == 0 ? "DRY" : "WET", 
+                 water_status);
     
     // 6. 获取采集时间戳并更新到传感器数据中
     if (result && p_sensor_data != NULL) {
