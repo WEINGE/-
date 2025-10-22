@@ -45,6 +45,7 @@ typedef struct {
     uint8_t  device_GPS_status;         /**< GPS状态: 0=正常, 1=异常 */
 
     // 参数有效性标志
+    uint32_t params_version;            /**< 参数版本号，用于检测结构体变更 */
     bool     params_initialized;        /**< 参数是否已初始化 */
     uint32_t params_checksum;           /**< 参数校验和 */
     
@@ -102,5 +103,10 @@ void shared_params_register_callback(param_change_callback_t callback);
 #define PARAM_TYPE_DEVICE_WATER     0x0102
 #define PARAM_TYPE_DEVICE_MOVE      0x0103
 #define PARAM_TYPE_DEVICE_GPS_STATUS 0x0104
+
+// 参数版本号定义
+// 每次修改 shared_device_params_t 结构体时，请递增此版本号
+// 这样可以确保Flash中的旧数据不会被错误加载
+#define PARAMS_VERSION              0x00010002  // v1.2 - 添加device_water默认值为1
 
 #endif // SHARED_PARAMS_H

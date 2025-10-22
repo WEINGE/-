@@ -33,6 +33,7 @@
 #include <stdlib.h>           // 为了使用 free 函数
 #include "grx_sys.h"          // 为了使用 sdk_err_t 类型
 #include "bm8563_rtc.h"       // 为了使用RTC时间读取功能
+#include "water_sensor.h"     // 水浸传感器驱动
 
 /*
  * EXTERNAL FUNCTION DECLARATIONS
@@ -391,8 +392,11 @@ static void update_status_info_from_sources(void)
     shared_params_set_device_gps_status(g_at_collector.gps_status);
     s_status_info.device_GPS_status = g_shared_params.device_GPS_status;
 
-    // 更新水浸状态和移动状态到共享参数
-    shared_params_set_device_water(ble_status_info.device_status & 0x01);
+    // 注意：水浸状态已在 sensor_collect_timer_handler() 中通过 water_sensor_get_status() 更新
+    // 这里不再覆盖，保持水浸传感器的实时状态
+    // shared_params_set_device_water(ble_status_info.device_status & 0x01);  // 已删除，避免覆盖
+    
+    // 更新移动状态到共享参数
     shared_params_set_device_move((ble_status_info.device_status >> 1) & 0x01);
 
     APP_LOG_INFO("%s Status info updated: water=%d, sensor=%d, move=%d, signal=%d, gps=%d", 
@@ -670,6 +674,14 @@ static void sensor_collect_timer_handler(void *p_context)
             APP_LOG_WARNING("%s Collection timer: failed to get RTC timestamp", DEBUG_TAG);
         }
         
+        // 2.5. 读取水浸传感器状态（在甲烷传感器采集之后）
+        uint8_t water_status = water_sensor_get_status();
+        shared_params_set_device_water(water_status);
+        APP_LOG_INFO("%s Water sensor status collected: %s (%d)", 
+                     DEBUG_TAG, 
+                     water_status == 0 ? "DRY" : "WET", 
+                     water_status);
+        
         // 3. 更新状态信息（103）- 使其与监测数据同步采集
         update_status_info_from_sources();
         
@@ -868,6 +880,21 @@ void ble_4g_protocol_init(void)
     ble_4g_protocol_init_device_info();
     ble_4g_protocol_init_status_info();
     ble_4g_protocol_init_param_settings();
+    
+    // 初始化水浸传感器（电源保持常开）
+    APP_LOG_INFO("%s Initializing water sensor", DEBUG_TAG);
+    if (water_sensor_init()) {
+        APP_LOG_INFO("%s Water sensor initialized successfully", DEBUG_TAG);
+        // 读取初始状态并更新到共享参数
+        uint8_t initial_water_status = water_sensor_get_status();
+        shared_params_set_device_water(initial_water_status);
+        APP_LOG_INFO("%s Initial water sensor status: %s (%d)", 
+                     DEBUG_TAG, 
+                     initial_water_status == 0 ? "DRY" : "WET", 
+                     initial_water_status);
+    } else {
+        APP_LOG_ERROR("%s Failed to initialize water sensor", DEBUG_TAG);
+    }
     
     // 初始化传感器数据
     memset(&s_current_sensor_data_4g, 0, sizeof(s_current_sensor_data_4g));

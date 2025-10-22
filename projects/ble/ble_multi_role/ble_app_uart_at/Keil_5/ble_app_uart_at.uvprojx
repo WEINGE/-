@@ -664,6 +664,16 @@
               <FileType>1</FileType>
               <FilePath>..\Src\user\battery_voltage_reader.c</FilePath>
             </File>
+            <File>
+              <FileName>water_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\water_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>water_sensor_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\water_sensor_test.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

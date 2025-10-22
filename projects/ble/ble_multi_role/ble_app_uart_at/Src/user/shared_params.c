@@ -29,6 +29,14 @@ static const shared_device_params_t default_params = {
     .install_lon = 0.0f,
     .server_port = 1883,
     .server_type = 1,                   // 默认MQTT
+    
+    // 实时状态信息默认值
+    .sensor_status = 0,                 // 默认传感器正常
+    .device_water = 1,                  // 默认水浸状态为1（浸水）
+    .device_move = 0,                   // 默认未移动
+    .device_GPS_status = 0,             // 默认GPS正常
+    
+    .params_version = PARAMS_VERSION,   // 参数版本号
     .params_initialized = true,
     .params_checksum = 0
 };
@@ -88,7 +96,12 @@ bool shared_params_init(void)
 {
     // 尝试从Flash加载参数
     if (shared_params_load_from_flash()) {
-        if (shared_params_validate()) {
+        // 检查版本号是否匹配
+        if (g_shared_params.params_version != PARAMS_VERSION) {
+            APP_LOG_WARNING("%s Version mismatch: Flash=0x%08X, Current=0x%08X, using defaults", 
+                          DEBUG_TAG, g_shared_params.params_version, PARAMS_VERSION);
+        } else if (shared_params_validate()) {
+            // 版本匹配且参数有效
             // 规范化仅允许的取值范围（例如：water_threshold 只能为0或1）
             uint16_t normalized_wt = (g_shared_params.water_threshold != 0) ? 1 : 0;
             if (g_shared_params.water_threshold != normalized_wt) {
@@ -97,20 +110,22 @@ bool shared_params_init(void)
                 APP_LOG_INFO("%s Normalized water_threshold to %d", DEBUG_TAG, normalized_wt);
             }
 
-            APP_LOG_INFO("%s Parameters loaded from Flash", DEBUG_TAG);
+            APP_LOG_INFO("%s Parameters loaded from Flash (version: 0x%08X)", 
+                        DEBUG_TAG, g_shared_params.params_version);
             return true;
         } else {
             APP_LOG_WARNING("%s Invalid parameters in Flash, using defaults", DEBUG_TAG);
         }
     }
     
-    // 使用默认参数
+    // 使用默认参数（版本不匹配或参数无效时）
     memcpy(&g_shared_params, &default_params, sizeof(shared_device_params_t));
     g_shared_params.params_checksum = shared_params_calculate_checksum();
     
     // 保存默认参数到Flash
     if (shared_params_save_to_flash()) {
-        APP_LOG_INFO("%s Default parameters saved to Flash", DEBUG_TAG);
+        APP_LOG_INFO("%s Default parameters saved to Flash (version: 0x%08X)", 
+                    DEBUG_TAG, PARAMS_VERSION);
     }
     
     return true;

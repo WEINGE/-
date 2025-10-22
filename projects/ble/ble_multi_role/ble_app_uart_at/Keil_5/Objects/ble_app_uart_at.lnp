@@ -43,6 +43,8 @@
 ".\objects\shared_params.o"
 ".\objects\bm8563_rtc.o"
 ".\objects\battery_voltage_reader.o"
+".\objects\water_sensor.o"
+".\objects\water_sensor_test.o"
 --library_type=microlib --strict --scatter "..\..\..\..\..\platform\soc\linker\keil\flash_scatter_common.sct"
 ..\..\..\..\..\platform\soc\linker\keil\rom_symbol.txt --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
