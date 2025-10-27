@@ -113,3 +113,4 @@
 .\objects\transport_scheduler.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h
 .\objects\transport_scheduler.o: ..\..\..\..\..\components\profiles\common\ble_prf_types.h
 .\objects\transport_scheduler.o: ..\..\..\..\..\components\libraries\utility\utility.h
+.\objects\transport_scheduler.o: ..\..\..\..\..\components\libraries\app_log\app_log.h

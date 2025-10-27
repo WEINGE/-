@@ -46,6 +46,7 @@
 #include "gus.h"
 #include "gus_c.h"
 #include "utility.h"
+#include "app_log.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -94,25 +95,41 @@ void transport_schedule(void)
     uint16_t read_len       = 0;
 
     // read data from s_uart_to_ble_buffer, then notify or write to peer.
+    items_avail = ring_buffer_items_count_get(&s_uart_to_ble_buffer);
+    
+    if (items_avail > 0)
+    {
+        APP_LOG_DEBUG("[TRANSPORT] Buffer has %d bytes to send", items_avail);
+        APP_LOG_DEBUG("[TRANSPORT] GUS_TX_NTF_ENABLE: %d, BLE_TX_CPLT: %d, BLE_TX_FLOW_ON: %d", 
+                     transport_flag_cfm(GUS_TX_NTF_ENABLE),
+                     transport_flag_cfm(BLE_TX_CPLT),
+                     transport_flag_cfm(BLE_TX_FLOW_ON));
+    }
+    
     if (transport_flag_cfm(GUS_TX_NTF_ENABLE) /* && transport_flag_cfm(BLE_TX_CPLT) && transport_flag_cfm(BLE_TX_FLOW_ON) */) // Temporarily bypass flow control flags for debugging
     {
-        items_avail = ring_buffer_items_count_get(&s_uart_to_ble_buffer);
-
         if (items_avail > 0)
         {
             read_len = ring_buffer_read(&s_uart_to_ble_buffer, s_ble_tx_data, s_mtu_size - 3);
+            APP_LOG_INFO("[TRANSPORT] Sending %d bytes via BLE (role: %d)", read_len, uart_at_curr_gap_role_get());
 
             transport_flag_set(BLE_TX_CPLT, false);
 
             if (BLE_GAP_ROLE_PERIPHERAL == uart_at_curr_gap_role_get())
             {
                 gus_tx_data_send(0, s_ble_tx_data, read_len);
+                APP_LOG_INFO("[TRANSPORT] Sent via gus_tx_data_send (peripheral mode)");
             }
             else if (BLE_GAP_ROLE_CENTRAL == uart_at_curr_gap_role_get())
             {
                 gus_c_tx_data_send(0, s_ble_tx_data, read_len);
+                APP_LOG_INFO("[TRANSPORT] Sent via gus_c_tx_data_send (central mode)");
             }
         }
+    }
+    else if (items_avail > 0)
+    {
+        APP_LOG_WARNING("[TRANSPORT] Cannot send: GUS_TX_NTF_ENABLE is disabled!");
     }
 
     // read data form s_ble_to_uart_buffer, then send to uart.
@@ -127,7 +144,11 @@ void transport_schedule(void)
 
 void uart_to_ble_buff_data_push(uint8_t const *p_data, uint16_t length)
 {
+    APP_LOG_INFO("[TRANSPORT] Pushing %d bytes to uart_to_ble buffer", length);
     ring_buffer_write(&s_uart_to_ble_buffer, p_data, length);
+    uint16_t items_count = ring_buffer_items_count_get(&s_uart_to_ble_buffer);
+    APP_LOG_INFO("[TRANSPORT] Buffer now contains %d bytes", items_count);
+    APP_LOG_INFO("[TRANSPORT] GUS_TX_NTF_ENABLE flag: %d", transport_flag_cfm(GUS_TX_NTF_ENABLE));
 }
 
 void ble_to_uart_buff_data_push(uint8_t const *p_data, uint16_t length)

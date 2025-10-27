@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\ble_app_uart_at.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\ble_app_uart_at.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Thu Oct 23 11:33:56 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Mon Oct 27 16:43:37 2025
 <BR><P>
 <H3>Maximum Stack Usage =       2488 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -3196,8 +3196,8 @@ Global Symbols
 <P><STRONG><a name="[5fa]"></a>rwble_isr_patch</STRONG> (Thumb, 82 bytes, Stack size 24 bytes, rwble_patch.o(RAM_CODE))
 <BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = rwble_isr_patch &rArr; rwble_reset_recovery &rArr; sch_prog_recovery_patch
 </UL>
-<BR>[Calls]<UL><LI><a href="#[5fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lld_iso_hop_accel_isr
-<LI><a href="#[458]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;assert_param
+<BR>[Calls]<UL><LI><a href="#[458]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;assert_param
+<LI><a href="#[5fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lld_iso_hop_accel_isr
 <LI><a href="#[5f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rwip_isr_patch
 <LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rwble_reset_recovery
 </UL>
@@ -5125,6 +5125,7 @@ Global Symbols
 <LI><a href="#[2e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_get_device_id
 <LI><a href="#[2e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_create_query_response
 <LI><a href="#[2df]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_create_param_set_response
+<LI><a href="#[2f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_to_ble_buff_data_push
 <LI><a href="#[2eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_query
 <LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[2e2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_data_process
@@ -5135,6 +5136,7 @@ Global Symbols
 <LI><a href="#[280]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_app_init
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gus_client_process_event
 <LI><a href="#[35a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
+<LI><a href="#[4f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_schedule
 <LI><a href="#[4f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_test_checksum
 <LI><a href="#[289]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 <LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
@@ -6285,7 +6287,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[2e3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_parse_json_command
 </UL>
 
-<P><STRONG><a name="[2eb]"></a>ble_protocol_handle_query</STRONG> (Thumb, 152 bytes, Stack size 32 bytes, ble_protocol.o(i.ble_protocol_handle_query))
+<P><STRONG><a name="[2eb]"></a>ble_protocol_handle_query</STRONG> (Thumb, 230 bytes, Stack size 32 bytes, ble_protocol.o(i.ble_protocol_handle_query))
 <BR><BR>[Stack]<UL><LI>Max Depth = 1080<LI>Call Chain = ble_protocol_handle_query &rArr; ble_protocol_create_query_response &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; cJSON_Print &rArr; print &rArr; print_value &rArr; print_number &rArr; __0sscanf &rArr; __vfscanf_char &rArr; __vfscanf &rArr; _scanf_real
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -6310,8 +6312,8 @@ Global Symbols
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[2ea]"></a>ble_protocol_send_json_response</STRONG> (Thumb, 142 bytes, Stack size 24 bytes, ble_protocol.o(i.ble_protocol_send_json_response))
-<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = ble_protocol_send_json_response &rArr; app_log_output &rArr; __2snprintf
+<P><STRONG><a name="[2ea]"></a>ble_protocol_send_json_response</STRONG> (Thumb, 172 bytes, Stack size 32 bytes, ble_protocol.o(i.ble_protocol_send_json_response))
+<BR><BR>[Stack]<UL><LI>Max Depth = 144<LI>Call Chain = ble_protocol_send_json_response &rArr; uart_to_ble_buff_data_push &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[2f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_to_ble_buff_data_push
@@ -9038,12 +9040,12 @@ Global Symbols
 <LI><a href="#[15b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dmul
 <LI><a href="#[16e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_d2iz
 <LI><a href="#[375]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rf_get_recalibration_flag
-<LI><a href="#[530]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;temperature_calibrations
 <LI><a href="#[3f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_data_from_adc
 <LI><a href="#[52f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rf_calibration_set
 <LI><a href="#[52e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hal_adc_is_using
 <LI><a href="#[370]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cpll_lock_check_recover
 <LI><a href="#[531]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vbatt_calibrations
+<LI><a href="#[530]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;temperature_calibrations
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[51c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;platform_init
@@ -9233,6 +9235,7 @@ Global Symbols
 <P><STRONG><a name="[209]"></a>ring_buffer_items_count_get</STRONG> (Thumb, 42 bytes, Stack size 0 bytes, ring_buffer.o(i.ring_buffer_items_count_get))
 <BR><BR>[Called By]<UL><LI><a href="#[217]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_uart_start_transmit_async
 <LI><a href="#[208]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_uart_dma_start_transmit_async
+<LI><a href="#[2f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_to_ble_buff_data_push
 <LI><a href="#[4f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_schedule
 </UL>
 
@@ -9922,7 +9925,8 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[584]"></a>transport_flag_cfm</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, transport_scheduler.o(i.transport_flag_cfm))
-<BR><BR>[Called By]<UL><LI><a href="#[4f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_schedule
+<BR><BR>[Called By]<UL><LI><a href="#[2f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_to_ble_buff_data_push
+<LI><a href="#[4f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_schedule
 </UL>
 
 <P><STRONG><a name="[2b3]"></a>transport_flag_set</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, transport_scheduler.o(i.transport_flag_set))
@@ -9934,13 +9938,14 @@ Global Symbols
 <LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 </UL>
 
-<P><STRONG><a name="[4f2]"></a>transport_schedule</STRONG> (Thumb, 128 bytes, Stack size 8 bytes, transport_scheduler.o(i.transport_schedule))
-<BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = transport_schedule &rArr; gus_tx_data_send &rArr; prf_find_handle_by_idx
+<P><STRONG><a name="[4f2]"></a>transport_schedule</STRONG> (Thumb, 304 bytes, Stack size 32 bytes, transport_scheduler.o(i.transport_schedule))
+<BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = transport_schedule &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[20a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ring_buffer_read
 <LI><a href="#[209]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ring_buffer_items_count_get
 <LI><a href="#[400]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gus_c_tx_data_send
 <LI><a href="#[406]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gus_tx_data_send
+<LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[20e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_tx_data_send
 <LI><a href="#[584]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_flag_cfm
 <LI><a href="#[338]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_curr_gap_role_get
@@ -10021,7 +10026,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> at_cmd_handler.o(.data)
 </UL>
 <P><STRONG><a name="[2b0]"></a>uart_at_adv_report_task</STRONG> (Thumb, 48 bytes, Stack size 16 bytes, at_cmd_handler.o(i.uart_at_adv_report_task))
-<BR><BR>[Stack]<UL><LI>Max Depth = 352<LI>Call Chain = uart_at_adv_report_task &rArr; uart_at_printf &rArr; ble_to_uart_buff_data_push &rArr; gus_rx_flow_ctrl_set &rArr; prf_find_handle_by_idx
+<BR><BR>[Stack]<UL><LI>Max Depth = 408<LI>Call Chain = uart_at_adv_report_task &rArr; uart_at_printf &rArr; uart_to_ble_buff_data_push &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[587]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_printf
 <LI><a href="#[586]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_gus_uuid_find
@@ -10305,7 +10310,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[587]"></a>uart_at_printf</STRONG> (Thumb, 68 bytes, Stack size 280 bytes, at_cmd_handler.o(i.uart_at_printf))
-<BR><BR>[Stack]<UL><LI>Max Depth = 336<LI>Call Chain = uart_at_printf &rArr; ble_to_uart_buff_data_push &rArr; gus_rx_flow_ctrl_set &rArr; prf_find_handle_by_idx
+<BR><BR>[Stack]<UL><LI>Max Depth = 392<LI>Call Chain = uart_at_printf &rArr; uart_to_ble_buff_data_push &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[2f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_to_ble_buff_data_push
 <LI><a href="#[2e7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_to_uart_buff_data_push
@@ -10443,10 +10448,13 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[2f3]"></a>uart_to_ble_buff_data_push</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, transport_scheduler.o(i.uart_to_ble_buff_data_push))
-<BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = uart_to_ble_buff_data_push &rArr; ring_buffer_write
+<P><STRONG><a name="[2f3]"></a>uart_to_ble_buff_data_push</STRONG> (Thumb, 98 bytes, Stack size 24 bytes, transport_scheduler.o(i.uart_to_ble_buff_data_push))
+<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = uart_to_ble_buff_data_push &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[336]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ring_buffer_write
+<LI><a href="#[209]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ring_buffer_items_count_get
+<LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
+<LI><a href="#[584]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transport_flag_cfm
 </UL>
 <BR>[Called By]<UL><LI><a href="#[587]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_printf
 <LI><a href="#[138]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;user_at_cmd_callback
@@ -12369,7 +12377,6 @@ Local Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[652]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_set_wakeup_flag (via Veneer)
 <LI><a href="#[654]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hal_pwr_enter_chip_deepsleep (via Veneer)
-<LI><a href="#[64f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_check_ext_timer
 <LI><a href="#[64e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__NVIC_GetPendingIRQ (via Veneer)
 <LI><a href="#[655]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ll_pwr_clear_ext_wakeup_status (via Veneer)
 <LI><a href="#[554]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;work_xo_bias_set (via Veneer)
@@ -12378,13 +12385,14 @@ Local Symbols
 <LI><a href="#[618]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hal_exflash_deepsleep_patch (via Veneer)
 <LI><a href="#[624]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_core_power_on (via Veneer)
 <LI><a href="#[653]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_core_power_off (via Veneer)
+<LI><a href="#[64f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_check_ext_timer
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> sdk_pwr_mgmt_patch.o(i.pwr_mgmt_shutdown_replace)
 </UL>
 <P><STRONG><a name="[64e]"></a>__NVIC_GetPendingIRQ</STRONG> (Thumb, 40 bytes, Stack size 0 bytes, sdk_pwr_mgmt_patch.o(i.__NVIC_GetPendingIRQ))
 <BR><BR>[Called By]<UL><LI><a href="#[591]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_ble_wakeup (via Veneer)
-<LI><a href="#[64f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_check_ext_timer (via Veneer)
 <LI><a href="#[11b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_shutdown_patch (via Veneer)
+<LI><a href="#[64f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwr_mgmt_check_ext_timer (via Veneer)
 </UL>
 
 <P><STRONG><a name="[21b]"></a>append_item</STRONG> (Thumb, 132 bytes, Stack size 24 bytes, sdk_nvds_patch.o(i.append_item))

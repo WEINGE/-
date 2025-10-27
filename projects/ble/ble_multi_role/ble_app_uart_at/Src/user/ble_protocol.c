@@ -1049,12 +1049,14 @@ void ble_protocol_handle_query(uint8_t query_type)
         return;
     }
     
+    APP_LOG_INFO("%s ========== START QUERY HANDLING ==========", DEBUG_TAG);
     APP_LOG_INFO("%s Handling query type: %d by reading from cache", DEBUG_TAG, query_type);
     
     // 直接从缓存创建响应，不再实时查询4G模块
     char *json_string = ble_protocol_create_query_response(query_type);
     if (json_string)
     {
+        APP_LOG_INFO("%s JSON response created successfully", DEBUG_TAG);
         ble_protocol_send_json_response(json_string);
         free(json_string);
         APP_LOG_INFO("%s Sent cached response for query type %d", DEBUG_TAG, query_type);
@@ -1063,6 +1065,7 @@ void ble_protocol_handle_query(uint8_t query_type)
     {
         APP_LOG_ERROR("%s Failed to create response for query type %d", DEBUG_TAG, query_type);
     }
+    APP_LOG_INFO("%s ========== END QUERY HANDLING ==========", DEBUG_TAG);
 }
 
 void ble_protocol_send_data_report(const ble_sensor_data_t *p_sensor_data)
@@ -1334,12 +1337,14 @@ void ble_protocol_send_json_response(const char *p_json_str)
         return;
     }
     
-    APP_LOG_INFO("%s Sending JSON response via BLE only", DEBUG_TAG);
+    uint16_t json_len = strlen(p_json_str);
+    APP_LOG_INFO("%s Sending JSON response via BLE only, length: %d", DEBUG_TAG, json_len);
+    APP_LOG_INFO("%s JSON content: %s", DEBUG_TAG, p_json_str);
     
     // 只发送到BLE，不发送到4G模块
-    uart_to_ble_buff_data_push((uint8_t*)p_json_str, strlen(p_json_str));
+    uart_to_ble_buff_data_push((uint8_t*)p_json_str, json_len);
     
-    APP_LOG_DEBUG("%s BLE response sent: %s", DEBUG_TAG, p_json_str);
+    APP_LOG_INFO("%s BLE response pushed to buffer successfully", DEBUG_TAG);
 }
 
 void ble_debug_printf(const char *format, ...)
