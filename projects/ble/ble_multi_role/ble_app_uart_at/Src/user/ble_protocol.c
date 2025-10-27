@@ -488,7 +488,7 @@ static char* ble_protocol_create_json_report(const ble_sensor_data_t *p_data)
     // 构建body - 符合BLE协议格式
     // sensor_methane: 字符串格式 "vol,lel"
     char methane_str[32];
-    snprintf(methane_str, sizeof(methane_str), "%.1f,%.1f", 
+    snprintf(methane_str, sizeof(methane_str), "%.2f,%.1f", 
              p_data->methane_vol, p_data->methane_lel);
     cJSON_AddStringToObject(body, "sensor_methane", methane_str);
     
@@ -497,7 +497,7 @@ static char* ble_protocol_create_json_report(const ble_sensor_data_t *p_data)
     
     // sensor_battery: 字符串格式 "voltage,percent"
     char battery_str[32];
-    snprintf(battery_str, sizeof(battery_str), "%.3f,%d", 
+    snprintf(battery_str, sizeof(battery_str), "%.2f,%d", 
              p_data->battery_voltage, p_data->battery_percent);
     cJSON_AddStringToObject(body, "sensor_battery", battery_str);
     
@@ -609,13 +609,13 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             // 按照蓝牙协议文档3.5的字段名称
             // 组合甲烷数据字符串 "vol,lel"
             char methane_str[32];
-            snprintf(methane_str, sizeof(methane_str), "%.1f,%.1f", 
+            snprintf(methane_str, sizeof(methane_str), "%.2f,%.1f", 
                     s_current_sensor_data.methane_vol, s_current_sensor_data.methane_lel);
             cJSON_AddStringToObject(body, "sensor_methane", methane_str);
             cJSON_AddNumberToObject(body, "sensor_TEMP", (int)s_current_sensor_data.temperature);
             // 组合电池信息字符串 "电压,百分比" - 使用update_sensor_data_from_parser()中已更新的真实电池数据
             char battery_str[32];
-            snprintf(battery_str, sizeof(battery_str), "%.3f,%d", 
+            snprintf(battery_str, sizeof(battery_str), "%.2f,%d", 
                     s_current_sensor_data.battery_voltage, s_current_sensor_data.battery_percent);
             cJSON_AddStringToObject(body, "sensor_battery", battery_str);
             break;

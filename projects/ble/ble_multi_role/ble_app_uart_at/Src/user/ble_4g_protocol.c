@@ -169,37 +169,42 @@ bool get_collection_timestamp_for_4g(char *timestamp_buffer)
     }
     
     // 直接获取格式化的时间字符串 "YYYYMMDDHHmmss"
-    if (!bm8563_get_time_string(timestamp_buffer)) {
+    char full_timestamp[16];
+    if (!bm8563_get_time_string(full_timestamp)) {
         APP_LOG_ERROR("%s Failed to get RTC time for 4G upload", DEBUG_TAG);
-        strcpy(timestamp_buffer, "20000101000000");
+        strcpy(timestamp_buffer, "202001010000");
         return false;
     }
     
     // 如果时间为默认值，记录警告但继续使用
-    if (strncmp(timestamp_buffer, "2000", 4) == 0) {
-        APP_LOG_WARNING("%s RTC time is default (%s), using default timestamp", DEBUG_TAG, timestamp_buffer);
+    if (strncmp(full_timestamp, "2000", 4) == 0) {
+        APP_LOG_WARNING("%s RTC time is default (%s), using default timestamp", DEBUG_TAG, full_timestamp);
     }
     
     // 验证时间戳格式和长度
-    size_t len = strlen(timestamp_buffer);
+    size_t len = strlen(full_timestamp);
     if (len != 14) {
         APP_LOG_WARNING("%s Invalid timestamp length: %d, expected 14. Timestamp: %s", 
-                        DEBUG_TAG, len, timestamp_buffer);
+                        DEBUG_TAG, len, full_timestamp);
         
         // 如果长度不对，尝试补零或截断
         if (len < 14) {
             // 长度不足，补零
-            while (strlen(timestamp_buffer) < 14) {
-                strcat(timestamp_buffer, "0");
+            while (strlen(full_timestamp) < 14) {
+                strcat(full_timestamp, "0");
             }
         } else if (len > 14) {
             // 长度过长，截断
-            timestamp_buffer[14] = '\0';
+            full_timestamp[14] = '\0';
         }
-        APP_LOG_INFO("%s Corrected timestamp: %s", DEBUG_TAG, timestamp_buffer);
+        APP_LOG_INFO("%s Corrected timestamp: %s", DEBUG_TAG, full_timestamp);
     }
     
-    APP_LOG_INFO("%s Collection timestamp for 4G: %s", DEBUG_TAG, timestamp_buffer);
+    // 截取前12位（YYYYMMDDHHmm），去掉秒
+    strncpy(timestamp_buffer, full_timestamp, 12);
+    timestamp_buffer[12] = '\0';
+    
+    APP_LOG_INFO("%s Collection timestamp for 4G (12-digit): %s", DEBUG_TAG, timestamp_buffer);
     return true;
 }
 
@@ -446,14 +451,14 @@ static char* ble_4g_protocol_create_data_report_json(const ble_4g_sensor_data_t 
     
     // 构建body - 使用特殊字段让4G模块自动转换
     char methane_str[32];
-    snprintf(methane_str, sizeof(methane_str), "%.1f,%.1f", 
+    snprintf(methane_str, sizeof(methane_str), "%.2f,%.1f", 
              p_data->methane_vol, p_data->methane_lel);
     cJSON_AddStringToObject(body, "sensor_methane", methane_str);
     
     cJSON_AddNumberToObject(body, "sensor_TEMP", p_data->temperature);
     
     char battery_str[32];
-    snprintf(battery_str, sizeof(battery_str), "%.3f,%d", 
+    snprintf(battery_str, sizeof(battery_str), "%.2f,%d", 
              p_data->battery_voltage, p_data->battery_percent);
     cJSON_AddStringToObject(body, "sensor_battery", battery_str);
     
@@ -553,9 +558,16 @@ static char* ble_4g_protocol_create_status_info_json(void)
     }
     cJSON_AddNumberToObject(body, "device_GPS_status", g_shared_params.device_GPS_status);
     
-    // 使用特殊字段获取定位信息
-    cJSON_AddStringToObject(body, "device_location", SPECIAL_FIELD_LON "," SPECIAL_FIELD_LAT);
-    cJSON_AddStringToObject(body, "device_installation_location", SPECIAL_FIELD_LON "," SPECIAL_FIELD_LAT);
+    // 使用特殊字段获取定位信息（格式化为6位小数）
+    char location_str[32];
+    snprintf(location_str, sizeof(location_str), "%.6f,%.6f", 
+             g_shared_params.location_lon, g_shared_params.location_lat);
+    cJSON_AddStringToObject(body, "device_location", location_str);
+    
+    char install_location_str[32];
+    snprintf(install_location_str, sizeof(install_location_str), "%.6f,%.6f", 
+             g_shared_params.install_lon, g_shared_params.install_lat);
+    cJSON_AddStringToObject(body, "device_installation_location", install_location_str);
     
     cJSON_AddItemToObject(json, "body", body);
     
