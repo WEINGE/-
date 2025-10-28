@@ -324,6 +324,10 @@ static void parse_at_command_response(const char* response, uint16_t length)
         strncpy(g_at_collector.imei, response + 6, sizeof(g_at_collector.imei) - 1);
         g_at_collector.imei[sizeof(g_at_collector.imei) - 1] = '\0';
         APP_LOG_INFO("%s Collected IMEI: %s", DEBUG_TAG, g_at_collector.imei);
+        
+        // 动态更新蓝牙名称（如果IMEI后四位与当前名称不符）
+        extern void update_ble_name_with_imei(void);
+        update_ble_name_with_imei();
     }
     else if (strncmp(response, "+ICCID:", 7) == 0)
     {

@@ -294,6 +294,11 @@ void uart_at_dev_state_set(dev_state_t dev_state)
     s_curr_dev_state = dev_state;
 }
 
+dev_state_t uart_at_dev_state_get(void)
+{
+    return s_curr_dev_state;
+}
+
 ble_gap_role_t uart_at_curr_gap_role_get(void)
 {
     return s_curr_gap_role;

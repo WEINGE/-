@@ -69,7 +69,7 @@
  *****************************************************************************************
  */
 /**@brief BLE GAP参数配置 - 定义设备的蓝牙行为参数 */
-#define DEVICE_NAME                         "Goodix_UART_AT"   /**< 设备名称，将包含在广播数据中，用于设备识别 */
+#define DEVICE_NAME                         "GAS0000"   /**< 默认设备名称，将在获取IMEI后动态更新 */
 
 /** 广播参数配置 - 控制设备的可发现性 */
 #define APP_ADV_INTERVAL_MIN                160                /**< 广播最小间隔 (单位: 0.625ms) = 100ms，影响功耗和发现速度 */
@@ -126,9 +126,9 @@ uint8_t g_adv_data_set[28] =
 
 uint8_t g_adv_rsp_data_set[28] =            /**< Scan responce data. */
 {
-    0x0f,
+    0x08,
     BLE_GAP_AD_TYPE_COMPLETE_NAME,
-    'G', 'o', 'o', 'd', 'i', 'x', '_', 'U', 'A', 'R', 'T', '_', 'A', 'T'
+    'G', 'A', 'S', '0', '0', '0', '0'
 };
 
 /*
@@ -137,6 +137,7 @@ uint8_t g_adv_rsp_data_set[28] =            /**< Scan responce data. */
  */
 static void gap_params_init(void)
 {
+    // 初始化时使用默认名称 GAS0000
     ble_gap_pair_enable(false);
     ble_gap_device_name_set(BLE_GAP_WRITE_PERM_DISABLE, (uint8_t *)DEVICE_NAME, strlen(DEVICE_NAME));
     ble_gap_l2cap_params_set(MAX_MTU_DEFUALT, MAX_MPS_DEFUALT, MAX_NB_LECB_DEFUALT);
@@ -152,7 +153,17 @@ static void gap_params_init(void)
     g_gap_adv_param.filter_pol   = BLE_GAP_ADV_ALLOW_SCAN_ANY_CON_ANY;
     ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_STATIC, &g_gap_adv_param);
     ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_DATA, g_adv_data_set, sizeof(g_adv_data_set));
-    ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_SCAN_RSP, g_adv_rsp_data_set, sizeof(g_adv_rsp_data_set));
+    
+    // 使用默认名称设置广播响应数据
+    uint8_t adv_rsp_data[28] = {0};
+    uint8_t name_len = strlen(DEVICE_NAME);
+    adv_rsp_data[0] = name_len + 1;
+    adv_rsp_data[1] = BLE_GAP_AD_TYPE_COMPLETE_NAME;
+    memcpy(&adv_rsp_data[2], DEVICE_NAME, name_len);
+    
+    ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_SCAN_RSP, adv_rsp_data, name_len + 2);
+    
+    APP_LOG_INFO("BLE initialized with default name: %s", DEVICE_NAME);
 
     g_gap_adv_time_param.duration    = 0;
     g_gap_adv_time_param.max_adv_evt = 0;
@@ -667,5 +678,90 @@ void update_sensor_data_from_parser(void)
                      ble_sensor_data.methane_vol, 
                      ble_sensor_data.methane_lel, 
                      ble_sensor_data.temperature);
+    }
+}
+
+/**
+ *****************************************************************************************
+ * @brief 动态更新蓝牙设备名称（基于IMEI后四位）
+ * 
+ * 此函数检查当前IMEI，如果IMEI后四位与当前蓝牙名称不符，则更新蓝牙名称并重启广播。
+ * 调用时机：在IMEI成功获取后调用，例如在4G模块初始化完成后。
+ *****************************************************************************************
+ */
+void update_ble_name_with_imei(void)
+{
+    static char s_current_ble_name[32] = DEVICE_NAME;  // 保存当前蓝牙名称
+    char imei_buffer[32] = {0};
+    char new_ble_name[32] = {0};
+    
+    // 尝试获取IMEI
+    if (!ble_protocol_get_imei(imei_buffer, sizeof(imei_buffer)) || strlen(imei_buffer) < 4)
+    {
+        APP_LOG_DEBUG("IMEI not available yet, keeping current BLE name: %s", s_current_ble_name);
+        return;
+    }
+    
+    // 获取IMEI的后四位
+    size_t imei_len = strlen(imei_buffer);
+    const char *last_four = &imei_buffer[imei_len - 4];
+    
+    // 构建新的蓝牙名称
+    snprintf(new_ble_name, sizeof(new_ble_name), "GAS%s", last_four);
+    
+    // 检查是否需要更新（名称是否改变）
+    if (strcmp(s_current_ble_name, new_ble_name) == 0)
+    {
+        APP_LOG_DEBUG("BLE name already up-to-date: %s", s_current_ble_name);
+        return;
+    }
+    
+    APP_LOG_INFO("Updating BLE name from '%s' to '%s' (IMEI: %s)", 
+                 s_current_ble_name, new_ble_name, imei_buffer);
+    
+    // 更新保存的当前名称
+    strncpy(s_current_ble_name, new_ble_name, sizeof(s_current_ble_name) - 1);
+    s_current_ble_name[sizeof(s_current_ble_name) - 1] = '\0';
+    
+    // 如果正在广播，先停止广播
+    bool was_advertising = false;
+    if (uart_at_dev_state_get() == ADVERTISING)
+    {
+        was_advertising = true;
+        ble_gap_adv_stop(0);
+        APP_LOG_INFO("Stopped advertising to update BLE name");
+        sys_delay_ms(50);  // 短暂延迟确保广播完全停止
+    }
+    
+    // 更新设备名称
+    ble_gap_device_name_set(BLE_GAP_WRITE_PERM_DISABLE, 
+                           (uint8_t *)new_ble_name, 
+                           strlen(new_ble_name));
+    
+    // 更新广播响应数据
+    uint8_t adv_rsp_data[28] = {0};
+    uint8_t name_len = strlen(new_ble_name);
+    adv_rsp_data[0] = name_len + 1;
+    adv_rsp_data[1] = BLE_GAP_AD_TYPE_COMPLETE_NAME;
+    memcpy(&adv_rsp_data[2], new_ble_name, name_len);
+    
+    ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_SCAN_RSP, adv_rsp_data, name_len + 2);
+    
+    // 如果之前在广播，重新启动广播
+    if (was_advertising)
+    {
+        sdk_err_t err_code = ble_gap_adv_start(0, &g_gap_adv_time_param);
+        if (BLE_SUCCESS == err_code)
+        {
+            APP_LOG_INFO("Advertising restarted with new BLE name: %s", new_ble_name);
+        }
+        else
+        {
+            APP_LOG_ERROR("Failed to restart advertising: 0x%02X", err_code);
+        }
+    }
+    else
+    {
+        APP_LOG_INFO("BLE name updated to: %s (not advertising)", new_ble_name);
     }
 }

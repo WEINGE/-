@@ -262,6 +262,11 @@ static bool ble_4g_protocol_force_get_imei(void)
             strncpy(s_device_id, g_at_collector.imei, sizeof(s_device_id) - 1);
             s_device_id[sizeof(s_device_id) - 1] = '\0';
             APP_LOG_INFO("%s IMEI successfully obtained: %s", DEBUG_TAG, s_device_id);
+            
+            // 动态更新蓝牙名称（如果IMEI后四位与当前名称不符）
+            extern void update_ble_name_with_imei(void);
+            update_ble_name_with_imei();
+            
             return true;
         }
         
