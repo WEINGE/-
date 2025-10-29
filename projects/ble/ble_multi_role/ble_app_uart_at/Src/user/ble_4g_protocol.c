@@ -666,11 +666,47 @@ static char* ble_4g_protocol_create_settings_query_json(void)
  * 
  * 采集定时器处理函数：只负责采集和存储数据，不进行上报
  * 同时更新状态信息（103），使其与监测数据（105）同步
+ * 
+ * 修改逻辑：优先检测水浸，如有水浸则跳过传感器采集
  *****************************************************************************************
  */
 static void sensor_collect_timer_handler(void *p_context)
 {
     APP_LOG_INFO("%s Sensor collect timer triggered - collecting data with power management", DEBUG_TAG);
+    
+    // ========== 步骤1: 优先检测水浸（节能优化） ==========
+    APP_LOG_INFO("%s [STEP 1] Priority check: Reading water sensor first", DEBUG_TAG);
+    uint8_t water_status = water_sensor_read_with_power_mgmt();
+    shared_params_set_device_water(water_status);
+    APP_LOG_INFO("%s Water sensor status: %s (%d)", 
+                 DEBUG_TAG, 
+                 water_status == 0 ? "DRY" : "WET", 
+                 water_status);
+    
+    // 如果检测到水浸，跳过传感器采集，只更新状态信息
+    if (water_status == 1) {  // 1 = WET (有水浸)
+        APP_LOG_WARNING("%s *** WATER ALARM DETECTED! Skipping gas sensor collection to save power ***", DEBUG_TAG);
+        
+        // 设置传感器状态为异常（因为未采集）
+        shared_params_set_sensor_status(1);
+        
+        // 更新状态信息（103）- 包含水浸告警状态
+        update_status_info_from_sources();
+        
+        // 关键修复：清空任何可能存在的旧的传感器数据，确保水浸告警期间不会上报过时的105消息
+        if (s_collected_data_count > 0) {
+            APP_LOG_WARNING("%s Clearing %d previously collected sensor data points due to water alarm.", DEBUG_TAG, s_collected_data_count);
+            s_collected_data_count = 0;
+            s_data_collection_index = 0;
+        }
+        
+        APP_LOG_INFO("%s Water alarm mode: Status info (103) updated, no sensor data (105) collected", DEBUG_TAG);
+        APP_LOG_INFO("%s Collection completed in water alarm mode (power saved)", DEBUG_TAG);
+        return;  // 直接返回，不采集传感器
+    }
+    
+    // ========== 步骤2: 无水浸，继续正常采集传感器 ==========
+    APP_LOG_INFO("%s [STEP 2] No water detected, proceeding with normal sensor collection", DEBUG_TAG);
     
     // 使用电源管理读取传感器数据
     ble_4g_sensor_data_t sensor_data;
@@ -691,14 +727,7 @@ static void sensor_collect_timer_handler(void *p_context)
             APP_LOG_WARNING("%s Collection timer: failed to get RTC timestamp", DEBUG_TAG);
         }
         
-        // 2.5. 读取水浸传感器状态（在甲烷传感器采集之后）
-        // 使用带电源管理的读取接口（自动上电/断电）
-        uint8_t water_status = water_sensor_read_with_power_mgmt();
-        shared_params_set_device_water(water_status);
-        APP_LOG_INFO("%s Water sensor status collected with power mgmt: %s (%d)", 
-                     DEBUG_TAG, 
-                     water_status == 0 ? "DRY" : "WET", 
-                     water_status);
+        // 注意：水浸状态已在步骤1中读取并更新，此处不再重复读取
         
         // 3. 更新状态信息（103）- 使其与监测数据同步采集
         update_status_info_from_sources();
@@ -838,31 +867,47 @@ static void data_report_timer_handler(void *p_context)
 {
     APP_LOG_INFO("%s Data report timer triggered - uploading with DTU power management", DEBUG_TAG);
     
-    // 更新状态信息
+    // 步骤1: 始终更新最新的状态信息 (103)
     update_status_info_from_sources();
     
-    // 确保有数据需要上报
+    // 步骤2: 检查是否有已采集的传感器数据 (105)
     if (s_collected_data_count == 0)
     {
-        APP_LOG_WARNING("%s No collected data to report", DEBUG_TAG);
+        APP_LOG_WARNING("%s No collected sensor data (105) to report.", DEBUG_TAG);
         
-        // 即使没有累积数据，也获取当前最新数据进行上报
-        ble_4g_sensor_data_t sensor_data;
-        bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
-        
-        if (data_valid)
+        // 检查当前是否处于水浸状态
+        if (g_shared_params.device_water == 1) // 1 = WET
         {
-            memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
+            // 如果是水浸状态，说明没有105数据是正常的。此时只上报103状态信息即可。
+            APP_LOG_INFO("%s In water alarm state. Reporting status info (103) only.", DEBUG_TAG);
+            
+            // 直接调用上传函数。该函数会发现没有105数据，但会发送最新的103状态信息。
+            ble_4g_protocol_upload_with_power_mgmt();
         }
-        
-        // 使用DTU电源管理上传单条数据
-        ble_4g_protocol_upload_with_power_mgmt();
+        else
+        {
+            // 如果不是水浸状态但依然没有数据，可能是设备刚启动或采集失败。
+            // 尝试进行一次即时采集并上报。
+            APP_LOG_INFO("%s Not in water alarm state. Attempting an immediate collection and report.", DEBUG_TAG);
+            
+            ble_4g_sensor_data_t sensor_data;
+            bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
+            
+            if (data_valid)
+            {
+                memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
+            }
+            
+            // 使用DTU电源管理上传单条数据
+            ble_4g_protocol_upload_with_power_mgmt();
+        }
     }
     else
     {
+        // 如果有累积的传感器数据，正常上报所有数据
         APP_LOG_INFO("%s %d data points ready to report with DTU power management", DEBUG_TAG, s_collected_data_count);
         
-        // 使用DTU电源管理上传所有累积数据（不在这里清空，在上传函数内部处理）
+        // 使用DTU电源管理上传所有累积数据
         ble_4g_protocol_upload_with_power_mgmt();
     }
 }
@@ -943,17 +988,27 @@ void ble_4g_protocol_init(void)
     // 初始化完成后执行首次上传（使用统一的电源管理流程）
     APP_LOG_INFO("%s Performing initial upload with power management", DEBUG_TAG);
 
-    // 1. 读取传感器数据
-    ble_4g_sensor_data_t sensor_data;
-    bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
-    if (data_valid)
+    // 检查初始水浸状态，如果设备启动时就有水浸，则跳过首次传感器采集
+    if (g_shared_params.device_water == 1) // 1 = WET
     {
-        memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
+        APP_LOG_WARNING("%s Device started in water alarm state. Skipping initial sensor data collection.", DEBUG_TAG);
+        // 设置传感器状态为异常
+        shared_params_set_sensor_status(1);
     }
     else
     {
-        APP_LOG_WARNING("%s Failed to read sensor data during init, using default data", DEBUG_TAG);
-        // update_sensor_data_from_parser();
+        // 如果设备启动时无水浸，则执行首次传感器数据采集
+        APP_LOG_INFO("%s No water alarm on init. Performing initial sensor data collection.", DEBUG_TAG);
+        ble_4g_sensor_data_t sensor_data;
+        bool data_valid = ble_4g_protocol_read_sensor_with_power_mgmt(&sensor_data);
+        if (data_valid)
+        {
+            memcpy(&s_current_sensor_data_4g, &sensor_data, sizeof(ble_4g_sensor_data_t));
+        }
+        else
+        {
+            APP_LOG_WARNING("%s Failed to read sensor data during init, using default data", DEBUG_TAG);
+        }
     }
 
     // 2. 更新状态信息
@@ -1550,15 +1605,8 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         result = ble_4g_protocol_get_sensor_data_no_threshold_check(p_sensor_data);
     }
     
-    // 5.5. 读取水浸传感器状态（在甲烷传感器读取之后）
-    // 使用带电源管理的读取接口（自动上电/断电）
-    APP_LOG_INFO("%s Reading water sensor with power management", DEBUG_TAG);
-    uint8_t water_status = water_sensor_read_with_power_mgmt();
-    shared_params_set_device_water(water_status);
-    APP_LOG_INFO("%s Water sensor status read with power mgmt: %s (%d)", 
-                 DEBUG_TAG, 
-                 water_status == 0 ? "DRY" : "WET", 
-                 water_status);
+    // 注意：水浸传感器状态已在 sensor_collect_timer_handler() 中优先检测
+    // 此处不再重复读取，避免重复上电/断电操作
     
     // 6. 获取采集时间戳并更新到传感器数据中
     if (result && p_sensor_data != NULL) {
@@ -1668,33 +1716,42 @@ void ble_4g_protocol_upload_with_power_mgmt(void)
     ble_4g_protocol_update_dtu_info_cache();
 
     // 3. 批量发送采集数据（先发动态，再发静态与查询）
-    if (s_collected_data_count > 0)
+    // 关键修复：只有在没有水浸的情况下才上报105数据
+    if (g_shared_params.device_water == 0) // 0 = DRY
     {
-        // 从最旧的数据开始上报
-        uint8_t total = s_collected_data_count;
-        uint8_t start_index = (s_data_collection_index + MAX_COLLECTED_DATA_COUNT - s_collected_data_count) % MAX_COLLECTED_DATA_COUNT;
-        APP_LOG_INFO("%s Uploading %d collected data points", DEBUG_TAG, total);
-        for (uint8_t i = 0; i < total; i++)
+        if (s_collected_data_count > 0)
         {
-            uint8_t current_index = (start_index + i) % MAX_COLLECTED_DATA_COUNT;
-            // 发送 105 监测数据
-            ble_4g_protocol_send_data_report(&s_collected_data_array[current_index]);
-            sys_delay_ms(300);  // 每条数据发送后等待2秒，确保传输完成
-            // 每次105后都跟一个103状态信息
-            ble_4g_protocol_send_status_info_report();
-            sys_delay_ms(300);  // 状态信息发送后也等待2秒
+            // 从最旧的数据开始上报
+            uint8_t total = s_collected_data_count;
+            uint8_t start_index = (s_data_collection_index + MAX_COLLECTED_DATA_COUNT - s_collected_data_count) % MAX_COLLECTED_DATA_COUNT;
+            APP_LOG_INFO("%s No water alarm. Uploading %d collected data points (105).", DEBUG_TAG, total);
+            for (uint8_t i = 0; i < total; i++)
+            {
+                uint8_t current_index = (start_index + i) % MAX_COLLECTED_DATA_COUNT;
+                // 发送 105 监测数据
+                ble_4g_protocol_send_data_report(&s_collected_data_array[current_index]);
+                // 每次105后都跟一个103状态信息
+                ble_4g_protocol_send_status_info_report();
+            }
+            // 发送完批量数据后清空缓冲
+            ble_4g_protocol_clear_collected_data();
         }
-        // 发送完批量数据后清空缓冲
-        ble_4g_protocol_clear_collected_data();
+        else
+        {
+            // 如果没有累积数据，则发送当前数据（如果有效）
+            APP_LOG_INFO("%s No collected data, sending current sensor data if valid", DEBUG_TAG);
+            if (s_current_sensor_data_4g.is_valid)
+            {
+                ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
+            }
+            ble_4g_protocol_send_status_info_report();
+        }
     }
     else
     {
-        // 没有累积数据，发送当前数据
-     //   APP_LOG_INFO("%s No collected data, sending current snapshot", DEBUG_TAG);
-        ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
-      sys_delay_ms(300);  // 等待数据发送完成
+        // 如果有水浸，则只发送103状态报告
+        APP_LOG_WARNING("%s Water alarm is active. Suppressing all 105 data reports. Sending status (103) only.", DEBUG_TAG);
         ble_4g_protocol_send_status_info_report();
-       sys_delay_ms(300);  // 等待状态信息发送完成
     }
 
     // 4. 发送静态信息与参数信息、设置查询

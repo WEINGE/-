@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\ble_app_uart_at.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\ble_app_uart_at.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Tue Oct 28 10:19:12 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Oct 29 17:47:36 2025
 <BR><P>
 <H3>Maximum Stack Usage =       3536 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -2651,7 +2651,7 @@ Global Symbols
 <LI><a href="#[252]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_ble_name_with_imei
 <LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 <LI><a href="#[263]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_read_with_power_mgmt
-<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 <LI><a href="#[271]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[27a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_update_dtu_info_cache
@@ -3869,7 +3869,7 @@ Global Symbols
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 <LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;data_report_timer_handler
 <LI><a href="#[253]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_sensor_data_no_threshold_check
-<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 <LI><a href="#[258]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_report_timer
 <LI><a href="#[256]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_collect_timer
 <LI><a href="#[2a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;llcp_pdu_handler_tab_replace
@@ -4020,7 +4020,7 @@ Global Symbols
 <LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_adv_start
 <LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_adv_param_set
 <LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_admin_cmd
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[252]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_ble_name_with_imei
 <LI><a href="#[284]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gap_params_init
 <LI><a href="#[28a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
@@ -4058,7 +4058,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[43f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;parse_at_command_response
 <LI><a href="#[26f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[2e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_get_imei
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[252]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_ble_name_with_imei
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
@@ -4123,12 +4123,12 @@ Global Symbols
 <LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;add_ltk_item
 </UL>
 
-<P><STRONG><a name="[269]"></a>strcpy</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, strcpy.o(.text))
+<P><STRONG><a name="[26a]"></a>strcpy</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, strcpy.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[534]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_value
 <LI><a href="#[53a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_string_ptr
 <LI><a href="#[2ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init_device_info
 <LI><a href="#[26f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[25f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init_device_info
 </UL>
 
@@ -4424,7 +4424,7 @@ Global Symbols
 <LI><a href="#[2e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_create_param_set_response
 <LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_sensor_rx_get
 <LI><a href="#[5f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_sensor_get
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[35c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
 <LI><a href="#[23c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;battery_voltage_send_ble_log
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
@@ -5144,7 +5144,7 @@ Global Symbols
 <LI><a href="#[2e3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_data_process
 <LI><a href="#[27b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_update_sensor_data
 <LI><a href="#[279]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[252]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_ble_name_with_imei
 <LI><a href="#[562]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart1_send_json_to_4g
 <LI><a href="#[281]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_app_init
@@ -5167,13 +5167,13 @@ Global Symbols
 <LI><a href="#[565]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_load_from_flash
 <LI><a href="#[263]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_read_with_power_mgmt
 <LI><a href="#[262]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_init
-<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
+<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
 <LI><a href="#[264]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_water
 <LI><a href="#[56a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_move
 <LI><a href="#[569]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_gps_status
 <LI><a href="#[343]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_start
 <LI><a href="#[33e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_read_time
-<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[25d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_sensor_power_control
 <LI><a href="#[276]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_status_info_report
 <LI><a href="#[275]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_static_info
@@ -5183,7 +5183,7 @@ Global Symbols
 <LI><a href="#[270]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_data_report
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 <LI><a href="#[241]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_clear_collected_data
-<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 <LI><a href="#[271]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[265]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
@@ -5205,7 +5205,7 @@ Global Symbols
 <LI><a href="#[2ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_install_location
 <LI><a href="#[255]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_collect_time
 <LI><a href="#[2eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_save_to_flash
-<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 <LI><a href="#[34e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_set_time_from_network
 <LI><a href="#[258]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_report_timer
 <LI><a href="#[256]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_restart_collect_timer
@@ -5590,7 +5590,7 @@ Global Symbols
 <LI><a href="#[150]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr
 <LI><a href="#[1b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -5622,7 +5622,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 </UL>
-<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
 <P><STRONG><a name="[2e2]"></a>ble_4g_protocol_get_status_info</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, ble_4g_protocol.o(i.ble_4g_protocol_get_status_info))
@@ -5645,8 +5645,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[2e8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 </UL>
 
-<P><STRONG><a name="[25c]"></a>ble_4g_protocol_init</STRONG> (Thumb, 546 bytes, Stack size 72 bytes, ble_4g_protocol.o(i.ble_4g_protocol_init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 2040<LI>Call Chain = ble_4g_protocol_init &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
+<P><STRONG><a name="[25c]"></a>ble_4g_protocol_init</STRONG> (Thumb, 620 bytes, Stack size 64 bytes, ble_4g_protocol.o(i.ble_4g_protocol_init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 2032<LI>Call Chain = ble_4g_protocol_init &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_timer_create
 <LI><a href="#[1cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_error_fault_handler
@@ -5654,11 +5654,12 @@ Global Symbols
 <LI><a href="#[25e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_4g_power_en_set
 <LI><a href="#[263]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_read_with_power_mgmt
 <LI><a href="#[262]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_init
+<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
 <LI><a href="#[264]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_water
-<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[25d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_sensor_power_control
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
-<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[265]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rtc_debug_test
 <LI><a href="#[260]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init_status_info
 <LI><a href="#[261]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init_param_settings
@@ -5669,18 +5670,16 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[266]"></a>ble_4g_protocol_read_sensor_with_power_mgmt</STRONG> (Thumb, 626 bytes, Stack size 64 bytes, ble_4g_protocol.o(i.ble_4g_protocol_read_sensor_with_power_mgmt))
+<P><STRONG><a name="[266]"></a>ble_4g_protocol_read_sensor_with_power_mgmt</STRONG> (Thumb, 546 bytes, Stack size 64 bytes, ble_4g_protocol.o(i.ble_4g_protocol_read_sensor_with_power_mgmt))
 <BR><BR>[Stack]<UL><LI>Max Depth = 1968<LI>Call Chain = ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[250]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sys_delay_ms
-<LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_clear_flag
-<LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
+<LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_clear_flag
+<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
 <LI><a href="#[26f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
-<LI><a href="#[263]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_read_with_power_mgmt
-<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
-<LI><a href="#[264]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_water
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
 <LI><a href="#[25d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_sensor_power_control
 <LI><a href="#[253]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_sensor_data_no_threshold_check
 <LI><a href="#[251]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncpy
@@ -5723,7 +5722,7 @@ Global Symbols
 <LI><a href="#[271]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[242]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_data_report_json
 </UL>
-<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
 </UL>
 
@@ -5768,7 +5767,7 @@ Global Symbols
 <LI><a href="#[273]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_param_info_report
 <LI><a href="#[272]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_device_info_report
 </UL>
-<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
 <P><STRONG><a name="[276]"></a>ble_4g_protocol_send_status_info_report</STRONG> (Thumb, 58 bytes, Stack size 16 bytes, ble_4g_protocol.o(i.ble_4g_protocol_send_status_info_report))
@@ -5778,7 +5777,7 @@ Global Symbols
 <LI><a href="#[271]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_json_with_delay
 <LI><a href="#[24d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_create_status_info_json
 </UL>
-<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delayed_send_timer_handler
 </UL>
 
@@ -5818,8 +5817,8 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 1680<LI>Call Chain = ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
-<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
-<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[1b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[35c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
@@ -5831,10 +5830,10 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[1b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 </UL>
 
-<P><STRONG><a name="[268]"></a>ble_4g_protocol_upload_with_power_mgmt</STRONG> (Thumb, 238 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.ble_4g_protocol_upload_with_power_mgmt))
+<P><STRONG><a name="[269]"></a>ble_4g_protocol_upload_with_power_mgmt</STRONG> (Thumb, 288 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.ble_4g_protocol_upload_with_power_mgmt))
 <BR><BR>[Stack]<UL><LI>Max Depth = 1656<LI>Call Chain = ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -5852,7 +5851,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[59b]"></a>ble_4g_protocol_vol_to_lel</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, ble_4g_protocol.o(i.ble_4g_protocol_vol_to_lel))
-<BR><BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR><BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 </UL>
 
 <P><STRONG><a name="[2aa]"></a>ble_act_num_get_by_env</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, ble_state.o(i.ble_act_num_get_by_env))
@@ -6352,11 +6351,11 @@ Global Symbols
 <P><STRONG><a name="[2f6]"></a>ble_protocol_update_sensor_data</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, ble_protocol.o(i.ble_protocol_update_sensor_data))
 <BR><BR>[Calls]<UL><LI><a href="#[1b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 </UL>
 
 <P><STRONG><a name="[59a]"></a>ble_protocol_vol_to_lel</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, ble_protocol.o(i.ble_protocol_vol_to_lel))
-<BR><BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR><BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 </UL>
 
 <P><STRONG><a name="[2f7]"></a>ble_scan_env_init</STRONG> (Thumb, 26 bytes, Stack size 8 bytes, cold_patch.o(i.ble_scan_env_init))
@@ -7387,12 +7386,12 @@ Global Symbols
 <LI><a href="#[343]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_start
 <LI><a href="#[344]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bm8563_is_running
 <LI><a href="#[20c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncmp
-<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
 <LI><a href="#[1be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 <LI><a href="#[251]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncpy
 <LI><a href="#[3f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcat
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 </UL>
@@ -7422,7 +7421,7 @@ Global Symbols
 <LI><a href="#[250]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sys_delay_ms
 </UL>
 <BR>[Called By]<UL><LI><a href="#[25c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
-<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
 <P><STRONG><a name="[29a]"></a>gr5xx_fpb_func_register</STRONG> (Thumb, 220 bytes, Stack size 32 bytes, sdk_fpb_mgmt.o(i.gr5xx_fpb_func_register))
@@ -8827,7 +8826,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> ble.o(.data)
 </UL>
 <P><STRONG><a name="[b5]"></a>main</STRONG> (Thumb, 736 bytes, Stack size 56 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 2096<LI>Call Chain = main &rArr; ble_4g_protocol_init &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
+<BR><BR>[Stack]<UL><LI>Max Depth = 2088<LI>Call Chain = main &rArr; ble_4g_protocol_init &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[374]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hal_dwt_enable
 <LI><a href="#[375]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hal_dwt_disable
@@ -9440,18 +9439,18 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble.o(.data)
 </UL>
-<P><STRONG><a name="[26b]"></a>sensor_data_clear_flag</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, sensor_data_parser.o(i.sensor_data_clear_flag))
+<P><STRONG><a name="[26c]"></a>sensor_data_clear_flag</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, sensor_data_parser.o(i.sensor_data_clear_flag))
 <BR><BR>[Called By]<UL><LI><a href="#[564]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_uart0_clear_flag
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 </UL>
 
-<P><STRONG><a name="[26c]"></a>sensor_data_get_latest</STRONG> (Thumb, 36 bytes, Stack size 8 bytes, sensor_data_parser.o(i.sensor_data_get_latest))
+<P><STRONG><a name="[26d]"></a>sensor_data_get_latest</STRONG> (Thumb, 36 bytes, Stack size 8 bytes, sensor_data_parser.o(i.sensor_data_get_latest))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = sensor_data_get_latest
 </UL>
 <BR>[Called By]<UL><LI><a href="#[60]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_status_get
 <LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_sensor_rx_get
 <LI><a href="#[5f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_sensor_get
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 </UL>
 
@@ -9481,7 +9480,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[564]"></a>sensor_uart0_clear_flag</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, user_periph_setup.o(i.sensor_uart0_clear_flag))
-<BR><BR>[Calls]<UL><LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_clear_flag
+<BR><BR>[Calls]<UL><LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_clear_flag
 </UL>
 <BR>[Called By]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_sensor_rx_clr
 </UL>
@@ -9497,7 +9496,7 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[566]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_validate
 <LI><a href="#[2eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_save_to_flash
-<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 </UL>
 
 <P><STRONG><a name="[35d]"></a>shared_params_get_methane_threshold</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, shared_params.o(i.shared_params_get_methane_threshold))
@@ -9512,7 +9511,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[35c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
 </UL>
 
-<P><STRONG><a name="[26a]"></a>shared_params_init</STRONG> (Thumb, 224 bytes, Stack size 32 bytes, shared_params.o(i.shared_params_init))
+<P><STRONG><a name="[26b]"></a>shared_params_init</STRONG> (Thumb, 224 bytes, Stack size 32 bytes, shared_params.o(i.shared_params_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 728<LI>Call Chain = shared_params_init &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -9532,7 +9531,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[37b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hal_flash_read
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<BR>[Called By]<UL><LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 </UL>
 
 <P><STRONG><a name="[2eb]"></a>shared_params_save_to_flash</STRONG> (Thumb, 144 bytes, Stack size 40 bytes, shared_params.o(i.shared_params_save_to_flash))
@@ -9549,7 +9548,7 @@ Global Symbols
 <LI><a href="#[259]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_methane_threshold
 <LI><a href="#[2ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_install_location
 <LI><a href="#[255]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_collect_time
-<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 <LI><a href="#[2e8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 </UL>
 
@@ -9570,7 +9569,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[568]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;notify_param_change
 </UL>
-<BR>[Called By]<UL><LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 </UL>
 
 <P><STRONG><a name="[56a]"></a>shared_params_set_device_move</STRONG> (Thumb, 64 bytes, Stack size 24 bytes, shared_params.o(i.shared_params_set_device_move))
@@ -9579,7 +9578,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[568]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;notify_param_change
 </UL>
-<BR>[Called By]<UL><LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 </UL>
 
 <P><STRONG><a name="[264]"></a>shared_params_set_device_water</STRONG> (Thumb, 64 bytes, Stack size 24 bytes, shared_params.o(i.shared_params_set_device_water))
@@ -9589,7 +9588,6 @@ Global Symbols
 <LI><a href="#[568]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;notify_param_change
 </UL>
 <BR>[Called By]<UL><LI><a href="#[25c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
-<LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 </UL>
 
@@ -9616,13 +9614,15 @@ Global Symbols
 <LI><a href="#[2e8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_handle_param_set
 </UL>
 
-<P><STRONG><a name="[26e]"></a>shared_params_set_sensor_status</STRONG> (Thumb, 64 bytes, Stack size 24 bytes, shared_params.o(i.shared_params_set_sensor_status))
+<P><STRONG><a name="[267]"></a>shared_params_set_sensor_status</STRONG> (Thumb, 64 bytes, Stack size 24 bytes, shared_params.o(i.shared_params_set_sensor_status))
 <BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = shared_params_set_sensor_status &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[568]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;notify_param_change
 </UL>
-<BR>[Called By]<UL><LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[25c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
+<LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
+<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 </UL>
 
 <P><STRONG><a name="[25a]"></a>shared_params_set_temp_thresholds</STRONG> (Thumb, 102 bytes, Stack size 40 bytes, shared_params.o(i.shared_params_set_temp_thresholds))
@@ -9665,7 +9665,7 @@ Global Symbols
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
 <LI><a href="#[567]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_calculate_checksum
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<BR>[Called By]<UL><LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 </UL>
 
 <P><STRONG><a name="[131]"></a>smpc_handle_enc_change_evt_func_patch</STRONG> (Thumb, 422 bytes, Stack size 24 bytes, smpc_patch.o(i.smpc_handle_enc_change_evt_func_patch))
@@ -10404,7 +10404,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[220]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_printf_bush
 <LI><a href="#[21f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_execute_cplt
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
-<LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
+<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_admin_cmd
@@ -10427,7 +10427,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[220]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_printf_bush
 <LI><a href="#[21f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_execute_cplt
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
-<LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
+<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> at_cmd_handler.o(.data)
@@ -10437,7 +10437,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[220]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_printf_bush
 <LI><a href="#[21f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;at_cmd_execute_cplt
-<LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
+<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_at_admin_cmd
@@ -10540,12 +10540,12 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_evt_handler
 </UL>
 
-<P><STRONG><a name="[26d]"></a>update_sensor_data_from_parser</STRONG> (Thumb, 346 bytes, Stack size 168 bytes, user_app.o(i.update_sensor_data_from_parser))
+<P><STRONG><a name="[26e]"></a>update_sensor_data_from_parser</STRONG> (Thumb, 346 bytes, Stack size 168 bytes, user_app.o(i.update_sensor_data_from_parser))
 <BR><BR>[Stack]<UL><LI>Max Depth = 1904<LI>Call Chain = update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
-<LI><a href="#[26c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
+<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_data_get_latest
 <LI><a href="#[26f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[59a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_vol_to_lel
 <LI><a href="#[2f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_update_sensor_data
@@ -10553,7 +10553,7 @@ Global Symbols
 <LI><a href="#[27b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_update_sensor_data
 <LI><a href="#[35c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;check_threshold_and_trigger_upload
 <LI><a href="#[239]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;battery_voltage_reader_get_voltage
-<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
 <LI><a href="#[251]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncpy
 <LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
@@ -10601,7 +10601,6 @@ Global Symbols
 <LI><a href="#[59f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_update_data
 </UL>
 <BR>[Called By]<UL><LI><a href="#[25c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
-<LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
 <LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sensor_collect_timer_handler
 </UL>
 
@@ -11352,7 +11351,7 @@ Local Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[383]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ensure
 <LI><a href="#[1c0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
-<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
 <LI><a href="#[1af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy
 </UL>
 <BR>[Called By]<UL><LI><a href="#[53b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_string
@@ -11367,7 +11366,7 @@ Local Symbols
 <LI><a href="#[537]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_number
 <LI><a href="#[536]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_array
 <LI><a href="#[383]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ensure
-<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
 <LI><a href="#[1be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 <LI><a href="#[1af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy
 </UL>
@@ -11416,7 +11415,7 @@ Local Symbols
 <LI><a href="#[35d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_get_methane_threshold
 <LI><a href="#[279]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_trigger_immediate_upload
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 </UL>
 
 <P><STRONG><a name="[284]"></a>gap_params_init</STRONG> (Thumb, 214 bytes, Stack size 56 bytes, user_app.o(i.gap_params_init))
@@ -11566,7 +11565,7 @@ Local Symbols
 <LI><a href="#[244]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_AddNumberToObject
 <LI><a href="#[246]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cJSON_AddItemToObject
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
-<LI><a href="#[26d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
+<LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_sensor_data_from_parser
 <LI><a href="#[2e2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_get_status_info
 <LI><a href="#[1e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 <LI><a href="#[1be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
@@ -11586,7 +11585,7 @@ Local Symbols
 <P><STRONG><a name="[2ee]"></a>ble_protocol_init_device_info</STRONG> (Thumb, 56 bytes, Stack size 8 bytes, ble_protocol.o(i.ble_protocol_init_device_info))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = ble_protocol_init_device_info
 </UL>
-<BR>[Calls]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<BR>[Calls]<UL><LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
 </UL>
 <BR>[Called By]<UL><LI><a href="#[28a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 </UL>
@@ -11595,7 +11594,7 @@ Local Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 744<LI>Call Chain = ble_protocol_init_param_settings &rArr; shared_params_init &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
-<LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[28a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_protocol_init
 </UL>
@@ -11779,7 +11778,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[25f]"></a>ble_4g_protocol_init_device_info</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, ble_4g_protocol.o(i.ble_4g_protocol_init_device_info))
-<BR><BR>[Calls]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
+<BR><BR>[Calls]<UL><LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strcpy
 </UL>
 <BR>[Called By]<UL><LI><a href="#[25c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
 </UL>
@@ -11787,7 +11786,7 @@ Local Symbols
 <P><STRONG><a name="[261]"></a>ble_4g_protocol_init_param_settings</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, ble_4g_protocol.o(i.ble_4g_protocol_init_param_settings))
 <BR><BR>[Stack]<UL><LI>Max Depth = 728<LI>Call Chain = ble_4g_protocol_init_param_settings &rArr; shared_params_init &rArr; shared_params_save_to_flash &rArr; hal_flash_write &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
-<BR>[Calls]<UL><LI><a href="#[26a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
+<BR>[Calls]<UL><LI><a href="#[26b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[25c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_init
 </UL>
@@ -11805,16 +11804,16 @@ Local Symbols
 <LI><a href="#[24e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_force_get_imei
 <LI><a href="#[1be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 </UL>
-<BR>[Called By]<UL><LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<BR>[Called By]<UL><LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 </UL>
 
-<P><STRONG><a name="[cb]"></a>data_report_timer_handler</STRONG> (Thumb, 132 bytes, Stack size 56 bytes, ble_4g_protocol.o(i.data_report_timer_handler))
+<P><STRONG><a name="[cb]"></a>data_report_timer_handler</STRONG> (Thumb, 204 bytes, Stack size 56 bytes, ble_4g_protocol.o(i.data_report_timer_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 2024<LI>Call Chain = data_report_timer_handler &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
-<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
+<LI><a href="#[269]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_upload_with_power_mgmt
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
-<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[1b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble_4g_protocol.o(i.ble_4g_protocol_init)
@@ -11860,21 +11859,22 @@ Local Symbols
 <LI><a href="#[270]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_send_data_report
 </UL>
 
-<P><STRONG><a name="[ca]"></a>sensor_collect_timer_handler</STRONG> (Thumb, 368 bytes, Stack size 88 bytes, ble_4g_protocol.o(i.sensor_collect_timer_handler))
+<P><STRONG><a name="[ca]"></a>sensor_collect_timer_handler</STRONG> (Thumb, 552 bytes, Stack size 88 bytes, ble_4g_protocol.o(i.sensor_collect_timer_handler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 2056<LI>Call Chain = sensor_collect_timer_handler &rArr; ble_4g_protocol_read_sensor_with_power_mgmt &rArr; update_sensor_data_from_parser &rArr; check_threshold_and_trigger_upload &rArr; ble_4g_protocol_trigger_immediate_upload &rArr; ble_4g_protocol_upload_with_power_mgmt &rArr; ble_4g_protocol_send_status_info_report &rArr; ble_4g_protocol_create_status_info_json &rArr; ble_4g_protocol_get_device_id &rArr; ble_4g_protocol_force_get_imei &rArr; update_ble_name_with_imei &rArr; ble_gap_device_name_set &rArr; ble_nvds_put &rArr; nvds_put &rArr; replace_item &rArr; append_item &rArr; compact_nvds &rArr; write_compacted_items &rArr; write_incr &rArr; dec_flash_write &rArr; hal_flash_write_r &rArr; hal_exflash_write &rArr; hal_xqspi_init_ext &rArr; hal_xqspi_init_ext_patch &rArr; ll_xqspi_init_patch
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
 <LI><a href="#[26f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_collection_timestamp_for_4g
 <LI><a href="#[263]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;water_sensor_read_with_power_mgmt
+<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
 <LI><a href="#[264]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_water
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ble_4g_protocol_read_sensor_with_power_mgmt
-<LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
+<LI><a href="#[268]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;update_status_info_from_sources
 <LI><a href="#[251]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strncpy
 <LI><a href="#[1b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> ble_4g_protocol.o(i.ble_4g_protocol_init)
 </UL>
-<P><STRONG><a name="[267]"></a>update_status_info_from_sources</STRONG> (Thumb, 118 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.update_status_info_from_sources))
+<P><STRONG><a name="[268]"></a>update_status_info_from_sources</STRONG> (Thumb, 118 bytes, Stack size 48 bytes, ble_4g_protocol.o(i.update_status_info_from_sources))
 <BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = update_status_info_from_sources &rArr; shared_params_set_device_move &rArr; app_log_output &rArr; __2snprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;app_log_output
@@ -11888,7 +11888,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[568]"></a>notify_param_change</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, shared_params.o(i.notify_param_change))
-<BR><BR>[Called By]<UL><LI><a href="#[26e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
+<BR><BR>[Called By]<UL><LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_sensor_status
 <LI><a href="#[264]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_water
 <LI><a href="#[56a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_move
 <LI><a href="#[569]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shared_params_set_device_gps_status
