@@ -91,6 +91,16 @@ at_response_collector_t g_at_collector = {0};
  */
 static void handle_4g_response(const char* response, uint16_t length)
 {
+    // 检查是否为JSON格式数据（平台下发的指令）
+    // JSON数据以 '{' 开头
+    if (response != NULL && length > 0 && response[0] == '{')
+    {
+        APP_LOG_INFO("%s Detected JSON command from platform, forwarding to 4G protocol handler", DEBUG_TAG);
+        // 调用4G协议处理函数处理平台下发的JSON指令
+        ble_4g_protocol_data_process((const uint8_t*)response, length);
+        return;
+    }
+    
     // 超级指令和普通AT指令的响应格式完全相同，统一按AT响应处理
     parse_at_command_response(response, length);
 }
@@ -362,12 +372,17 @@ static void parse_at_command_response(const char* response, uint16_t length)
             if (lat == 0.0f && lon == 0.0f)
             {
                 g_at_collector.gps_status = 1;  // GPS异常
+                shared_params_set_device_gps_status(1); // 更新全局GPS状态
                 APP_LOG_INFO("%s GPS not positioned: %s,%s", DEBUG_TAG, g_at_collector.latitude, g_at_collector.longitude);
             }
             else
             {
                 g_at_collector.gps_status = 0;  // GPS正常
+                shared_params_set_device_gps_status(0); // 更新全局GPS状态
                 APP_LOG_INFO("%s Collected GPS: LAT=%s, LON=%s", DEBUG_TAG, g_at_collector.latitude, g_at_collector.longitude);
+                
+                // [修复] 将获取到的GPS坐标更新到全局共享参数中
+                shared_params_set_location(lat, lon);
             }
         }
     }
@@ -572,6 +587,12 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             snprintf(location_str, sizeof(location_str), "%.6f,%.6f", 
                     g_shared_params.location_lon, g_shared_params.location_lat);
             cJSON_AddStringToObject(body, "device_location", location_str);
+            
+            // 添加设备安装位置信息
+            char install_location_str[64];
+            snprintf(install_location_str, sizeof(install_location_str), "%.6f,%.6f", 
+                     g_shared_params.install_lon, g_shared_params.install_lat);
+            cJSON_AddStringToObject(body, "device_installation_location", install_location_str);
             break;
             
         case PROTOCOL_QUERY_TYPE_STATUS_INFO:
@@ -687,8 +708,9 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
             case 109: // 安装坐标设置
                 {
                     char coordinate_str[64];
+                    // [修复] 从 install_lon 和 install_lat 读取已设置的安装坐标
                     snprintf(coordinate_str, sizeof(coordinate_str), "%.6f,%.6f", 
-                            g_shared_params.location_lon, g_shared_params.location_lat);
+                             g_shared_params.install_lon, g_shared_params.install_lat);
                     cJSON_AddStringToObject(body, "coordinate", coordinate_str);
                 }
                 break;
@@ -919,13 +941,50 @@ static void ble_protocol_parse_json_command(const char* json_str)
             int location_set = location_set_item->valueint;
             const char* coordinate_str = coordinate_item->valuestring;
             
-            // 解析经纬度字符串 "longitude,latitude"
-            float longitude, latitude;
-            if (sscanf(coordinate_str, "%f,%f", &longitude, &latitude) != 2)
+            APP_LOG_INFO("%s Location set mode: %d (0=auto GPS, 1=manual)", DEBUG_TAG, location_set);
+            
+            // 如果是自动获取模式，需要从GPS获取坐标
+            if (location_set == 0)
             {
-                APP_LOG_ERROR("%s Invalid coordinate format: %s", DEBUG_TAG, coordinate_str);
+                APP_LOG_INFO("%s Auto GPS mode selected, will use GPS coordinates", DEBUG_TAG);
+                // TODO: 实现从GPS自动获取坐标的逻辑
+                // 当前暂不支持，返回错误
+                APP_LOG_ERROR("%s Auto GPS mode not implemented yet", DEBUG_TAG);
+                
+                // 发送失败回文
+                cJSON *response = cJSON_CreateObject();
+                cJSON *header = cJSON_CreateObject();
+                cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_LOCATION_SET);
+                cJSON_AddItemToObject(response, "header", header);
+                cJSON_AddNumberToObject(response, "result", 1); // 设置失败
+                
+                char *json_string = cJSON_Print(response);
+                if (json_string) {
+                    ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                    free(json_string);
+                }
+                cJSON_Delete(response);
                 break;
             }
+            
+            // location_set == 1: 使用报文中的坐标
+            // 解析经纬度字符串 "longitude,latitude"（注意：格式为经度在前，纬度在后）
+            float longitude, latitude;
+            int parsed = sscanf(coordinate_str, "%f,%f", &longitude, &latitude);
+            if (parsed != 2)
+            {
+                APP_LOG_ERROR("%s Invalid coordinate format: %s (expected: longitude,latitude)", DEBUG_TAG, coordinate_str);
+                break;
+            }
+            
+            // 验证坐标范围：经度 [-180, 180]，纬度 [-90, 90]
+            if (longitude < -180.0f || longitude > 180.0f || latitude < -90.0f || latitude > 90.0f)
+            {
+                APP_LOG_ERROR("%s Coordinate out of range: lon=%.6f, lat=%.6f", DEBUG_TAG, longitude, latitude);
+                break;
+            }
+            
+            APP_LOG_INFO("%s Parsed coordinates: longitude=%.6f, latitude=%.6f", DEBUG_TAG, longitude, latitude);
             
             uint8_t data[12];
             memcpy(&data[0], &location_set, 4);
@@ -1236,24 +1295,38 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
             break;
             
         case PROTOCOL_CMD_LOCATION_SET:
-            if (length >= 8)
+            if (length >= 12)
             {
-                // 解析经纬度 (4字节浮点数)
-                float lat, lon;
-                memcpy(&lat, &p_data[0], 4);
+                // 解析 location_set 模式和经纬度 (4字节整数 + 2个4字节浮点数)
+                int location_set_mode;
+                float lon, lat;
+                memcpy(&location_set_mode, &p_data[0], 4);
                 memcpy(&lon, &p_data[4], 4);
+                memcpy(&lat, &p_data[8], 4);
+                
+                APP_LOG_INFO("%s Location set mode: %d, lon=%.6f, lat=%.6f", 
+                           DEBUG_TAG, location_set_mode, lon, lat);
                 
                 // 使用共享参数API设置位置
                 if (shared_params_set_install_location(lat, lon))
                 {
+                    // 保存到Flash确保断电不丢失
+                    shared_params_save_to_flash();
+                    
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set install location: lat=%.6f, lon=%.6f", DEBUG_TAG, lat, lon);
+                    APP_LOG_INFO("%s Set install location success and saved to flash", DEBUG_TAG);
                 }
                 else
                 {
                     result = PROTOCOL_RESULT_SET_FAILED;
                     APP_LOG_ERROR("%s Failed to set install location", DEBUG_TAG);
                 }
+            }
+            else
+            {
+                APP_LOG_ERROR("%s Invalid data length for location set: %d (expected >= 12)", 
+                            DEBUG_TAG, length);
+                result = PROTOCOL_RESULT_SET_FAILED;
             }
             break;
             

@@ -95,6 +95,11 @@ static uint8_t s_uart1_rx_buffer[UART1_RX_BUFFER_SIZE]; // 改为中断接收缓
 static uint8_t s_uart1_rx_line[UART1_RX_BUFFER_SIZE];
 static uint16_t s_uart1_rx_len = 0;
 
+// JSON-aware buffer for UART1
+static uint8_t s_uart1_json_buffer[UART1_RX_BUFFER_SIZE];
+static uint16_t s_uart1_json_buffer_len = 0;
+static int16_t s_uart1_brace_count = 0; // Used to track JSON object completeness
+
 
 
 /*
@@ -225,82 +230,105 @@ void app_uart_evt_handler(app_uart_evt_t *p_evt)
  * @brief UART1 event handler for 4G module communication (Interrupt mode)
  *****************************************************************************************
  */
+static int s_json_brace_level = 0;
+
 static void app_uart1_evt_handler(app_uart_evt_t *p_evt)
 {
-    switch (p_evt->type)
+    if (p_evt->type == APP_UART_EVT_RX_DATA)
     {
-    case APP_UART_EVT_RX_DATA:
-    {
-        uint16_t rx_size = p_evt->data.size;
-        // 将中断接收到的数据写入按行缓冲，检测CRLF并处理
-        for (uint16_t i = 0; i < rx_size; i++)
+        for (uint16_t i = 0; i < p_evt->data.size; i++)
         {
             uint8_t ch = s_uart1_rx_buffer[i];
-            if (s_uart1_rx_len < sizeof(s_uart1_rx_line) - 1) // 预留空间给null终止符
-            {
-                s_uart1_rx_line[s_uart1_rx_len++] = ch;
 
-                // 检测CRLF结尾或单独的LF结尾
-                if ((s_uart1_rx_len >= 2 &&
-                     s_uart1_rx_line[s_uart1_rx_len - 2] == 0x0D &&
-                     s_uart1_rx_line[s_uart1_rx_len - 1] == 0x0A) ||
-                    (s_uart1_rx_len >= 1 &&
-                     s_uart1_rx_line[s_uart1_rx_len - 1] == 0x0A))
-                {
-                    // 完整一帧到达，处理4G模块响应数据
-                    uint16_t data_len = s_uart1_rx_len;
-                    
-                    // 去掉结尾的CRLF或LF
-                    if (data_len >= 2 && 
-                        s_uart1_rx_line[data_len - 2] == 0x0D && 
-                        s_uart1_rx_line[data_len - 1] == 0x0A)
-                    {
-                        data_len -= 2; // 去掉CRLF
-                    }
-                    else if (data_len >= 1 && s_uart1_rx_line[data_len - 1] == 0x0A)
-                    {
-                        data_len -= 1; // 去掉LF
-                    }
-                    
-                    // 只处理非空行
-                    if (data_len > 0)
-                    {
-                        // 添加调试日志
-                        s_uart1_rx_line[data_len] = '\0'; // 确保字符串终止
-                        APP_LOG_INFO("UART1 RX: [%d bytes] %s", data_len, s_uart1_rx_line);
-                        
-                        ble_protocol_handle_4g_data(s_uart1_rx_line, data_len);
-                    }
-
-                    // 重置行缓冲
-                    s_uart1_rx_len = 0;
-                }
-            }
-            else
+            // 缓冲区溢出检查
+            if (s_uart1_rx_len >= sizeof(s_uart1_rx_line) - 1)
             {
-                // 缓冲溢出，丢弃并复位
                 APP_LOG_WARNING("UART1 RX buffer overflow, resetting");
                 s_uart1_rx_len = 0;
+                s_json_brace_level = 0;
+                continue;
+            }
+
+            // 存储字符
+            s_uart1_rx_line[s_uart1_rx_len++] = ch;
+
+            // 确定处理模式：JSON 或 AT指令
+            if (s_uart1_rx_len == 1)
+            {
+                if (ch == '{')
+                {
+                    s_json_brace_level = 1;
+                }
+                else
+                {
+                    s_json_brace_level = 0; // AT指令模式
+                }
+            }
+            else if (s_json_brace_level > 0) // 仅在JSON模式下处理括号
+            {
+                if (ch == '{')
+                {
+                    s_json_brace_level++;
+                }
+                else if (ch == '}')
+                {
+                    s_json_brace_level--;
+                }
+            }
+
+            // 检查数据帧是否结束
+            bool frame_end = false;
+            if (s_json_brace_level == 0 && s_uart1_rx_len > 0) // 括号匹配完成或处于AT模式
+            {
+                if (s_uart1_rx_line[0] == '{') // JSON模式结束
+                {
+                    frame_end = true;
+                }
+                else if (ch == '\n') // AT指令模式结束
+                {
+                    frame_end = true;
+                }
+            }
+
+            if (frame_end)
+            {
+                uint16_t data_len = s_uart1_rx_len;
+                s_uart1_rx_line[data_len] = '\0'; // 确保字符串终止
+
+                // 去除AT指令的尾部回车换行
+                if (s_uart1_rx_line[0] != '{')
+                {
+                    if (data_len >= 2 && s_uart1_rx_line[data_len - 2] == '\r')
+                    {
+                        data_len -= 2;
+                        s_uart1_rx_line[data_len] = '\0';
+                    }
+                    else if (data_len >= 1)
+                    {
+                        data_len -= 1;
+                        s_uart1_rx_line[data_len] = '\0';
+                    }
+                }
+
+                if (data_len > 0)
+                {
+                    APP_LOG_INFO("UART1 RX Frame: [%d bytes] %s", data_len, s_uart1_rx_line);
+                    ble_protocol_handle_4g_data(s_uart1_rx_line, data_len);
+                }
+
+                // 重置缓冲区和状态
+                s_uart1_rx_len = 0;
+                s_json_brace_level = 0;
             }
         }
-
-        // 重新启动下一次中断接收
         app_uart_receive_async(APP_UART_ID_1, s_uart1_rx_buffer, UART1_RX_BUFFER_SIZE);
-        break;
     }
-
-            case APP_UART_EVT_TX_CPLT:
-            // 发送完成
-            break;
-
-    case APP_UART_EVT_ERROR:
+    else if (p_evt->type == APP_UART_EVT_ERROR)
+    {
         // 错误处理：复位行缓冲并重启接收
         s_uart1_rx_len = 0;
+        s_json_brace_level = 0;
         app_uart_receive_async(APP_UART_ID_1, s_uart1_rx_buffer, UART1_RX_BUFFER_SIZE);
-        break;
-
-    default:
-        break;
     }
 }
 

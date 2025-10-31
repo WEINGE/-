@@ -1019,6 +1019,197 @@ void ble_4g_protocol_init(void)
     ble_4g_protocol_upload_with_power_mgmt();
 }
 
+/**
+ *****************************************************************************************
+ * @brief Create JSON response for collect time setting (code 106).
+ *****************************************************************************************
+ */
+static char* ble_4g_protocol_create_collect_time_response(int result, uint16_t collect_time)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON *header = cJSON_CreateObject();
+    
+    if (json == NULL || header == NULL)
+    {
+        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
+        if (json) cJSON_Delete(json);
+        if (header) cJSON_Delete(header);
+        return NULL;
+    }
+    
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
+    // 构建header
+    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_COLLECT_TIME_SET);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
+    cJSON_AddItemToObject(json, "header", header);
+    
+    // 如果成功，添加body
+    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
+    {
+        cJSON *body = cJSON_CreateObject();
+        if (body)
+        {
+            cJSON_AddNumberToObject(body, "collect_time_set", collect_time);
+            cJSON_AddItemToObject(json, "body", body);
+        }
+    }
+    
+    // 添加result
+    cJSON_AddNumberToObject(json, "result", result);
+    
+    char *json_string = cJSON_Print(json);
+    cJSON_Delete(json);
+    
+    return json_string;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Create JSON response for update time setting (code 107).
+ *****************************************************************************************
+ */
+static char* ble_4g_protocol_create_update_time_response(int result, uint16_t update_time)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON *header = cJSON_CreateObject();
+    
+    if (json == NULL || header == NULL)
+    {
+        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
+        if (json) cJSON_Delete(json);
+        if (header) cJSON_Delete(header);
+        return NULL;
+    }
+    
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
+    // 构建header
+    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_UPDATE_TIME_SET);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
+    cJSON_AddItemToObject(json, "header", header);
+    
+    // 如果成功，添加body
+    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
+    {
+        cJSON *body = cJSON_CreateObject();
+        if (body)
+        {
+            cJSON_AddNumberToObject(body, "updata_time_set", update_time);
+            cJSON_AddItemToObject(json, "body", body);
+        }
+    }
+    
+    // 添加result
+    cJSON_AddNumberToObject(json, "result", result);
+    
+    char *json_string = cJSON_Print(json);
+    cJSON_Delete(json);
+    
+    return json_string;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Create JSON response for threshold setting (code 108).
+ *****************************************************************************************
+ */
+static char* ble_4g_protocol_create_threshold_response(int result, float methane_threshold, 
+                                                        int16_t temp_high, int16_t temp_low)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON *header = cJSON_CreateObject();
+    
+    if (json == NULL || header == NULL)
+    {
+        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
+        if (json) cJSON_Delete(json);
+        if (header) cJSON_Delete(header);
+        return NULL;
+    }
+    
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
+    // 构建header
+    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_THRESHOLD_SET);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
+    cJSON_AddItemToObject(json, "header", header);
+    
+    // 如果成功，添加body
+    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
+    {
+        cJSON *body = cJSON_CreateObject();
+        if (body)
+        {
+            cJSON_AddNumberToObject(body, "methane_threshold_set", methane_threshold);
+            cJSON_AddNumberToObject(body, "TEMPH_threshold_set", temp_high);
+            cJSON_AddNumberToObject(body, "TEMPL_threshold_set", temp_low);
+            cJSON_AddItemToObject(json, "body", body);
+        }
+    }
+    
+    // 添加result
+    cJSON_AddNumberToObject(json, "result", result);
+    
+    char *json_string = cJSON_Print(json);
+    cJSON_Delete(json);
+    
+    return json_string;
+}
+
+/**
+ *****************************************************************************************
+ * @brief Create JSON response for water threshold setting (code 110).
+ *****************************************************************************************
+ */
+static char* ble_4g_protocol_create_water_threshold_response(int result, uint16_t water_threshold)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON *header = cJSON_CreateObject();
+    
+    if (json == NULL || header == NULL)
+    {
+        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
+        if (json) cJSON_Delete(json);
+        if (header) cJSON_Delete(header);
+        return NULL;
+    }
+    
+    // 动态获取设备 ID (IMEI)
+    char device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
+    
+    // 构建header
+    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_WATER_THRESHOLD_SET);
+    cJSON_AddStringToObject(header, "device_ID", device_id);
+    cJSON_AddItemToObject(json, "header", header);
+    
+    // 如果成功，添加body
+    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
+    {
+        cJSON *body = cJSON_CreateObject();
+        if (body)
+        {
+            cJSON_AddNumberToObject(body, "water_threshold_set", water_threshold);
+            cJSON_AddItemToObject(json, "body", body);
+        }
+    }
+    
+    // 添加result
+    cJSON_AddNumberToObject(json, "result", result);
+    
+    char *json_string = cJSON_Print(json);
+    cJSON_Delete(json);
+    
+    return json_string;
+}
+
 void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
 {
     if (!s_protocol_initialized)
@@ -1048,8 +1239,230 @@ void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
     
     APP_LOG_INFO("%s Received JSON from 4G: %s", DEBUG_TAG, json_str);
     
-    // TODO: 解析服务器下发的设置命令
-    // 这里可以解析服务器返回的参数设置命令
+    // 解析JSON
+    cJSON *json = cJSON_Parse(json_str);
+    if (json == NULL)
+    {
+        APP_LOG_ERROR("%s Failed to parse JSON", DEBUG_TAG);
+        return;
+    }
+    
+    // 解析header
+    cJSON *header = cJSON_GetObjectItem(json, "header");
+    if (header == NULL)
+    {
+        APP_LOG_ERROR("%s No header in JSON", DEBUG_TAG);
+        cJSON_Delete(json);
+        return;
+    }
+    
+    // 获取命令代码
+    cJSON *code_item = cJSON_GetObjectItem(header, "code");
+    if (code_item == NULL || !cJSON_IsNumber(code_item))
+    {
+        APP_LOG_ERROR("%s Invalid or missing code in header", DEBUG_TAG);
+        cJSON_Delete(json);
+        return;
+    }
+    
+    int cmd_code = code_item->valueint;
+    APP_LOG_INFO("%s Received command code: %d", DEBUG_TAG, cmd_code);
+    
+    // 解析body
+    cJSON *body = cJSON_GetObjectItem(json, "body");
+    
+    // 根据命令代码处理不同的设置指令
+    int result = PROTOCOL_4G_RESULT_SET_FAILED;
+    char *response_json = NULL;
+    
+    switch (cmd_code)
+    {
+        case PROTOCOL_4G_CMD_COLLECT_TIME_SET: // 106 - 检测周期设置
+        {
+            if (body == NULL)
+            {
+                APP_LOG_ERROR("%s No body in collect time set command", DEBUG_TAG);
+                break;
+            }
+            
+            cJSON *collect_time_item = cJSON_GetObjectItem(body, "collect_time_set");
+            if (collect_time_item == NULL || !cJSON_IsNumber(collect_time_item))
+            {
+                APP_LOG_ERROR("%s Invalid collect_time_set parameter", DEBUG_TAG);
+                break;
+            }
+            
+            uint16_t new_collect_time = (uint16_t)collect_time_item->valueint;
+            APP_LOG_INFO("%s Setting collect time to: %d minutes", DEBUG_TAG, new_collect_time);
+            
+            // 参数范围验证 (1-1440分钟)
+            if (new_collect_time >= 1 && new_collect_time <= 1440)
+            {
+                if (shared_params_set_collect_time(new_collect_time))
+                {
+                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Collect time set successfully", DEBUG_TAG);
+                    
+                    // 重启采集定时器
+                    ble_4g_protocol_restart_collect_timer();
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Failed to set collect time", DEBUG_TAG);
+                }
+            }
+            else
+            {
+                APP_LOG_ERROR("%s Invalid collect time: %d (range: 1-1440)", DEBUG_TAG, new_collect_time);
+            }
+            
+            // 创建响应
+            response_json = ble_4g_protocol_create_collect_time_response(result, 
+                                                                          g_shared_params.device_collect_time);
+            break;
+        }
+        
+        case PROTOCOL_4G_CMD_UPDATE_TIME_SET: // 107 - 数据上报周期设置
+        {
+            if (body == NULL)
+            {
+                APP_LOG_ERROR("%s No body in update time set command", DEBUG_TAG);
+                break;
+            }
+            
+            cJSON *update_time_item = cJSON_GetObjectItem(body, "updata_time_set");
+            if (update_time_item == NULL || !cJSON_IsNumber(update_time_item))
+            {
+                APP_LOG_ERROR("%s Invalid updata_time_set parameter", DEBUG_TAG);
+                break;
+            }
+            
+            uint16_t new_update_time = (uint16_t)update_time_item->valueint;
+            APP_LOG_INFO("%s Setting update time to: %d minutes", DEBUG_TAG, new_update_time);
+            
+            // 参数范围验证 (1-1440分钟)
+            if (new_update_time >= 1 && new_update_time <= 1440)
+            {
+                if (shared_params_set_update_time(new_update_time))
+                {
+                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                    APP_LOG_INFO("%s Update time set successfully", DEBUG_TAG);
+                    
+                    // 重启上报定时器
+                    ble_4g_protocol_restart_report_timer();
+                }
+                else
+                {
+                    APP_LOG_ERROR("%s Failed to set update time", DEBUG_TAG);
+                }
+            }
+            else
+            {
+                APP_LOG_ERROR("%s Invalid update time: %d (range: 1-1440)", DEBUG_TAG, new_update_time);
+            }
+            
+            // 创建响应
+            response_json = ble_4g_protocol_create_update_time_response(result, 
+                                                                         g_shared_params.device_updata_time);
+            break;
+        }
+        
+        case PROTOCOL_4G_CMD_THRESHOLD_SET: // 108 - 甲烷及温度报警阈值设置
+        {
+            if (body == NULL)
+            {
+                APP_LOG_ERROR("%s No body in threshold set command", DEBUG_TAG);
+                break;
+            }
+            
+            cJSON *methane_item = cJSON_GetObjectItem(body, "methane_threshold_set");
+            cJSON *temp_high_item = cJSON_GetObjectItem(body, "TEMPH_threshold_set");
+            cJSON *temp_low_item = cJSON_GetObjectItem(body, "TEMPL_threshold_set");
+            
+            if (methane_item == NULL || !cJSON_IsNumber(methane_item) ||
+                temp_high_item == NULL || !cJSON_IsNumber(temp_high_item) ||
+                temp_low_item == NULL || !cJSON_IsNumber(temp_low_item))
+            {
+                APP_LOG_ERROR("%s Invalid threshold parameters", DEBUG_TAG);
+                break;
+            }
+            
+            float new_methane_threshold = (float)methane_item->valuedouble;
+            int16_t new_temp_high = (int16_t)temp_high_item->valueint;
+            int16_t new_temp_low = (int16_t)temp_low_item->valueint;
+            
+            APP_LOG_INFO("%s Setting thresholds: CH4=%.2f, TEMP_H=%d, TEMP_L=%d", 
+                         DEBUG_TAG, new_methane_threshold, new_temp_high, new_temp_low);
+            
+            // 设置阈值
+            if (shared_params_set_methane_threshold(new_methane_threshold) &&
+                shared_params_set_temp_thresholds(new_temp_high, new_temp_low))
+            {
+                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                APP_LOG_INFO("%s Thresholds set successfully", DEBUG_TAG);
+            }
+            else
+            {
+                APP_LOG_ERROR("%s Failed to set thresholds", DEBUG_TAG);
+            }
+            
+            // 创建响应
+            response_json = ble_4g_protocol_create_threshold_response(result,
+                                                                       g_shared_params.methane_threshold,
+                                                                       g_shared_params.temp_high_threshold,
+                                                                       g_shared_params.temp_low_threshold);
+            break;
+        }
+        
+        case PROTOCOL_4G_CMD_WATER_THRESHOLD_SET: // 110 - 水浸报警阈值设置
+        {
+            if (body == NULL)
+            {
+                APP_LOG_ERROR("%s No body in water threshold set command", DEBUG_TAG);
+                break;
+            }
+            
+            cJSON *water_threshold_item = cJSON_GetObjectItem(body, "water_threshold_set");
+            if (water_threshold_item == NULL || !cJSON_IsNumber(water_threshold_item))
+            {
+                APP_LOG_ERROR("%s Invalid water_threshold_set parameter", DEBUG_TAG);
+                break;
+            }
+            
+            uint16_t new_water_threshold = (uint16_t)water_threshold_item->valueint;
+            APP_LOG_INFO("%s Setting water threshold to: %d", DEBUG_TAG, new_water_threshold);
+            
+            // 设置水浸阈值
+            if (shared_params_set_water_threshold(new_water_threshold))
+            {
+                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
+                APP_LOG_INFO("%s Water threshold set successfully", DEBUG_TAG);
+            }
+            else
+            {
+                APP_LOG_ERROR("%s Failed to set water threshold", DEBUG_TAG);
+            }
+            
+            // 创建响应
+            response_json = ble_4g_protocol_create_water_threshold_response(result,
+                                                                             g_shared_params.water_threshold);
+            break;
+        }
+        
+        default:
+            APP_LOG_WARNING("%s Unknown command code: %d", DEBUG_TAG, cmd_code);
+            break;
+    }
+    
+    // 发送响应
+    if (response_json != NULL)
+    {
+        APP_LOG_INFO("%s Sending response for command %d", DEBUG_TAG, cmd_code);
+        send_json_with_delay(response_json, "parameter setting response");
+    }
+    
+    // 清理
+    cJSON_Delete(json);
 }
 
 void ble_4g_protocol_send_device_info_report(void)
