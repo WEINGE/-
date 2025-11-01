@@ -1256,6 +1256,31 @@ void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
         return;
     }
     
+    // 获取并验证 device_ID
+    cJSON *device_id_item = cJSON_GetObjectItem(header, "device_ID");
+    if (device_id_item == NULL || !cJSON_IsString(device_id_item))
+    {
+        APP_LOG_ERROR("%s Invalid or missing device_ID in header", DEBUG_TAG);
+        cJSON_Delete(json);
+        return;
+    }
+    
+    // 获取本机设备ID (IMEI)
+    char local_device_id[DEVICE_ID_SIZE] = {0};
+    ble_4g_protocol_get_device_id(local_device_id, sizeof(local_device_id));
+    
+    // 比较 device_ID 是否匹配
+    const char *received_device_id = device_id_item->valuestring;
+    if (strcmp(local_device_id, received_device_id) != 0)
+    {
+        APP_LOG_WARNING("%s Device ID mismatch! Local: %s, Received: %s - Ignoring command", 
+                        DEBUG_TAG, local_device_id, received_device_id);
+        cJSON_Delete(json);
+        return;
+    }
+    
+    APP_LOG_INFO("%s Device ID verified: %s", DEBUG_TAG, local_device_id);
+    
     // 获取命令代码
     cJSON *code_item = cJSON_GetObjectItem(header, "code");
     if (code_item == NULL || !cJSON_IsNumber(code_item))

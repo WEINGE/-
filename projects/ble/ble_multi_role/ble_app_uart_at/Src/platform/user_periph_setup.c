@@ -95,10 +95,7 @@ static uint8_t s_uart1_rx_buffer[UART1_RX_BUFFER_SIZE]; // 改为中断接收缓
 static uint8_t s_uart1_rx_line[UART1_RX_BUFFER_SIZE];
 static uint16_t s_uart1_rx_len = 0;
 
-// JSON-aware buffer for UART1
-static uint8_t s_uart1_json_buffer[UART1_RX_BUFFER_SIZE];
-static uint16_t s_uart1_json_buffer_len = 0;
-static int16_t s_uart1_brace_count = 0; // Used to track JSON object completeness
+
 
 
 
