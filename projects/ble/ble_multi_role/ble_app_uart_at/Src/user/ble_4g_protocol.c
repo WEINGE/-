@@ -163,7 +163,7 @@ bool get_collection_timestamp_for_4g(char *timestamp_buffer)
         APP_LOG_WARNING("%s RTC is not running, attempting to start", DEBUG_TAG);
         if (!bm8563_start()) {
             APP_LOG_ERROR("%s Failed to start RTC, using default timestamp", DEBUG_TAG);
-            strcpy(timestamp_buffer, "20240101000000");
+            strcpy(timestamp_buffer, "20241114164200");
             return false;
         }
     }
@@ -172,7 +172,7 @@ bool get_collection_timestamp_for_4g(char *timestamp_buffer)
     char full_timestamp[16];
     if (!bm8563_get_time_string(full_timestamp)) {
         APP_LOG_ERROR("%s Failed to get RTC time for 4G upload", DEBUG_TAG);
-        strcpy(timestamp_buffer, "202001010000");
+        strcpy(timestamp_buffer, "202411141642");
         return false;
     }
     
@@ -346,7 +346,7 @@ static void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buf
             else
             {
                 // 真正的最后fallback
-                strncpy(p_device_id_buffer, "NO_IMEI_AVAILABLE", buffer_size - 1);
+                strncpy(p_device_id_buffer, "000000000000000", buffer_size - 1);
                 p_device_id_buffer[buffer_size - 1] = '\0';
                 APP_LOG_ERROR("%s No IMEI or MAC available, using error ID: %s", DEBUG_TAG, p_device_id_buffer);
             }
@@ -362,7 +362,7 @@ static void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buf
 static void ble_4g_protocol_init_device_info(void)
 {
     // device_id 将在需要时动态获取，这里不再设置
-    strcpy(s_device_info.device_ver, "1.0.0");
+    strcpy(s_device_info.device_ver, "1.0.1");
 }
 
 /**
@@ -375,7 +375,7 @@ static void ble_4g_protocol_init_status_info(void)
     s_status_info.device_water = 0;        // 未水浸
     s_status_info.sensor_status = 0;       // 传感器正常
     s_status_info.device_move = 0;         // 位置正常
-    s_status_info.device_LTE_signal = 25;  // 4G信号值
+    s_status_info.device_LTE_signal = 0;  // 4G信号值
     s_status_info.device_GPS_status = 0;   // GPS正常
 }
 

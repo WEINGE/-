@@ -17,8 +17,8 @@ static param_change_callback_t s_param_callback = NULL;
 
 // 默认参数值
 static const shared_device_params_t default_params = {
-    .device_collect_time = 60,          // 默认1小时采集
-    .device_updata_time = 1440,         // 默认24小时上报
+    .device_collect_time = 60,          // 默认60分钟采集
+    .device_updata_time = 1440,         // 默认1440分钟上报
     .methane_threshold = 5.0f,          // 默认5%vol甲烷阈值
     .temp_high_threshold = 50,          // 默认50℃高温阈值
     .temp_low_threshold = -20,          // 默认-20℃低温阈值
