@@ -74,7 +74,7 @@ static app_timer_id_t m_data_report_timer;
 static app_timer_id_t m_delayed_send_timer;  // 延时发送定时器
 
 // 数据累积机制
-#define MAX_COLLECTED_DATA_COUNT 10  // 最大存储10次采集数据
+#define MAX_COLLECTED_DATA_COUNT 24  // 最大存储24次采集数据
 static ble_4g_sensor_data_t s_collected_data_array[MAX_COLLECTED_DATA_COUNT];
 static uint8_t s_collected_data_count = 0;
 static uint8_t s_data_collection_index = 0;
