@@ -107,6 +107,6 @@ void shared_params_register_callback(param_change_callback_t callback);
 // 参数版本号定义
 // 每次修改 shared_device_params_t 结构体时，请递增此版本号
 // 这样可以确保Flash中的旧数据不会被错误加载
-#define PARAMS_VERSION              0x00010002  // v1.2 - 添加device_water默认值为1
+#define PARAMS_VERSION              0x00010005 // v1.2 - 添加device_water默认值为1
 
 #endif // SHARED_PARAMS_H

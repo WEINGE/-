@@ -16,6 +16,7 @@
 #include "battery_voltage_reader.h"
 #include "app_io.h"
 #include "app_log.h"
+
 #include <string.h>
 
 // ADC相关头文件包含
@@ -118,6 +119,7 @@ bool battery_voltage_reader_get_voltage(battery_voltage_data_t *p_voltage_data)
     }
     
     memset(p_voltage_data, 0, sizeof(battery_voltage_data_t));
+
     
     // 配置ADC参数（严格按照SDK示例配置）
     app_adc_params_t adc_params = {
@@ -188,6 +190,7 @@ bool battery_voltage_reader_get_voltage(battery_voltage_data_t *p_voltage_data)
     
     app_adc_dma_deinit();
     app_adc_deinit();
+
     
     return true;
 }

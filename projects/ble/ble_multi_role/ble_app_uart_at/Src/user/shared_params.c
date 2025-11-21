@@ -27,8 +27,12 @@ static const shared_device_params_t default_params = {
     .location_lon = 0.0f,
     .install_lat = 0.0f,
     .install_lon = 0.0f,
-    .server_port = 1883,
-    .server_type = 1,                   // 默认MQTT
+    // 服务器默认配置（MQTT）
+    .server_address = "1.194.166.152", // 默认服务器地址
+    .server_port    = 1883,             // 默认服务器端口
+    .username       = "root",          // 默认用户名
+    .password       = "root123456",   // 默认密码
+    .server_type    = 1,                // 默认MQTT
     
     // 实时状态信息默认值
     .sensor_status = 0,                 // 默认传感器正常

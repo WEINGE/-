@@ -41,6 +41,11 @@
  */
 extern void gpio_4g_power_en_set(bool enable);
 extern bool gpio_4g_power_en_get(void);
+extern void gpio_p_m_en_set(bool enable);
+extern void sensor_uart_open(void);
+extern void sensor_uart_close(void);
+extern void fourg_uart_open(void);
+extern void fourg_uart_close(void);
 /*
  * DEFINES
  *****************************************************************************************
@@ -67,6 +72,7 @@ static ble_4g_status_info_t s_status_info = {0};
 
 static bool s_protocol_initialized = false;
 static char s_device_id[DEVICE_ID_SIZE] = {0};
+static bool s_server_config_changed = false;
 
 // 定时器定义
 static app_timer_id_t m_sensor_collect_timer;
@@ -229,7 +235,7 @@ static void send_json_with_delay(char *json_string, const char *message_type)
     free(json_string);
     
     // 标准化延时，避免JSON消息粘连
-    sys_delay_ms(300);
+    sys_delay_ms(500);
 }
 
 /**
@@ -1990,7 +1996,9 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
 
     APP_LOG_INFO("%s Reading sensor with power management", DEBUG_TAG);
     
-    // 1. 上电传感器
+    // 1. 打开总电源、传感器UART并上电传感器
+    gpio_p_m_en_set(true);
+    sensor_uart_open();
     ble_4g_protocol_sensor_power_control(true);
     
     // 2. 等待传感器稳定和初始化
@@ -2059,8 +2067,10 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         }
     }
     
-    // 7. 断电传感器
+    // 7. 断电传感器并关闭UART和总电源
     ble_4g_protocol_sensor_power_control(false);
+    sensor_uart_close();
+    gpio_p_m_en_set(false);
     
     if (result && data_received) {
         APP_LOG_INFO("%s Fresh sensor data read successfully with timestamp", DEBUG_TAG);
@@ -2142,13 +2152,68 @@ static void ble_4g_protocol_update_dtu_info_cache(void)
     APP_LOG_INFO("%s GPS coordinate query sent.", DEBUG_TAG);
 }
 
+static void ble_4g_protocol_apply_server_config_if_needed(void)
+{
+    if (!s_server_config_changed)
+    {
+        APP_LOG_INFO("%s Server configuration not changed, skip DTU reconfig", DEBUG_TAG);
+        return;
+    }
+
+    APP_LOG_INFO("%s Applying updated server configuration to DTU...", DEBUG_TAG);
+
+    char at_cmd[128];
+
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTSV1=%s,%d\r\n",
+             g_shared_params.server_address,
+             (int)g_shared_params.server_port);
+    SEND_AT_COMMAND_ASYNC(at_cmd);
+    sys_delay_ms(500);
+
+    const char *client_id = "${IMEI}";
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTCONN1=%s,%s,%s,60,1\r\n",
+             client_id,
+             g_shared_params.username,
+             g_shared_params.password);
+    SEND_AT_COMMAND_ASYNC(at_cmd);
+    sys_delay_ms(500);
+
+    const char *report_topic = "/methane_sensor/test/report";
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTPUB1=%s,0,0\r\n", report_topic);
+    SEND_AT_COMMAND_ASYNC(at_cmd);
+    sys_delay_ms(500);
+
+    const char *command_topic = "/methane_sensor/test/command";
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTSUB1=%s,0\r\n", command_topic);
+    SEND_AT_COMMAND_ASYNC(at_cmd);
+    sys_delay_ms(500);
+
+    const char *save_cmd = "adminAT+S\r\n";
+    SEND_AT_COMMAND_ASYNC(save_cmd);
+    sys_delay_ms(10000);
+
+    s_server_config_changed = false;
+    APP_LOG_INFO("%s Server configuration applied to DTU and flag cleared", DEBUG_TAG);
+}
+
+void ble_4g_protocol_mark_server_config_changed(void)
+{
+    s_server_config_changed = true;
+    APP_LOG_INFO("%s Mark server configuration changed flag", DEBUG_TAG);
+}
+
 void ble_4g_protocol_upload_with_power_mgmt(void)
 {
     APP_LOG_INFO("%s Starting upload with 4G/DTU power management", DEBUG_TAG);
 
-    // 1. 上电4G/DTU模块并等待稳定
+    // 1. 打开4G UART并上电4G/DTU模块并等待稳定
+    gpio_p_m_en_set(true);
+    fourg_uart_open();
     gpio_4g_power_en_set(true);
     sys_delay_ms(10000);
+
+    // 1.5 如果服务器配置有变更，优先下发新的服务器配置并保存到DTU
+    ble_4g_protocol_apply_server_config_if_needed();
 
     // 2. 更新并缓存DTU关键信息（IMEI, CSQ）
     ble_4g_protocol_update_dtu_info_cache();
@@ -2198,8 +2263,10 @@ void ble_4g_protocol_upload_with_power_mgmt(void)
     // 5. 等待平台可能下发的设置指令
     sys_delay_ms(10000);
 
-    // 6. 断电4G/DTU模块
+    // 6. 断电4G/DTU模块并关闭UART
     gpio_4g_power_en_set(false);
+    fourg_uart_close();
+    gpio_p_m_en_set(false);
     APP_LOG_INFO("%s 4G/DTU module powered off", DEBUG_TAG);
 }
 

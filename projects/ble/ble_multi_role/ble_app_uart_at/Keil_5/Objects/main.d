@@ -129,3 +129,4 @@
 .\objects\main.o: ..\..\..\..\..\drivers\inc\app_uart.h
 .\objects\main.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
 .\objects\main.o: ..\..\..\..\..\drivers\inc\app_dma.h
+.\objects\main.o: ..\Src\user\shared_params.h

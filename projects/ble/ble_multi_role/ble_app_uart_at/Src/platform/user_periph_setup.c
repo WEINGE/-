@@ -95,6 +95,9 @@ static uint8_t s_uart1_rx_buffer[UART1_RX_BUFFER_SIZE]; // 改为中断接收缓
 static uint8_t s_uart1_rx_line[UART1_RX_BUFFER_SIZE];
 static uint16_t s_uart1_rx_len = 0;
 
+static bool s_sensor_uart_opened = false;
+static bool s_fourg_uart_opened  = false;
+
 
 
 
@@ -395,8 +398,6 @@ void uart_init(uint32_t baud_rate)
     // 先反初始化，确保干净配置
     app_uart_deinit(APP_UART_ID);
 
-
-
     // 初始化UART（中断/事件回调用于DMA接收完成通知）
     app_uart_init(&s_uart_param, app_uart_evt_handler, &s_uart_buffer);
 
@@ -427,6 +428,43 @@ void uart1_tx_data_send(uint8_t *p_data, uint16_t length)
     app_uart_transmit_sync(APP_UART_ID_1, p_data, length, 1000);
 }
 
+void sensor_uart_open(void)
+{
+    if (!s_sensor_uart_opened)
+    {
+        uart_init(APP_UART_BAUDRATE);
+        s_sensor_uart_opened = true;
+    }
+}
+
+void sensor_uart_close(void)
+{
+    if (s_sensor_uart_opened)
+    {
+        app_uart_dma_deinit(APP_UART_ID);
+        app_uart_deinit(APP_UART_ID);
+        s_sensor_uart_opened = false;
+    }
+}
+
+void fourg_uart_open(void)
+{
+    if (!s_fourg_uart_opened)
+    {
+        uart1_init(APP_UART1_BAUDRATE);
+        s_fourg_uart_opened = true;
+    }
+}
+
+void fourg_uart_close(void)
+{
+    if (s_fourg_uart_opened)
+    {
+        app_uart_deinit(APP_UART_ID_1);
+        s_fourg_uart_opened = false;
+    }
+}
+
 // AT命令接收和解析任务
 void uart_polling_task(void)
 {
@@ -438,8 +476,6 @@ void app_periph_init(void)
 {
     SYS_SET_BD_ADDR(s_bd_addr);
     app_assert_init();
-    uart_init(APP_UART_BAUDRATE);
-    uart1_init(APP_UART1_BAUDRATE); // Initialize UART1 for 4G module
 
     // Configure GPIO25 (S_EN) as output, initial state OFF (low)
     {
@@ -450,7 +486,7 @@ void app_periph_init(void)
         io_init.pin  = APP_IO_PIN_25; // GPIO25
         app_io_init(APP_IO_TYPE_NORMAL, &io_init);
         // Set initial state to OFF (low)
-        app_io_write_pin(APP_IO_TYPE_NORMAL, APP_IO_PIN_25, APP_IO_PIN_SET);
+        app_io_write_pin(APP_IO_TYPE_NORMAL, APP_IO_PIN_25, APP_IO_PIN_RESET);
     }
 
     // Configure AON_GPIO_2 (4G_POWER_EN) as output, initial state ON (high) for 4G module power
@@ -462,7 +498,7 @@ void app_periph_init(void)
         io_init.pin  = AON_GPIO_PIN_2; // AON GPIO2
         app_io_init(APP_IO_TYPE_AON, &io_init);
         // Set to high for 4G module power enable (external circuit handles power)
-        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_2, APP_IO_PIN_SET);
+        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_2, APP_IO_PIN_RESET);
     }
 
     // Configure AON_GPIO_6 (P_M_EN) as output, initial state OFF (low)
@@ -474,7 +510,7 @@ void app_periph_init(void)
         io_init.pin  = AON_GPIO_PIN_6; // AON GPIO6
         app_io_init(APP_IO_TYPE_AON, &io_init);
         // Set initial state to OFF (low)
-        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6, APP_IO_PIN_SET);
+        app_io_write_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_6, APP_IO_PIN_RESET);
     }
 
     // 初始化BM8563 RTC模块
@@ -484,7 +520,7 @@ void app_periph_init(void)
         APP_LOG_ERROR("BM8563 RTC initialization failed");
     }
 
-    pwr_mgmt_mode_set(PMR_MGMT_ACTIVE_MODE);
+    pwr_mgmt_mode_set(PMR_MGMT_SLEEP_MODE);
 }
 
 // -----------------------------------------------------------------------------

@@ -108,6 +108,12 @@ bool gpio_4g_power_en_get(void);
 void uart1_init(uint32_t baud_rate);
 void uart1_tx_data_send(uint8_t *p_data, uint16_t length);
 
+// UART open/close functions for low-power mode
+void sensor_uart_open(void);
+void sensor_uart_close(void);
+void fourg_uart_open(void);
+void fourg_uart_close(void);
+
 /**
  * @brief UART1异步发送函数，适用于时钟信号不稳定的环境
  * @param[in] p_data: 要发送的数据指针

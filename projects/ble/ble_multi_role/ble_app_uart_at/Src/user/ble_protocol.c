@@ -45,8 +45,10 @@
 static void parse_at_command_response(const char* response, uint16_t length);
 static char* ble_protocol_create_query_response(uint8_t query_type);
 
-
 void ble_protocol_send_json_response(const char *p_json_str);
+
+// 标记服务器配置已修改（由4G协议模块实现）
+extern void ble_4g_protocol_mark_server_config_changed(void);
 
 /*
  * DEFINES
@@ -626,6 +628,13 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             cJSON_AddNumberToObject(body, "TEMPH_threshold", g_shared_params.temp_high_threshold);
             cJSON_AddNumberToObject(body, "TEMPL_threshold", g_shared_params.temp_low_threshold);
             cJSON_AddNumberToObject(body, "water_threshold", g_shared_params.water_threshold);
+
+            // 服务器配置（3.11 服务器地址设置/查询）
+            cJSON_AddNumberToObject(body, "server_type", g_shared_params.server_type);
+            cJSON_AddStringToObject(body, "server_address", g_shared_params.server_address);
+            cJSON_AddNumberToObject(body, "server_port", g_shared_params.server_port);
+            cJSON_AddStringToObject(body, "username", g_shared_params.username);
+            cJSON_AddStringToObject(body, "password", g_shared_params.password);
             break;
             
         case PROTOCOL_QUERY_TYPE_CURRENT_DATA:
@@ -1012,15 +1021,105 @@ static void ble_protocol_parse_json_command(const char* json_str)
         
         case PROTOCOL_CMD_SERVER_ADDRESS_SET:
         {
-            cJSON *address_item = cJSON_GetObjectItem(body, "address");
-            if (address_item == NULL || !cJSON_IsString(address_item))
+            // 按照蓝牙协议文档3.11，字段为 server_type/server_address/server_port/username/password
+            cJSON *type_item  = cJSON_GetObjectItem(body, "server_type");
+            cJSON *addr_item  = cJSON_GetObjectItem(body, "server_address");
+            cJSON *port_item  = cJSON_GetObjectItem(body, "server_port");
+            cJSON *user_item  = cJSON_GetObjectItem(body, "username");
+            cJSON *pass_item  = cJSON_GetObjectItem(body, "password");
+
+            if (type_item == NULL || !cJSON_IsNumber(type_item)   ||
+                addr_item == NULL || !cJSON_IsString(addr_item)   ||
+                port_item == NULL || !cJSON_IsNumber(port_item)   ||
+                user_item == NULL || !cJSON_IsString(user_item)   ||
+                pass_item == NULL || !cJSON_IsString(pass_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid address in server address set", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid fields in server address set", DEBUG_TAG);
+
+                // 按照协议：仅返回 header.code 和 result=1
+                cJSON *resp   = cJSON_CreateObject();
+                cJSON *header = cJSON_CreateObject();
+                if (resp == NULL || header == NULL)
+                {
+                    if (resp)   cJSON_Delete(resp);
+                    if (header) cJSON_Delete(header);
+                    break;
+                }
+
+                cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_SERVER_ADDRESS_SET);
+                cJSON_AddItemToObject(resp, "header", header);
+                cJSON_AddNumberToObject(resp, "result", 1);
+
+                char *json_string = cJSON_Print(resp);
+                if (json_string)
+                {
+                    // 通过BLE回传失败结果
+                    ble_protocol_send_json_response(json_string);
+                    free(json_string);
+                }
+                cJSON_Delete(resp);
                 break;
             }
-            
-            const char *address = address_item->valuestring;
-            ble_protocol_handle_param_set(cmd_code, (uint8_t*)address, strlen(address));
+
+            int server_type  = type_item->valueint;
+            int server_port  = port_item->valueint;
+            const char *server_address = addr_item->valuestring;
+            const char *username       = user_item->valuestring;
+            const char *password       = pass_item->valuestring;
+
+            // 更新共享参数中的服务器配置
+            memset(g_shared_params.server_address, 0, sizeof(g_shared_params.server_address));
+            strncpy(g_shared_params.server_address, server_address,
+                    sizeof(g_shared_params.server_address) - 1);
+
+            g_shared_params.server_type = (uint8_t)server_type;
+            g_shared_params.server_port = (uint16_t)server_port;
+
+            memset(g_shared_params.username, 0, sizeof(g_shared_params.username));
+            strncpy(g_shared_params.username, username,
+                    sizeof(g_shared_params.username) - 1);
+            memset(g_shared_params.password, 0, sizeof(g_shared_params.password));
+            strncpy(g_shared_params.password, password,
+                    sizeof(g_shared_params.password) - 1);
+
+            // 保存到Flash，确保掉电不丢失
+            shared_params_save_to_flash();
+
+            // 通知4G协议：服务器配置已修改，下次上电时需要向DTU下发新配置
+            ble_4g_protocol_mark_server_config_changed();
+
+            // 构建成功回文
+            cJSON *resp      = cJSON_CreateObject();
+            cJSON *header    = cJSON_CreateObject();
+            cJSON *body_resp = cJSON_CreateObject();
+            if (resp == NULL || header == NULL || body_resp == NULL)
+            {
+                if (resp)      cJSON_Delete(resp);
+                if (header)    cJSON_Delete(header);
+                if (body_resp) cJSON_Delete(body_resp);
+                APP_LOG_ERROR("%s Failed to create JSON response for server address set", DEBUG_TAG);
+                break;
+            }
+
+            cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_SERVER_ADDRESS_SET);
+            cJSON_AddItemToObject(resp, "header", header);
+
+            char addr_port[96];
+            snprintf(addr_port, sizeof(addr_port), "%s:%d",
+                     g_shared_params.server_address,
+                     (int)g_shared_params.server_port);
+            cJSON_AddStringToObject(body_resp, "server_address", addr_port);
+            cJSON_AddItemToObject(resp, "body", body_resp);
+            cJSON_AddNumberToObject(resp, "result", 0);
+
+            char *json_string = cJSON_Print(resp);
+            if (json_string)
+            {
+                // 通过BLE回传成功结果
+                ble_protocol_send_json_response(json_string);
+                free(json_string);
+            }
+            cJSON_Delete(resp);
             break;
         }
         
