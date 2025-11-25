@@ -26,6 +26,7 @@
 #include "app_error.h"
 #include "app_uart.h"
 #include "board_SK.h"
+#include "ble_4g_param_handler.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -34,6 +35,8 @@
 #include "grx_sys.h"          // 为了使用 sdk_err_t 类型
 #include "bm8563_rtc.h"       // 为了使用RTC时间读取功能
 #include "water_sensor.h"     // 水浸传感器驱动
+
+#include "4g_time_utils.h"
 
 /*
  * EXTERNAL FUNCTION DECLARATIONS
@@ -55,7 +58,13 @@ extern void fourg_uart_close(void);
 } while(0)
 #define DEBUG_TAG                   "[4G_PROTOCOL]"
 #define JSON_BUFFER_SIZE            1024
-#define DEVICE_ID_SIZE              32
+
+// 将数值按两位小数四舍五入，避免2.0999999这类浮点显示问题
+static double round_to_2_decimal(double value)
+{
+    long tmp = (long)(value * 100.0 + 0.5);
+    return (double)tmp / 100.0;
+}
 
 // GPIO定义 - 电源控制引脚
 #define SENSOR_POWER_PIN    APP_IO_PIN_25 // S_EN - 传感器电源控制
@@ -105,44 +114,7 @@ static bool s_is_sending = false;  // 是否正在发送数据
  */
 static void rtc_debug_test(void)
 {
-    APP_LOG_INFO("%s === RTC Debug Test Start ===", DEBUG_TAG);
-    
-    // 1. 检查RTC是否运行
-    bool is_running = bm8563_is_running();
-    APP_LOG_INFO("%s RTC is running: %s", DEBUG_TAG, is_running ? "YES" : "NO");
-    
-    // 2. 尝试读取原始时间数据
-    rtc_time_t rtc_time;
-    bool read_success = bm8563_read_time(&rtc_time);
-    APP_LOG_INFO("%s Raw time read success: %s", DEBUG_TAG, read_success ? "YES" : "NO");
-    
-    if (read_success) {
-        APP_LOG_INFO("%s Raw time: %04d-%02d-%02d %02d:%02d:%02d (weekday: %d)",
-                     DEBUG_TAG, rtc_time.year, rtc_time.month, rtc_time.day,
-                     rtc_time.hour, rtc_time.minute, rtc_time.second, rtc_time.weekday);
-    }
-    
-    // 3. 测试格式化时间字符串
-    char time_str[RTC_TIME_STRING_LEN];
-    bool format_success = bm8563_get_time_string(time_str);
-    APP_LOG_INFO("%s Formatted time success: %s", DEBUG_TAG, format_success ? "YES" : "NO");
-    
-    if (format_success) {
-        APP_LOG_INFO("%s Formatted time: %s (length: %d)", DEBUG_TAG, time_str, strlen(time_str));
-    }
-    
-    // 4. 如果RTC没有运行，尝试启动
-    if (!is_running) {
-        APP_LOG_INFO("%s Attempting to start RTC...", DEBUG_TAG);
-        bool start_success = bm8563_start();
-        APP_LOG_INFO("%s RTC start result: %s", DEBUG_TAG, start_success ? "SUCCESS" : "FAILED");
-        
-        // 重新检查状态
-        is_running = bm8563_is_running();
-        APP_LOG_INFO("%s RTC is now running: %s", DEBUG_TAG, is_running ? "YES" : "NO");
-    }
-    
-    APP_LOG_INFO("%s === RTC Debug Test End ===", DEBUG_TAG);
+    fourg_time_rtc_debug_test();
 }
 
 /**
@@ -159,59 +131,7 @@ static void rtc_debug_test(void)
  */
 bool get_collection_timestamp_for_4g(char *timestamp_buffer)
 {
-    if (timestamp_buffer == NULL) {
-        APP_LOG_ERROR("%s Invalid timestamp buffer pointer", DEBUG_TAG);
-        return false;
-    }
-    
-    // 首先检查RTC是否正常工作
-    if (!bm8563_is_running()) {
-        APP_LOG_WARNING("%s RTC is not running, attempting to start", DEBUG_TAG);
-        if (!bm8563_start()) {
-            APP_LOG_ERROR("%s Failed to start RTC, using default timestamp", DEBUG_TAG);
-            strcpy(timestamp_buffer, "20241114164200");
-            return false;
-        }
-    }
-    
-    // 直接获取格式化的时间字符串 "YYYYMMDDHHmmss"
-    char full_timestamp[16];
-    if (!bm8563_get_time_string(full_timestamp)) {
-        APP_LOG_ERROR("%s Failed to get RTC time for 4G upload", DEBUG_TAG);
-        strcpy(timestamp_buffer, "202411141642");
-        return false;
-    }
-    
-    // 如果时间为默认值，记录警告但继续使用
-    if (strncmp(full_timestamp, "2000", 4) == 0) {
-        APP_LOG_WARNING("%s RTC time is default (%s), using default timestamp", DEBUG_TAG, full_timestamp);
-    }
-    
-    // 验证时间戳格式和长度
-    size_t len = strlen(full_timestamp);
-    if (len != 14) {
-        APP_LOG_WARNING("%s Invalid timestamp length: %d, expected 14. Timestamp: %s", 
-                        DEBUG_TAG, len, full_timestamp);
-        
-        // 如果长度不对，尝试补零或截断
-        if (len < 14) {
-            // 长度不足，补零
-            while (strlen(full_timestamp) < 14) {
-                strcat(full_timestamp, "0");
-            }
-        } else if (len > 14) {
-            // 长度过长，截断
-            full_timestamp[14] = '\0';
-        }
-        APP_LOG_INFO("%s Corrected timestamp: %s", DEBUG_TAG, full_timestamp);
-    }
-    
-    // 截取前12位（YYYYMMDDHHmm），去掉秒
-    strncpy(timestamp_buffer, full_timestamp, 12);
-    timestamp_buffer[12] = '\0';
-    
-    APP_LOG_INFO("%s Collection timestamp for 4G (12-digit): %s", DEBUG_TAG, timestamp_buffer);
-    return true;
+    return fourg_time_get_collection_timestamp(timestamp_buffer);
 }
 
 /**
@@ -301,7 +221,7 @@ static bool ble_4g_protocol_force_get_imei(void)
  * @param[in] buffer_size: Size of the buffer.
  *****************************************************************************************
  */
-static void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buffer_size)
+void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buffer_size)
 {
     if (p_device_id_buffer == NULL || buffer_size == 0)
     {
@@ -620,7 +540,8 @@ static char* ble_4g_protocol_create_param_info_json(void)
     // 构建body
     cJSON_AddNumberToObject(body, "device_collect_time", g_shared_params.device_collect_time);
     cJSON_AddNumberToObject(body, "device_updata_time", g_shared_params.device_updata_time);
-    cJSON_AddNumberToObject(body, "methane_threshold", g_shared_params.methane_threshold);
+    // 甲烷阈值按两位小数四舍五入后再写入JSON，避免2.0999999046等显示
+    cJSON_AddNumberToObject(body, "methane_threshold", round_to_2_decimal(g_shared_params.methane_threshold));
     cJSON_AddNumberToObject(body, "TEMPH_threshold", g_shared_params.temp_high_threshold);
     cJSON_AddNumberToObject(body, "TEMPL_threshold", g_shared_params.temp_low_threshold);
     cJSON_AddNumberToObject(body, "water_threshold", g_shared_params.water_threshold);
@@ -819,51 +740,6 @@ static void delayed_send_timer_handler(void *p_context)
 
 /**
  *****************************************************************************************
- * @brief Start delayed send process.
- * 
- * 启动延时发送流程
- *****************************************************************************************
- */
-/*
-static void start_delayed_send_process(void)
-{
-    if (s_is_sending)
-    {
-        APP_LOG_WARNING("%s Already sending data, skip", DEBUG_TAG);
-        return;
-    }
-    
-    if (s_collected_data_count == 0)
-    {
-        APP_LOG_WARNING("%s No data to send", DEBUG_TAG);
-        return;
-    }
-    
-    // 初始化发送状态
-    s_is_sending = true;
-    s_send_data_index = 0;
-    s_total_data_to_send = s_collected_data_count;
-    
-    APP_LOG_INFO("%s Starting delayed send process for %d data points", DEBUG_TAG, s_total_data_to_send);
-    
-    // 立即发送第一条数据
-    delayed_send_timer_handler(NULL);
-    
-    // 启动定时器，后续数据延时发送
-    if (s_total_data_to_send > 1)
-    {
-        sdk_err_t err_code = app_timer_start(m_delayed_send_timer, DELAYED_SEND_INTERVAL_MS, NULL);
-        if (err_code != SDK_SUCCESS)
-        {
-            APP_LOG_ERROR("%s Failed to start delayed send timer: 0x%X", DEBUG_TAG, err_code);
-            s_is_sending = false;
-        }
-    }
-}
-*/
-
-/**
- *****************************************************************************************
  * @brief Data report timer handler.
  * 
  * 上报定时器处理函数：触发延时发送流程
@@ -923,6 +799,7 @@ static void data_report_timer_handler(void *p_context)
  *****************************************************************************************
  */
 
+// 初始化4G协议模块：配置电源初始状态、水浸与传感器状态、创建定时器并执行首次上传
 void ble_4g_protocol_init(void)
 {
     if (s_protocol_initialized)
@@ -1025,197 +902,8 @@ void ble_4g_protocol_init(void)
     ble_4g_protocol_upload_with_power_mgmt();
 }
 
-/**
- *****************************************************************************************
- * @brief Create JSON response for collect time setting (code 106).
- *****************************************************************************************
- */
-static char* ble_4g_protocol_create_collect_time_response(int result, uint16_t collect_time)
-{
-    cJSON *json = cJSON_CreateObject();
-    cJSON *header = cJSON_CreateObject();
-    
-    if (json == NULL || header == NULL)
-    {
-        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
-        if (json) cJSON_Delete(json);
-        if (header) cJSON_Delete(header);
-        return NULL;
-    }
-    
-    // 动态获取设备 ID (IMEI)
-    char device_id[DEVICE_ID_SIZE] = {0};
-    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
-    
-    // 构建header
-    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_COLLECT_TIME_SET);
-    cJSON_AddStringToObject(header, "device_ID", device_id);
-    cJSON_AddItemToObject(json, "header", header);
-    
-    // 如果成功，添加body
-    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
-    {
-        cJSON *body = cJSON_CreateObject();
-        if (body)
-        {
-            cJSON_AddNumberToObject(body, "collect_time_set", collect_time);
-            cJSON_AddItemToObject(json, "body", body);
-        }
-    }
-    
-    // 添加result
-    cJSON_AddNumberToObject(json, "result", result);
-    
-    char *json_string = cJSON_Print(json);
-    cJSON_Delete(json);
-    
-    return json_string;
-}
 
-/**
- *****************************************************************************************
- * @brief Create JSON response for update time setting (code 107).
- *****************************************************************************************
- */
-static char* ble_4g_protocol_create_update_time_response(int result, uint16_t update_time)
-{
-    cJSON *json = cJSON_CreateObject();
-    cJSON *header = cJSON_CreateObject();
-    
-    if (json == NULL || header == NULL)
-    {
-        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
-        if (json) cJSON_Delete(json);
-        if (header) cJSON_Delete(header);
-        return NULL;
-    }
-    
-    // 动态获取设备 ID (IMEI)
-    char device_id[DEVICE_ID_SIZE] = {0};
-    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
-    
-    // 构建header
-    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_UPDATE_TIME_SET);
-    cJSON_AddStringToObject(header, "device_ID", device_id);
-    cJSON_AddItemToObject(json, "header", header);
-    
-    // 如果成功，添加body
-    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
-    {
-        cJSON *body = cJSON_CreateObject();
-        if (body)
-        {
-            cJSON_AddNumberToObject(body, "updata_time_set", update_time);
-            cJSON_AddItemToObject(json, "body", body);
-        }
-    }
-    
-    // 添加result
-    cJSON_AddNumberToObject(json, "result", result);
-    
-    char *json_string = cJSON_Print(json);
-    cJSON_Delete(json);
-    
-    return json_string;
-}
-
-/**
- *****************************************************************************************
- * @brief Create JSON response for threshold setting (code 108).
- *****************************************************************************************
- */
-static char* ble_4g_protocol_create_threshold_response(int result, float methane_threshold, 
-                                                        int16_t temp_high, int16_t temp_low)
-{
-    cJSON *json = cJSON_CreateObject();
-    cJSON *header = cJSON_CreateObject();
-    
-    if (json == NULL || header == NULL)
-    {
-        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
-        if (json) cJSON_Delete(json);
-        if (header) cJSON_Delete(header);
-        return NULL;
-    }
-    
-    // 动态获取设备 ID (IMEI)
-    char device_id[DEVICE_ID_SIZE] = {0};
-    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
-    
-    // 构建header
-    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_THRESHOLD_SET);
-    cJSON_AddStringToObject(header, "device_ID", device_id);
-    cJSON_AddItemToObject(json, "header", header);
-    
-    // 如果成功，添加body
-    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
-    {
-        cJSON *body = cJSON_CreateObject();
-        if (body)
-        {
-            cJSON_AddNumberToObject(body, "methane_threshold_set", methane_threshold);
-            cJSON_AddNumberToObject(body, "TEMPH_threshold_set", temp_high);
-            cJSON_AddNumberToObject(body, "TEMPL_threshold_set", temp_low);
-            cJSON_AddItemToObject(json, "body", body);
-        }
-    }
-    
-    // 添加result
-    cJSON_AddNumberToObject(json, "result", result);
-    
-    char *json_string = cJSON_Print(json);
-    cJSON_Delete(json);
-    
-    return json_string;
-}
-
-/**
- *****************************************************************************************
- * @brief Create JSON response for water threshold setting (code 110).
- *****************************************************************************************
- */
-static char* ble_4g_protocol_create_water_threshold_response(int result, uint16_t water_threshold)
-{
-    cJSON *json = cJSON_CreateObject();
-    cJSON *header = cJSON_CreateObject();
-    
-    if (json == NULL || header == NULL)
-    {
-        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
-        if (json) cJSON_Delete(json);
-        if (header) cJSON_Delete(header);
-        return NULL;
-    }
-    
-    // 动态获取设备 ID (IMEI)
-    char device_id[DEVICE_ID_SIZE] = {0};
-    ble_4g_protocol_get_device_id(device_id, sizeof(device_id));
-    
-    // 构建header
-    cJSON_AddNumberToObject(header, "code", PROTOCOL_4G_CMD_WATER_THRESHOLD_SET);
-    cJSON_AddStringToObject(header, "device_ID", device_id);
-    cJSON_AddItemToObject(json, "header", header);
-    
-    // 如果成功，添加body
-    if (result == PROTOCOL_4G_RESULT_SET_SUCCESS)
-    {
-        cJSON *body = cJSON_CreateObject();
-        if (body)
-        {
-            cJSON_AddNumberToObject(body, "water_threshold_set", water_threshold);
-            cJSON_AddItemToObject(json, "body", body);
-        }
-    }
-    
-    // 添加result
-    cJSON_AddNumberToObject(json, "result", result);
-    
-    char *json_string = cJSON_Print(json);
-    cJSON_Delete(json);
-    
-    return json_string;
-}
-
+// 处理来自4G模块的JSON下行数据，根据命令码解析并分发到参数处理模块
 void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
 {
     if (!s_protocol_initialized)
@@ -1303,182 +991,25 @@ void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
     cJSON *body = cJSON_GetObjectItem(json, "body");
     
     // 根据命令代码处理不同的设置指令
-    int result = PROTOCOL_4G_RESULT_SET_FAILED;
     char *response_json = NULL;
     
     switch (cmd_code)
     {
         case PROTOCOL_4G_CMD_COLLECT_TIME_SET: // 106 - 检测周期设置
-        {
-            if (body == NULL)
-            {
-                APP_LOG_ERROR("%s No body in collect time set command", DEBUG_TAG);
-                break;
-            }
-            
-            cJSON *collect_time_item = cJSON_GetObjectItem(body, "collect_time_set");
-            if (collect_time_item == NULL || !cJSON_IsNumber(collect_time_item))
-            {
-                APP_LOG_ERROR("%s Invalid collect_time_set parameter", DEBUG_TAG);
-                break;
-            }
-            
-            uint16_t new_collect_time = (uint16_t)collect_time_item->valueint;
-            APP_LOG_INFO("%s Setting collect time to: %d minutes", DEBUG_TAG, new_collect_time);
-            
-            // 参数范围验证 (1-1440分钟)
-            if (new_collect_time >= 1 && new_collect_time <= 1440)
-            {
-                if (shared_params_set_collect_time(new_collect_time))
-                {
-                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Collect time set successfully", DEBUG_TAG);
-                    
-                    // 重启采集定时器
-                    ble_4g_protocol_restart_collect_timer();
-                }
-                else
-                {
-                    APP_LOG_ERROR("%s Failed to set collect time", DEBUG_TAG);
-                }
-            }
-            else
-            {
-                APP_LOG_ERROR("%s Invalid collect time: %d (range: 1-1440)", DEBUG_TAG, new_collect_time);
-            }
-            
-            // 创建响应
-            response_json = ble_4g_protocol_create_collect_time_response(result, 
-                                                                          g_shared_params.device_collect_time);
+            response_json = ble_4g_param_process_json_command(cmd_code, body);
             break;
-        }
         
         case PROTOCOL_4G_CMD_UPDATE_TIME_SET: // 107 - 数据上报周期设置
-        {
-            if (body == NULL)
-            {
-                APP_LOG_ERROR("%s No body in update time set command", DEBUG_TAG);
-                break;
-            }
-            
-            cJSON *update_time_item = cJSON_GetObjectItem(body, "updata_time_set");
-            if (update_time_item == NULL || !cJSON_IsNumber(update_time_item))
-            {
-                APP_LOG_ERROR("%s Invalid updata_time_set parameter", DEBUG_TAG);
-                break;
-            }
-            
-            uint16_t new_update_time = (uint16_t)update_time_item->valueint;
-            APP_LOG_INFO("%s Setting update time to: %d minutes", DEBUG_TAG, new_update_time);
-            
-            // 参数范围验证 (1-1440分钟)
-            if (new_update_time >= 1 && new_update_time <= 1440)
-            {
-                if (shared_params_set_update_time(new_update_time))
-                {
-                    result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Update time set successfully", DEBUG_TAG);
-                    
-                    // 重启上报定时器
-                    ble_4g_protocol_restart_report_timer();
-                }
-                else
-                {
-                    APP_LOG_ERROR("%s Failed to set update time", DEBUG_TAG);
-                }
-            }
-            else
-            {
-                APP_LOG_ERROR("%s Invalid update time: %d (range: 1-1440)", DEBUG_TAG, new_update_time);
-            }
-            
-            // 创建响应
-            response_json = ble_4g_protocol_create_update_time_response(result, 
-                                                                         g_shared_params.device_updata_time);
+            response_json = ble_4g_param_process_json_command(cmd_code, body);
             break;
-        }
         
         case PROTOCOL_4G_CMD_THRESHOLD_SET: // 108 - 甲烷及温度报警阈值设置
-        {
-            if (body == NULL)
-            {
-                APP_LOG_ERROR("%s No body in threshold set command", DEBUG_TAG);
-                break;
-            }
-            
-            cJSON *methane_item = cJSON_GetObjectItem(body, "methane_threshold_set");
-            cJSON *temp_high_item = cJSON_GetObjectItem(body, "TEMPH_threshold_set");
-            cJSON *temp_low_item = cJSON_GetObjectItem(body, "TEMPL_threshold_set");
-            
-            if (methane_item == NULL || !cJSON_IsNumber(methane_item) ||
-                temp_high_item == NULL || !cJSON_IsNumber(temp_high_item) ||
-                temp_low_item == NULL || !cJSON_IsNumber(temp_low_item))
-            {
-                APP_LOG_ERROR("%s Invalid threshold parameters", DEBUG_TAG);
-                break;
-            }
-            
-            float new_methane_threshold = (float)methane_item->valuedouble;
-            int16_t new_temp_high = (int16_t)temp_high_item->valueint;
-            int16_t new_temp_low = (int16_t)temp_low_item->valueint;
-            
-            APP_LOG_INFO("%s Setting thresholds: CH4=%.2f, TEMP_H=%d, TEMP_L=%d", 
-                         DEBUG_TAG, new_methane_threshold, new_temp_high, new_temp_low);
-            
-            // 设置阈值
-            if (shared_params_set_methane_threshold(new_methane_threshold) &&
-                shared_params_set_temp_thresholds(new_temp_high, new_temp_low))
-            {
-                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Thresholds set successfully", DEBUG_TAG);
-            }
-            else
-            {
-                APP_LOG_ERROR("%s Failed to set thresholds", DEBUG_TAG);
-            }
-            
-            // 创建响应
-            response_json = ble_4g_protocol_create_threshold_response(result,
-                                                                       g_shared_params.methane_threshold,
-                                                                       g_shared_params.temp_high_threshold,
-                                                                       g_shared_params.temp_low_threshold);
+            response_json = ble_4g_param_process_json_command(cmd_code, body);
             break;
-        }
         
         case PROTOCOL_4G_CMD_WATER_THRESHOLD_SET: // 110 - 水浸报警阈值设置
-        {
-            if (body == NULL)
-            {
-                APP_LOG_ERROR("%s No body in water threshold set command", DEBUG_TAG);
-                break;
-            }
-            
-            cJSON *water_threshold_item = cJSON_GetObjectItem(body, "water_threshold_set");
-            if (water_threshold_item == NULL || !cJSON_IsNumber(water_threshold_item))
-            {
-                APP_LOG_ERROR("%s Invalid water_threshold_set parameter", DEBUG_TAG);
-                break;
-            }
-            
-            uint16_t new_water_threshold = (uint16_t)water_threshold_item->valueint;
-            APP_LOG_INFO("%s Setting water threshold to: %d", DEBUG_TAG, new_water_threshold);
-            
-            // 设置水浸阈值
-            if (shared_params_set_water_threshold(new_water_threshold))
-            {
-                result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Water threshold set successfully", DEBUG_TAG);
-            }
-            else
-            {
-                APP_LOG_ERROR("%s Failed to set water threshold", DEBUG_TAG);
-            }
-            
-            // 创建响应
-            response_json = ble_4g_protocol_create_water_threshold_response(result,
-                                                                             g_shared_params.water_threshold);
+            response_json = ble_4g_param_process_json_command(cmd_code, body);
             break;
-        }
         
         default:
             APP_LOG_WARNING("%s Unknown command code: %d", DEBUG_TAG, cmd_code);
@@ -1496,6 +1027,7 @@ void ble_4g_protocol_data_process(const uint8_t *p_data, uint16_t length)
     cJSON_Delete(json);
 }
 
+// 发送设备信息上报报文（code 102）
 void ble_4g_protocol_send_device_info_report(void)
 {
     if (!s_protocol_initialized)
@@ -1511,6 +1043,7 @@ void ble_4g_protocol_send_device_info_report(void)
     }
 }
 
+// 发送设备运行状态上报报文（code 103）
 void ble_4g_protocol_send_status_info_report(void)
 {
     if (!s_protocol_initialized)
@@ -1526,6 +1059,7 @@ void ble_4g_protocol_send_status_info_report(void)
     }
 }
 
+// 发送当前参数设置信息上报报文（code 104）
 void ble_4g_protocol_send_param_info_report(void)
 {
     if (!s_protocol_initialized)
@@ -1541,6 +1075,7 @@ void ble_4g_protocol_send_param_info_report(void)
     }
 }
 
+// 发送单条传感器监测数据上报报文（code 105）
 void ble_4g_protocol_send_data_report(const ble_4g_sensor_data_t *p_sensor_data)
 {
     if (!s_protocol_initialized)
@@ -1562,6 +1097,7 @@ void ble_4g_protocol_send_data_report(const ble_4g_sensor_data_t *p_sensor_data)
     }
 }
 
+// 发送参数变更查询报文（code 120），用于从平台拉取最新配置
 void ble_4g_protocol_send_settings_query(void)
 {
     if (!s_protocol_initialized)
@@ -1577,6 +1113,7 @@ void ble_4g_protocol_send_settings_query(void)
     }
 }
 
+// 处理来自4G平台的参数设置命令，根据cmd_code更新共享参数并重启相关定时器
 void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uint16_t length)
 {
     if (!s_protocol_initialized)
@@ -1585,7 +1122,7 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
         return;
     }
     
-    uint8_t result = PROTOCOL_4G_RESULT_SET_FAILED; // 定义result变量
+    uint8_t result = PROTOCOL_4G_RESULT_SET_FAILED; // 定义result变量，用于日志记录
     
     switch (cmd_code)
     {
@@ -1697,17 +1234,22 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
             break;
     }
     
-    // 发送设置结果响应
-    APP_LOG_INFO("%s Parameter setting result: %s", DEBUG_TAG, 
+    // 记录设置结果（不改变原有行为，仅用于调试）
+    APP_LOG_INFO("%s Parameter setting result: %s", DEBUG_TAG,
                  (result == PROTOCOL_4G_RESULT_SET_SUCCESS) ? "SUCCESS" : "FAILED");
+
+    // 显式标记变量已使用，防止在关闭日志宏时出现未使用警告
+    (void)result;
 }
 
+// 将甲烷体积分数%vol换算为爆炸下限百分比%LEL（5%vol=100%LEL）
 float ble_4g_protocol_vol_to_lel(float vol_percent)
 {
     // 甲烷LEL转换: 5%vol = 100%LEL
     return (vol_percent / METHANE_MAX_VOL_PERCENT) * METHANE_MAX_LEL_PERCENT;
 }
 
+// 读取最新的传感器数据（内部先从解析模块更新，再返回4G协议缓存）
 bool ble_4g_protocol_get_sensor_data(ble_4g_sensor_data_t *p_sensor_data)
 {
     if (p_sensor_data == NULL)
@@ -1750,6 +1292,7 @@ static bool ble_4g_protocol_get_sensor_data_no_threshold_check(ble_4g_sensor_dat
     return s_current_sensor_data_4g.is_valid;
 }
 
+// 获取当前设备信息结构（如固件版本号）
 void ble_4g_protocol_get_device_info(ble_4g_device_info_t *p_device_info)
 {
     if (p_device_info != NULL)
@@ -1758,6 +1301,7 @@ void ble_4g_protocol_get_device_info(ble_4g_device_info_t *p_device_info)
     }
 }
 
+// 获取当前设备状态信息结构（水浸、传感器状态、移动状态、信号等）
 void ble_4g_protocol_get_status_info(ble_4g_status_info_t *p_status_info)
 {
     if (p_status_info != NULL)
@@ -1766,6 +1310,7 @@ void ble_4g_protocol_get_status_info(ble_4g_status_info_t *p_status_info)
     }
 }
 
+// 以旧结构体形式导出当前参数配置，便于兼容旧接口
 void ble_4g_protocol_get_param_settings(ble_4g_param_settings_t *p_param_settings)
 {
     if (p_param_settings != NULL)
@@ -1780,6 +1325,7 @@ void ble_4g_protocol_get_param_settings(ble_4g_param_settings_t *p_param_setting
     }
 }
 
+// 按共享参数中的采集周期启动传感器采集定时器
 void ble_4g_protocol_start_collect_timer(void)
 {
     if (!s_protocol_initialized)
@@ -1797,6 +1343,7 @@ void ble_4g_protocol_start_collect_timer(void)
     APP_LOG_INFO("%s Started collect timer: %d minutes", DEBUG_TAG, g_shared_params.device_collect_time);
 }
 
+// 按共享参数中的上报周期启动数据上报定时器
 void ble_4g_protocol_start_report_timer(void)
 {
     if (!s_protocol_initialized)
@@ -1814,6 +1361,7 @@ void ble_4g_protocol_start_report_timer(void)
     APP_LOG_INFO("%s Started report timer: %d minutes", DEBUG_TAG, g_shared_params.device_updata_time);
 }
 
+// 停止传感器采集定时器
 void ble_4g_protocol_stop_collect_timer(void)
 {
     if (!s_protocol_initialized)
@@ -1827,6 +1375,7 @@ void ble_4g_protocol_stop_collect_timer(void)
     APP_LOG_INFO("%s Stopped collect timer", DEBUG_TAG);
 }
 
+// 停止数据上报定时器
 void ble_4g_protocol_stop_report_timer(void)
 {
     if (!s_protocol_initialized)
@@ -1932,6 +1481,7 @@ void ble_4g_protocol_clear_collected_data(void)
     APP_LOG_INFO("%s Collected data buffer cleared", DEBUG_TAG);
 }
 
+// 在阈值超限等场景下，使用当前告警传感器数据立即触发一次完整上传
 void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sensor_data)
 {
     if (!p_sensor_data || !p_sensor_data->is_valid) {
@@ -1952,6 +1502,7 @@ void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sens
     ble_4g_protocol_upload_with_power_mgmt();
 }
 
+// 发送所有静态信息报文（102设备信息、104参数信息、120设置查询）
 void ble_4g_protocol_send_static_info(void)
 {
     APP_LOG_INFO("%s Sending static information reports", DEBUG_TAG);
@@ -1974,6 +1525,7 @@ void ble_4g_protocol_send_static_info(void)
  *****************************************************************************************
  */
 
+// 控制传感器电源引脚S_EN的开关，用于配合采集电源管理
 void ble_4g_protocol_sensor_power_control(bool enable)
 {
     if (enable) {
@@ -2196,77 +1748,82 @@ static void ble_4g_protocol_apply_server_config_if_needed(void)
     APP_LOG_INFO("%s Server configuration applied to DTU and flag cleared", DEBUG_TAG);
 }
 
+// 打开4G/DTU电源域和UART，并等待模块上电稳定
+static void dtu_power_on_and_wait(void)
+{
+    gpio_p_m_en_set(true);
+    fourg_uart_open();
+    gpio_4g_power_en_set(true);
+    sys_delay_ms(10000);
+}
+
+// 关闭4G/DTU电源和UART，结束一次完整的上传周期
+static void dtu_power_off(void)
+{
+    gpio_4g_power_en_set(false);
+    fourg_uart_close();
+    gpio_p_m_en_set(false);
+    APP_LOG_INFO("%s 4G/DTU module powered off", DEBUG_TAG);
+}
+
+// 在4G/DTU已上电的前提下，根据水浸与传感器状态以及采集缓存决定发送哪些105/103报文
+static void upload_dynamic_reports_no_power_mgmt(void)
+{
+    // 告警优先级：若存在水浸，则只上报103，不发送任何105数据
+    if (g_shared_params.device_water != 0 )
+    {
+        APP_LOG_WARNING("%s Alarm or sensor fault active. Suppressing all 105 data reports. Sending status (103) only.", DEBUG_TAG);
+        ble_4g_protocol_send_status_info_report();
+        return;
+    }
+
+    if (s_collected_data_count > 0)
+    {
+        uint8_t total = s_collected_data_count;
+        uint8_t start_index = (s_data_collection_index + MAX_COLLECTED_DATA_COUNT - s_collected_data_count) % MAX_COLLECTED_DATA_COUNT;
+        APP_LOG_INFO("%s No water alarm and sensor OK. Uploading %d collected data points (105).", DEBUG_TAG, total);
+        for (uint8_t i = 0; i < total; i++)
+        {
+            uint8_t current_index = (start_index + i) % MAX_COLLECTED_DATA_COUNT;
+            ble_4g_protocol_send_data_report(&s_collected_data_array[current_index]);
+            ble_4g_protocol_send_status_info_report();
+        }
+        ble_4g_protocol_clear_collected_data();
+    }
+    else
+    {
+        APP_LOG_INFO("%s No collected data, sending current sensor data if valid", DEBUG_TAG);
+        if (s_current_sensor_data_4g.is_valid)
+        {
+            ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
+        }
+        ble_4g_protocol_send_status_info_report();
+    }
+}
+
+// 标记服务器配置已被修改，下次4G上电时会重新下发MQTT相关参数到DTU
 void ble_4g_protocol_mark_server_config_changed(void)
 {
     s_server_config_changed = true;
     APP_LOG_INFO("%s Mark server configuration changed flag", DEBUG_TAG);
 }
 
+// 执行一次带4G/DTU电源管理的完整上传流程（上电→更新配置→上传→等待下行→下电）
 void ble_4g_protocol_upload_with_power_mgmt(void)
 {
     APP_LOG_INFO("%s Starting upload with 4G/DTU power management", DEBUG_TAG);
 
-    // 1. 打开4G UART并上电4G/DTU模块并等待稳定
-    gpio_p_m_en_set(true);
-    fourg_uart_open();
-    gpio_4g_power_en_set(true);
-    sys_delay_ms(10000);
+    dtu_power_on_and_wait();
 
-    // 1.5 如果服务器配置有变更，优先下发新的服务器配置并保存到DTU
     ble_4g_protocol_apply_server_config_if_needed();
-
-    // 2. 更新并缓存DTU关键信息（IMEI, CSQ）
     ble_4g_protocol_update_dtu_info_cache();
 
-    // 3. 批量发送采集数据（先发动态，再发静态与查询）
-    // 关键修复：只有在没有水浸的情况下才上报105数据
-    if (g_shared_params.device_water == 0) // 0 = DRY
-    {
-        if (s_collected_data_count > 0)
-        {
-            // 从最旧的数据开始上报
-            uint8_t total = s_collected_data_count;
-            uint8_t start_index = (s_data_collection_index + MAX_COLLECTED_DATA_COUNT - s_collected_data_count) % MAX_COLLECTED_DATA_COUNT;
-            APP_LOG_INFO("%s No water alarm. Uploading %d collected data points (105).", DEBUG_TAG, total);
-            for (uint8_t i = 0; i < total; i++)
-            {
-                uint8_t current_index = (start_index + i) % MAX_COLLECTED_DATA_COUNT;
-                // 发送 105 监测数据
-                ble_4g_protocol_send_data_report(&s_collected_data_array[current_index]);
-                // 每次105后都跟一个103状态信息
-                ble_4g_protocol_send_status_info_report();
-            }
-            // 发送完批量数据后清空缓冲
-            ble_4g_protocol_clear_collected_data();
-        }
-        else
-        {
-            // 如果没有累积数据，则发送当前数据（如果有效）
-            APP_LOG_INFO("%s No collected data, sending current sensor data if valid", DEBUG_TAG);
-            if (s_current_sensor_data_4g.is_valid)
-            {
-                ble_4g_protocol_send_data_report(&s_current_sensor_data_4g);
-            }
-            ble_4g_protocol_send_status_info_report();
-        }
-    }
-    else
-    {
-        // 如果有水浸，则只发送103状态报告
-        APP_LOG_WARNING("%s Water alarm is active. Suppressing all 105 data reports. Sending status (103) only.", DEBUG_TAG);
-        ble_4g_protocol_send_status_info_report();
-    }
+    upload_dynamic_reports_no_power_mgmt();
 
-    // 4. 发送静态信息与参数信息、设置查询
     ble_4g_protocol_send_static_info();
 
-    // 5. 等待平台可能下发的设置指令
     sys_delay_ms(10000);
 
-    // 6. 断电4G/DTU模块并关闭UART
-    gpio_4g_power_en_set(false);
-    fourg_uart_close();
-    gpio_p_m_en_set(false);
-    APP_LOG_INFO("%s 4G/DTU module powered off", DEBUG_TAG);
+    dtu_power_off();
 }
 

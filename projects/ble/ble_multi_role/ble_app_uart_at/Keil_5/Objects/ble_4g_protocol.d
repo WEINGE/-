@@ -124,6 +124,8 @@
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\libraries\app_key\app_key.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\components\libraries\app_key\app_key_core.h
 .\objects\ble_4g_protocol.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
+.\objects\ble_4g_protocol.o: ..\Src\user\ble_4g_param_handler.h
 .\objects\ble_4g_protocol.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
 .\objects\ble_4g_protocol.o: ..\Src\user\bm8563_rtc.h
 .\objects\ble_4g_protocol.o: ..\Src\user\water_sensor.h
+.\objects\ble_4g_protocol.o: ..\Src\user\4g_time_utils.h

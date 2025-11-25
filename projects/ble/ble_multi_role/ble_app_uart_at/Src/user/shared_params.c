@@ -18,7 +18,7 @@ static param_change_callback_t s_param_callback = NULL;
 // 默认参数值
 static const shared_device_params_t default_params = {
     .device_collect_time = 60,          // 默认60分钟采集
-    .device_updata_time = 1440,         // 默认1440分钟上报
+    .device_updata_time = 300,         // 默认300分钟上报
     .methane_threshold = 5.0f,          // 默认5%vol甲烷阈值
     .temp_high_threshold = 50,          // 默认50℃高温阈值
     .temp_low_threshold = -20,          // 默认-20℃低温阈值
@@ -28,11 +28,13 @@ static const shared_device_params_t default_params = {
     .install_lat = 0.0f,
     .install_lon = 0.0f,
     // 服务器默认配置（MQTT）
-    .server_address = "1.194.166.152", // 默认服务器地址
+    .server_address = "101.200.34.226", // 默认服务器地址
     .server_port    = 1883,             // 默认服务器端口
-    .username       = "root",          // 默认用户名
-    .password       = "root123456",   // 默认密码
+    .username       = "admin",          // 默认用户名
+    .password       = "Admin123",   // 默认密码
     .server_type    = 1,                // 默认MQTT
+    .pub_topic      = "/methane_sensor/test/report",
+    .sub_topic      = "/methane_sensor/test/command",
     
     // 实时状态信息默认值
     .sensor_status = 0,                 // 默认传感器正常

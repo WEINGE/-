@@ -31,6 +31,8 @@ typedef struct {
     char     username[32];              /**< 用户名 */
     char     password[32];              /**< 密码 */
     uint8_t  server_type;               /**< 服务器类型: 0=TCP, 1=MQTT, 2=HTTP */
+    char     pub_topic[64];
+    char     sub_topic[64];
     
     // 设备信息
     char     device_id[32];             /**< 设备ID */
@@ -107,6 +109,6 @@ void shared_params_register_callback(param_change_callback_t callback);
 // 参数版本号定义
 // 每次修改 shared_device_params_t 结构体时，请递增此版本号
 // 这样可以确保Flash中的旧数据不会被错误加载
-#define PARAMS_VERSION              0x00010005 // v1.2 - 添加device_water默认值为1
+#define PARAMS_VERSION              0x00010006 // v1.2 - 添加device_water默认值为1
 
 #endif // SHARED_PARAMS_H

@@ -61,6 +61,14 @@ extern void ble_4g_protocol_mark_server_config_changed(void);
 #define DEBUG_TAG                   "[4G_PROTOCOL]"
 #define JSON_BUFFER_SIZE            1024
 #define DEVICE_ID_SIZE              32
+#define PROTOCOL_CMD_SERVER_ADDRESS_QUERY   123
+
+// 将数值按两位小数四舍五入，避免2.0999999这类浮点显示问题
+static double round_to_2_decimal(double value)
+{
+    long tmp = (long)(value * 100.0 + 0.5);
+    return (double)tmp / 100.0;
+}
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -624,17 +632,11 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             cJSON_AddNumberToObject(body, "device_collect_time", g_shared_params.device_collect_time);
             cJSON_AddNumberToObject(body, "device_updata_time", g_shared_params.device_updata_time);
             // 甲烷阈值改为float类型（协议V1.4更新）
-            cJSON_AddNumberToObject(body, "methane_threshold", g_shared_params.methane_threshold);
+            // 按两位小数四舍五入后写入JSON，避免2.0999999046等显示
+            cJSON_AddNumberToObject(body, "methane_threshold", round_to_2_decimal(g_shared_params.methane_threshold));
             cJSON_AddNumberToObject(body, "TEMPH_threshold", g_shared_params.temp_high_threshold);
             cJSON_AddNumberToObject(body, "TEMPL_threshold", g_shared_params.temp_low_threshold);
             cJSON_AddNumberToObject(body, "water_threshold", g_shared_params.water_threshold);
-
-            // 服务器配置（3.11 服务器地址设置/查询）
-            cJSON_AddNumberToObject(body, "server_type", g_shared_params.server_type);
-            cJSON_AddStringToObject(body, "server_address", g_shared_params.server_address);
-            cJSON_AddNumberToObject(body, "server_port", g_shared_params.server_port);
-            cJSON_AddStringToObject(body, "username", g_shared_params.username);
-            cJSON_AddStringToObject(body, "password", g_shared_params.password);
             break;
             
         case PROTOCOL_QUERY_TYPE_CURRENT_DATA:
@@ -709,8 +711,8 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
                 cJSON_AddNumberToObject(body, "updata_time_set", g_shared_params.device_updata_time);
                 break;
             case 108: // 甲烷及温度报警阈值设置
-                // 甲烷阈值改为float类型（协议V1.4更新）
-                cJSON_AddNumberToObject(body, "methane_threshold_set", g_shared_params.methane_threshold);
+                // 甲烷阈值按两位小数四舍五入后写入JSON，避免2.0999999046等显示
+                cJSON_AddNumberToObject(body, "methane_threshold_set", round_to_2_decimal(g_shared_params.methane_threshold));
                 cJSON_AddNumberToObject(body, "TEMPH_threshold_set", g_shared_params.temp_high_threshold);
                 cJSON_AddNumberToObject(body, "TEMPL_threshold_set", g_shared_params.temp_low_threshold);
                 break;
@@ -728,6 +730,8 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
                 break;
             case 111: // 服务器地址设置
                 cJSON_AddStringToObject(body, "server_address", g_shared_params.server_address);
+                cJSON_AddStringToObject(body, "pub_topic", g_shared_params.pub_topic);
+                cJSON_AddStringToObject(body, "sub_topic", g_shared_params.sub_topic);
                 break;
         }
         cJSON_AddItemToObject(json, "body", body);
@@ -1027,6 +1031,8 @@ static void ble_protocol_parse_json_command(const char* json_str)
             cJSON *port_item  = cJSON_GetObjectItem(body, "server_port");
             cJSON *user_item  = cJSON_GetObjectItem(body, "username");
             cJSON *pass_item  = cJSON_GetObjectItem(body, "password");
+            cJSON *pub_item   = cJSON_GetObjectItem(body, "pub_topic");
+            cJSON *sub_item   = cJSON_GetObjectItem(body, "sub_topic");
 
             if (type_item == NULL || !cJSON_IsNumber(type_item)   ||
                 addr_item == NULL || !cJSON_IsString(addr_item)   ||
@@ -1066,6 +1072,8 @@ static void ble_protocol_parse_json_command(const char* json_str)
             const char *server_address = addr_item->valuestring;
             const char *username       = user_item->valuestring;
             const char *password       = pass_item->valuestring;
+            const char *pub_topic      = (pub_item && cJSON_IsString(pub_item)) ? pub_item->valuestring : NULL;
+            const char *sub_topic      = (sub_item && cJSON_IsString(sub_item)) ? sub_item->valuestring : NULL;
 
             // 更新共享参数中的服务器配置
             memset(g_shared_params.server_address, 0, sizeof(g_shared_params.server_address));
@@ -1081,6 +1089,20 @@ static void ble_protocol_parse_json_command(const char* json_str)
             memset(g_shared_params.password, 0, sizeof(g_shared_params.password));
             strncpy(g_shared_params.password, password,
                     sizeof(g_shared_params.password) - 1);
+
+            if (pub_topic)
+            {
+                memset(g_shared_params.pub_topic, 0, sizeof(g_shared_params.pub_topic));
+                strncpy(g_shared_params.pub_topic, pub_topic,
+                        sizeof(g_shared_params.pub_topic) - 1);
+            }
+
+            if (sub_topic)
+            {
+                memset(g_shared_params.sub_topic, 0, sizeof(g_shared_params.sub_topic));
+                strncpy(g_shared_params.sub_topic, sub_topic,
+                        sizeof(g_shared_params.sub_topic) - 1);
+            }
 
             // 保存到Flash，确保掉电不丢失
             shared_params_save_to_flash();
@@ -1119,6 +1141,46 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 ble_protocol_send_json_response(json_string);
                 free(json_string);
             }
+            cJSON_Delete(resp);
+            break;
+        }
+
+        case PROTOCOL_CMD_SERVER_ADDRESS_QUERY:
+        {
+            cJSON *resp      = cJSON_CreateObject();
+            cJSON *header    = cJSON_CreateObject();
+            cJSON *body_resp = cJSON_CreateObject();
+
+            if (resp == NULL || header == NULL || body_resp == NULL)
+            {
+                if (resp)      cJSON_Delete(resp);
+                if (header)    cJSON_Delete(header);
+                if (body_resp) cJSON_Delete(body_resp);
+                APP_LOG_ERROR("%s Failed to create JSON response for server address query", DEBUG_TAG);
+                break;
+            }
+
+            cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_SERVER_ADDRESS_QUERY);
+            cJSON_AddItemToObject(resp, "header", header);
+
+            cJSON_AddNumberToObject(body_resp, "server_type", g_shared_params.server_type);
+            cJSON_AddStringToObject(body_resp, "server_address", g_shared_params.server_address);
+            cJSON_AddNumberToObject(body_resp, "server_port", g_shared_params.server_port);
+            cJSON_AddStringToObject(body_resp, "username", g_shared_params.username);
+            cJSON_AddStringToObject(body_resp, "password", g_shared_params.password);
+            cJSON_AddStringToObject(body_resp, "pub_topic", g_shared_params.pub_topic);
+            cJSON_AddStringToObject(body_resp, "sub_topic", g_shared_params.sub_topic);
+
+            cJSON_AddItemToObject(resp, "body", body_resp);
+            cJSON_AddNumberToObject(resp, "result", 0);
+
+            char *json_string = cJSON_Print(resp);
+            if (json_string)
+            {
+                ble_protocol_send_json_response(json_string);
+                free(json_string);
+            }
+
             cJSON_Delete(resp);
             break;
         }
@@ -1312,7 +1374,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 }
             }
             break;
-            
+
         case PROTOCOL_CMD_UPDATE_TIME_SET:
             if (length >= 2)
             {

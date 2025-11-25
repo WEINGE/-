@@ -39,6 +39,9 @@
 #define PROTOCOL_4G_RESULT_SET_SUCCESS         0   /**< 设置成功 */
 #define PROTOCOL_4G_RESULT_SET_FAILED          1   /**< 设置失败 */
 
+// 设备ID缓冲区长度定义
+#define DEVICE_ID_SIZE                         32
+
 // 特殊字段定义（根据图片中的特殊字段说明）
 #define SPECIAL_FIELD_IMEI          "${IMEI}"        /**< IMEI号 */
 #define SPECIAL_FIELD_ICCID         "${ICCID}"       /**< SIM卡ICCID */
@@ -325,10 +328,10 @@ void ble_4g_protocol_sensor_power_control(bool enable);
  * @brief Read sensor data with power management.
  * 
  * This function:
- * 1. Powers on sensor (S_EN)
- * 2. Waits 3 seconds for sensor stabilization
- * 3. Reads sensor data
- * 4. Powers off sensor
+ * 1. Powers on the 4G/sensor power domain and sensor (S_EN), and opens the sensor UART
+ * 2. Waits several seconds for the sensor to stabilize and produce fresh data
+ * 3. Reads the latest sensor data, updates shared status flags, and attaches a timestamp
+ * 4. Powers off the sensor, closes UART, and turns off the related power domain
  *
  * @param[out] p_sensor_data: Pointer to store sensor data.
  *
@@ -341,7 +344,12 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
  *****************************************************************************************
  * @brief Get collection timestamp for 4G protocol
  * 
- * @param[out] timestamp_buffer Buffer to store the timestamp string (format: YYYYMMDDHHMMSS)
+ * This helper reads time from the RTC (bm8563) and returns a formatted
+ * collection timestamp string for use in 4G reports. The timestamp uses
+ * minute resolution in the form "YYYYMMDDHHmm" (12 digits), and falls back
+ * to safe default values if the RTC is not running or time is invalid.
+ * 
+ * @param[out] timestamp_buffer Buffer to store the timestamp string
  * 
  * @return true if timestamp obtained successfully, false otherwise
  *****************************************************************************************
@@ -352,8 +360,10 @@ bool get_collection_timestamp_for_4g(char *timestamp_buffer);
  *****************************************************************************************
  * @brief Core data upload function (without power management).
  * 
- * This function sends all necessary data reports. It assumes the 4G module
- * is already powered on and initialized.
+ * This helper sends the current dynamic reports (105 sensor data and
+ * 103 status) followed by static reports (102 device info, 104 parameter
+ * info, and a 120 settings query). It assumes the 4G/DTU module and UART
+ * are already powered on and initialized by the caller.
  *****************************************************************************************
  */
 void ble_4g_protocol_upload(void);
@@ -362,13 +372,20 @@ void ble_4g_protocol_upload(void);
  *****************************************************************************************
  * @brief Upload data with 4G/DTU power management.
  * 
- * This function:
- * 1. Powers on 4G/DTU module
- * 2. Waits 2 seconds for module initialization
- * 3. Sends all required data
- * 4. Powers off 4G/DTU module
+ * This function performs a full upload cycle with DTU电源管理:
+ * 1. Powers on the 4G/DTU power domain and UART, then waits for the module to stabilize
+ * 2. If server configuration has changed, pushes updated MQTT settings to the DTU and saves them
+ * 3. Updates DTU info cache (IMEI, CSQ, ICCID, GPS) using AT commands
+ * 4. Reports sensor (105) and status (103) data according to water-alarm state
+ *    and any accumulated samples, then clears the collected buffer if needed
+ * 5. Sends static information (102/104) and a settings query (120)
+ * 6. Waits briefly for possible downlink commands, then powers off the 4G/DTU
+ *    module and closes the related UART/power resources
  *****************************************************************************************
  */
 void ble_4g_protocol_upload_with_power_mgmt(void);
+
+// 内部工具函数，用于获取当前设备ID（IMEI或回退ID）
+void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buffer_size);
 
 #endif /* __BLE_4G_PROTOCOL_H__ */
