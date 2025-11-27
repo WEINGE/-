@@ -44,7 +44,6 @@
 ".\objects\bm8563_rtc.o"
 ".\objects\battery_voltage_reader.o"
 ".\objects\water_sensor.o"
-".\objects\water_sensor_test.o"
 ".\objects\ble_4g_param_handler.o"
 ".\objects\4g_time_utils.o"
 --library_type=microlib --strict --scatter "..\..\..\..\..\platform\soc\linker\keil\flash_scatter_common.sct"

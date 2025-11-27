@@ -135,9 +135,55 @@ uint8_t g_adv_rsp_data_set[28] =            /**< Scan responce data. */
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
+
+/** 清理传输缓冲区和标志 */
+static void reset_transport_buffers(void)
+{
+    GLOBAL_EXCEPTION_DISABLE();
+    memset(s_uart_to_ble_buffer.p_buffer, 0, sizeof(s_uart_to_ble_buffer.buffer_size));
+    memset(s_ble_to_uart_buffer.p_buffer, 0, sizeof(s_ble_to_uart_buffer.buffer_size));
+    s_uart_to_ble_buffer.write_index = 0;
+    s_uart_to_ble_buffer.read_index  = 0;
+    s_ble_to_uart_buffer.write_index = 0;
+    s_ble_to_uart_buffer.read_index  = 0;
+    transport_flag_set(BLE_TX_CPLT, true);
+    transport_flag_set(GUS_TX_NTF_ENABLE, false);
+    transport_flag_set(BLE_FLOW_CTRL_ENABLE, false);
+    transport_flag_set(BLE_TX_FLOW_ON, true);
+    transport_flag_set(BLE_RX_FLOW_ON, true);
+    GLOBAL_EXCEPTION_ENABLE();
+}
+
 static void gap_params_init(void)
 {
-    // 初始化时使用默认名称 GAS0000
+    // 使用芯片UID生成唯一的蓝牙地址，让不同开发板被识别为不同设备
+    uint8_t uid[16] = {0};
+    if (sys_device_uid_get(uid) == 0) {
+        ble_gap_bdaddr_t bd_addr;
+        bd_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
+        // 使用UID填充地址，最高2位设为11表示静态随机地址
+        bd_addr.gap_addr.addr[0] = uid[0];
+        bd_addr.gap_addr.addr[1] = uid[1];
+        bd_addr.gap_addr.addr[2] = uid[2];
+        bd_addr.gap_addr.addr[3] = uid[3];
+        bd_addr.gap_addr.addr[4] = uid[4];
+        bd_addr.gap_addr.addr[5] = (uid[5] | 0xC0);  // 最高2位设为11
+        uint16_t ret = ble_gap_addr_set(&bd_addr);
+        APP_LOG_INFO("Set BLE addr ret=%d, UID-based: %02X:%02X:%02X:%02X:%02X:%02X",
+                     ret, bd_addr.gap_addr.addr[5], bd_addr.gap_addr.addr[4],
+                     bd_addr.gap_addr.addr[3], bd_addr.gap_addr.addr[2],
+                     bd_addr.gap_addr.addr[1], bd_addr.gap_addr.addr[0]);
+        char addr_msg[80] = {0};
+        snprintf(addr_msg, sizeof(addr_msg),
+                 "BLE addr ret=%d, %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+                 ret,
+                 bd_addr.gap_addr.addr[5], bd_addr.gap_addr.addr[4],
+                 bd_addr.gap_addr.addr[3], bd_addr.gap_addr.addr[2],
+                 bd_addr.gap_addr.addr[1], bd_addr.gap_addr.addr[0]);
+        uart_to_ble_buff_data_push((uint8_t *)addr_msg, strlen(addr_msg));
+    }
+    
+    // 设备名称保持默认，之后由IMEI更新
     ble_gap_pair_enable(false);
     ble_gap_device_name_set(BLE_GAP_WRITE_PERM_DISABLE, (uint8_t *)DEVICE_NAME, strlen(DEVICE_NAME));
     ble_gap_l2cap_params_set(MAX_MTU_DEFUALT, MAX_MPS_DEFUALT, MAX_NB_LECB_DEFUALT);
@@ -151,7 +197,8 @@ static void gap_params_init(void)
     g_gap_adv_param.chnl_map     = BLE_GAP_ADV_CHANNEL_37_38_39;
     g_gap_adv_param.disc_mode    = BLE_GAP_DISC_MODE_GEN_DISCOVERABLE;
     g_gap_adv_param.filter_pol   = BLE_GAP_ADV_ALLOW_SCAN_ANY_CON_ANY;
-    ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_STATIC, &g_gap_adv_param);
+    // 使用协议栈生成的非可解析随机地址，使同一固件在不同设备上具有不同MAC
+    ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_GEN_NON_RSLV, &g_gap_adv_param);
     ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_DATA, g_adv_data_set, sizeof(g_adv_data_set));
     
     // 使用默认名称设置广播响应数据
@@ -163,7 +210,7 @@ static void gap_params_init(void)
     
     ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_SCAN_RSP, adv_rsp_data, name_len + 2);
     
-    APP_LOG_INFO("BLE initialized with default name: %s", DEVICE_NAME);
+    APP_LOG_INFO("BLE initialized with unique address, name: %s", DEVICE_NAME);
 
     g_gap_adv_time_param.duration    = 0;
     g_gap_adv_time_param.max_adv_evt = 0;
@@ -201,8 +248,21 @@ static void gus_service_process_event(gus_evt_t *p_evt)
     switch (p_evt->evt_type)
     {
         case GUS_EVT_TX_PORT_OPENED:
+        {
             transport_flag_set(GUS_TX_NTF_ENABLE, true);
+
+            // 连接建立且APP打开通知后，通过蓝牙串口输出当前BLE地址
+            ble_gap_bdaddr_t addr;
+            char msg[64] = {0};
+            ble_gap_addr_get(&addr);
+            snprintf(msg, sizeof(msg),
+                     "BLE addr: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+                     addr.gap_addr.addr[5], addr.gap_addr.addr[4],
+                     addr.gap_addr.addr[3], addr.gap_addr.addr[2],
+                     addr.gap_addr.addr[1], addr.gap_addr.addr[0]);
+            uart_to_ble_buff_data_push((uint8_t*)msg, strlen(msg));
             break;
+        }
 
         case GUS_EVT_TX_PORT_CLOSED:
             transport_flag_set(GUS_TX_NTF_ENABLE, false);
@@ -411,19 +471,7 @@ void ble_evt_handler(const ble_evt_t *p_evt)
                                 p_evt->evt.gapc_evt.params.connected.peer_addr.addr[0]);
             }
             at_cmd_execute_cplt(&cmd_rsp);
-            GLOBAL_EXCEPTION_DISABLE();
-            memset(s_uart_to_ble_buffer.p_buffer, 0, sizeof(s_uart_to_ble_buffer.buffer_size));
-            memset(s_ble_to_uart_buffer.p_buffer, 0, sizeof(s_ble_to_uart_buffer.buffer_size));
-            s_uart_to_ble_buffer.write_index = 0;
-            s_uart_to_ble_buffer.read_index  = 0;
-            s_ble_to_uart_buffer.write_index = 0;
-            s_ble_to_uart_buffer.read_index  = 0;
-            transport_flag_set(BLE_TX_CPLT, true);
-            transport_flag_set(GUS_TX_NTF_ENABLE, false);
-            transport_flag_set(BLE_FLOW_CTRL_ENABLE, false);
-            transport_flag_set(BLE_TX_FLOW_ON, true);
-            transport_flag_set(BLE_RX_FLOW_ON, true);
-            GLOBAL_EXCEPTION_ENABLE();
+            reset_transport_buffers();
             break; 
 
         case BLE_GAPC_EVT_DISCONNECTED:
@@ -435,28 +483,8 @@ void ble_evt_handler(const ble_evt_t *p_evt)
             {
                 uart_at_dev_state_set(STANDBY);
                 APP_LOG_INFO("Disconnected (0x%02X)", p_evt->evt.gapc_evt.params.disconnected.reason);
-                
-                // 重置连接状态标志
                 is_connected = false;
-                
-                // 清理传输缓冲区
-                GLOBAL_EXCEPTION_DISABLE();
-                memset(s_uart_to_ble_buffer.p_buffer, 0, sizeof(s_uart_to_ble_buffer.buffer_size));
-                memset(s_ble_to_uart_buffer.p_buffer, 0, sizeof(s_ble_to_uart_buffer.buffer_size));
-                s_uart_to_ble_buffer.write_index = 0;
-                s_uart_to_ble_buffer.read_index  = 0;
-                s_ble_to_uart_buffer.write_index = 0;
-                s_ble_to_uart_buffer.read_index  = 0;
-                
-                // 重置传输标志
-                transport_flag_set(BLE_TX_CPLT, true);
-                transport_flag_set(GUS_TX_NTF_ENABLE, false);
-                transport_flag_set(BLE_FLOW_CTRL_ENABLE, false);
-                transport_flag_set(BLE_TX_FLOW_ON, true);
-                transport_flag_set(BLE_RX_FLOW_ON, true);
-                GLOBAL_EXCEPTION_ENABLE();
-                
-                APP_LOG_INFO("Connection resources cleaned up");
+                reset_transport_buffers();
                 
                 // 延迟重新启动广播以确保完全断开
                 sys_delay_ms(100);
@@ -542,226 +570,102 @@ void ble_app_init(void)
     ble_gap_adv_start(0, &g_gap_adv_time_param);
 }
 
-/**
- *****************************************************************************************
- * @brief Function for sending JSON data to 4G module via UART1.
- *****************************************************************************************
- */
+/** @brief 发送JSON到 4G模块 */
 void uart1_send_json_to_4g(const char* json_data)
 {
-    if (json_data == NULL)
-    {
-        APP_LOG_ERROR("Invalid JSON data");
-        return;
-    }
-    
-    uint16_t data_len = strlen(json_data);
-    APP_LOG_INFO("Sending JSON to 4G module via UART1: %s", json_data);
-    
-    // Send JSON data via UART1 to 4G module using synchronous transmission
-    uart1_tx_data_send((uint8_t*)json_data, data_len);
+    if (json_data) uart1_tx_data_send((uint8_t*)json_data, strlen(json_data));
 }
 
-/**
- *****************************************************************************************
- * @brief Update sensor data from sensor parser.
- * 
- * This function updates sensor data in both BLE and 4G protocol modules.
- * It reads the latest sensor data from the parser and updates the corresponding
- * data structures in both protocol handlers.
- *****************************************************************************************
- */
-/**
- * @brief 检查传感器数据是否超出阈值，如果超出则立即触发上传
- */
+/** @brief 检查阈值并触发立即上传 */
 static void check_threshold_and_trigger_upload(const ble_4g_sensor_data_t *p_data)
 {
-    if (!p_data || !p_data->is_valid) {
-        return;
-    }
+    if (!p_data || !p_data->is_valid) return;
     
-    bool threshold_exceeded = false;
+    bool exceeded = false;
+    float ch4_th = shared_params_get_methane_threshold();
+    int16_t temp_h = shared_params_get_temp_high_threshold();
+    int16_t temp_l = shared_params_get_temp_low_threshold();
     
-    // 检查甲烷阈值
-    float methane_threshold = shared_params_get_methane_threshold();
-    if (p_data->methane_vol >= methane_threshold) {
-        APP_LOG_WARNING("Methane threshold exceeded: %.2f >= %.2f %%vol", 
-                       p_data->methane_vol, methane_threshold);
-        threshold_exceeded = true;
-    }
+    if (p_data->methane_vol >= ch4_th) exceeded = true;
+    if (p_data->temperature >= temp_h || p_data->temperature <= temp_l) exceeded = true;
     
-    // 检查温度阈值
-    int16_t temp_high = shared_params_get_temp_high_threshold();
-    int16_t temp_low = shared_params_get_temp_low_threshold();
-    
-    if (p_data->temperature >= temp_high) {
-        APP_LOG_WARNING("High temperature threshold exceeded: %d >= %d °C", 
-                       p_data->temperature, temp_high);
-        threshold_exceeded = true;
-    } else if (p_data->temperature <= temp_low) {
-        APP_LOG_WARNING("Low temperature threshold exceeded: %d <= %d °C", 
-                       p_data->temperature, temp_low);
-        threshold_exceeded = true;
-    }
-    
-    // 如果超出阈值，立即触发数据上传
-    if (threshold_exceeded) {
-        APP_LOG_INFO("Threshold exceeded - triggering immediate upload");
-        
-        // 调用专门的立即上传函数，复用现有的上传逻辑
+    if (exceeded) {
         extern void ble_4g_protocol_trigger_immediate_upload(const ble_4g_sensor_data_t *p_sensor_data);
         ble_4g_protocol_trigger_immediate_upload(p_data);
     }
 }
 
+/** @brief 从解析器更新传感器数据 */
 void update_sensor_data_from_parser(void)
 {
-    sensor_data_t raw_data = {0};
+    sensor_data_t raw = {0};
+    if (!sensor_data_get_latest(&raw)) return;
     
-    if (sensor_data_get_latest(&raw_data))
-    {
-        // 读取实际电池电压和电量
-        battery_voltage_data_t battery_data = {0};
-        float battery_voltage = 3.3f;  // 默认值
-        uint8_t battery_percent = 100; // 默认值
-        
-        if (battery_voltage_reader_get_voltage(&battery_data) && battery_data.is_valid)
-        {
-            battery_voltage = battery_data.battery_voltage;
-            battery_percent = battery_data.battery_percent;
-            APP_LOG_DEBUG("Battery data updated: %.3fV, %d%%", battery_voltage, battery_percent);
-        }
-        else
-        {
-            APP_LOG_WARNING("Failed to read battery voltage, using default values");
-        }
-        
-        // Update BLE protocol sensor data
-        ble_sensor_data_t ble_sensor_data = {0};
-        ble_sensor_data.methane_vol = raw_data.concentration;
-        ble_sensor_data.methane_lel = ble_protocol_vol_to_lel(raw_data.concentration);
-        ble_sensor_data.temperature = raw_data.temperature;
-        ble_sensor_data.battery_voltage = battery_voltage;
-        ble_sensor_data.battery_percent = battery_percent;
-        ble_sensor_data.is_valid = raw_data.data_valid;
-        
-        // 使用接口函数更新BLE协议数据
-        ble_protocol_update_sensor_data(&ble_sensor_data);
-        
-        // Update 4G protocol sensor data
-        ble_4g_sensor_data_t ble_4g_sensor_data = {0};
-        ble_4g_sensor_data.methane_vol = raw_data.concentration;
-        ble_4g_sensor_data.methane_lel = ble_4g_protocol_vol_to_lel(raw_data.concentration);
-        ble_4g_sensor_data.temperature = (int16_t)raw_data.temperature;
-        ble_4g_sensor_data.battery_voltage = battery_voltage;
-        ble_4g_sensor_data.battery_percent = battery_percent;
-        ble_4g_sensor_data.is_valid = raw_data.data_valid;
-        
-        // 生成收集时间字符串 (格式: YYYYMMDDHHMMSS)
-        char timestamp[RTC_TIME_STRING_LEN];
-        extern bool get_collection_timestamp_for_4g(char *timestamp_buffer);
-        if (get_collection_timestamp_for_4g(timestamp)) {
-            strncpy(ble_4g_sensor_data.collect_time, timestamp, sizeof(ble_4g_sensor_data.collect_time) - 1);
-            ble_4g_sensor_data.collect_time[sizeof(ble_4g_sensor_data.collect_time) - 1] = '\0';
-        } else {
-            // 如果RTC获取失败，使用默认时间戳
-            strcpy(ble_4g_sensor_data.collect_time, "20000101000000");
-        }
-        
-        // 使用接口函数更新4G协议数据
-        ble_4g_protocol_update_sensor_data(&ble_4g_sensor_data);
-        
-        // 检查是否超出阈值，如果超出则立即触发上传
-        check_threshold_and_trigger_upload(&ble_4g_sensor_data);
-        
-        APP_LOG_INFO("Updated sensor data: CH4=%.2f%%vol/%.2f%%LEL, TEMP=%.1fC", 
-                     ble_sensor_data.methane_vol, 
-                     ble_sensor_data.methane_lel, 
-                     ble_sensor_data.temperature);
+    // 读取电池数据
+    battery_voltage_data_t bat = {0};
+    float bat_v = 3.3f;
+    uint8_t bat_p = 100;
+    if (battery_voltage_reader_get_voltage(&bat) && bat.is_valid) {
+        bat_v = bat.battery_voltage;
+        bat_p = bat.battery_percent;
     }
+    
+    // 更新BLE协议数据
+    ble_sensor_data_t ble_data = {0};
+    ble_data.methane_vol = raw.concentration;
+    ble_data.methane_lel = ble_protocol_vol_to_lel(raw.concentration);
+    ble_data.temperature = raw.temperature;
+    ble_data.battery_voltage = bat_v;
+    ble_data.battery_percent = bat_p;
+    ble_data.is_valid = raw.data_valid;
+    ble_protocol_update_sensor_data(&ble_data);
+    
+    // 更新4G协议数据
+    ble_4g_sensor_data_t data_4g = {0};
+    data_4g.methane_vol = raw.concentration;
+    data_4g.methane_lel = ble_4g_protocol_vol_to_lel(raw.concentration);
+    data_4g.temperature = (int16_t)raw.temperature;
+    data_4g.battery_voltage = bat_v;
+    data_4g.battery_percent = bat_p;
+    data_4g.is_valid = raw.data_valid;
+    
+    // 生成时间戳
+    char ts[RTC_TIME_STRING_LEN];
+    extern bool get_collection_timestamp_for_4g(char *timestamp_buffer);
+    if (get_collection_timestamp_for_4g(ts)) {
+        strncpy(data_4g.collect_time, ts, sizeof(data_4g.collect_time) - 1);
+    } else {
+        strcpy(data_4g.collect_time, "20000101000000");
+    }
+    
+    ble_4g_protocol_update_sensor_data(&data_4g);
+    check_threshold_and_trigger_upload(&data_4g);
 }
 
-/**
- *****************************************************************************************
- * @brief 动态更新蓝牙设备名称（基于IMEI后四位）
- * 
- * 此函数检查当前IMEI，如果IMEI后四位与当前蓝牙名称不符，则更新蓝牙名称并重启广播。
- * 调用时机：在IMEI成功获取后调用，例如在4G模块初始化完成后。
- *****************************************************************************************
- */
+/** @brief 动态更新蓝牙名称(基于IMEI后四位) */
 void update_ble_name_with_imei(void)
 {
-    static char s_current_ble_name[32] = DEVICE_NAME;  // 保存当前蓝牙名称
-    char imei_buffer[32] = {0};
-    char new_ble_name[32] = {0};
+    static char s_name[32] = DEVICE_NAME;
+    char imei[32] = {0}, new_name[32] = {0};
     
-    // 尝试获取IMEI
-    if (!ble_protocol_get_imei(imei_buffer, sizeof(imei_buffer)) || strlen(imei_buffer) < 4)
-    {
-        APP_LOG_DEBUG("IMEI not available yet, keeping current BLE name: %s", s_current_ble_name);
-        return;
-    }
+    if (!ble_protocol_get_imei(imei, sizeof(imei)) || strlen(imei) < 4) return;
     
-    // 获取IMEI的后四位
-    size_t imei_len = strlen(imei_buffer);
-    const char *last_four = &imei_buffer[imei_len - 4];
+    snprintf(new_name, sizeof(new_name), "GAS%s", &imei[strlen(imei) - 4]);
+    if (strcmp(s_name, new_name) == 0) return;
     
-    // 构建新的蓝牙名称
-    snprintf(new_ble_name, sizeof(new_ble_name), "GAS%s", last_four);
+    strncpy(s_name, new_name, sizeof(s_name) - 1);
     
-    // 检查是否需要更新（名称是否改变）
-    if (strcmp(s_current_ble_name, new_ble_name) == 0)
-    {
-        APP_LOG_DEBUG("BLE name already up-to-date: %s", s_current_ble_name);
-        return;
-    }
+    bool was_adv = (uart_at_dev_state_get() == ADVERTISING);
+    if (was_adv) { ble_gap_adv_stop(0); sys_delay_ms(50); }
     
-    APP_LOG_INFO("Updating BLE name from '%s' to '%s' (IMEI: %s)", 
-                 s_current_ble_name, new_ble_name, imei_buffer);
+    ble_gap_device_name_set(BLE_GAP_WRITE_PERM_DISABLE, (uint8_t*)new_name, strlen(new_name));
     
-    // 更新保存的当前名称
-    strncpy(s_current_ble_name, new_ble_name, sizeof(s_current_ble_name) - 1);
-    s_current_ble_name[sizeof(s_current_ble_name) - 1] = '\0';
+    uint8_t rsp[28] = {0};
+    uint8_t len = strlen(new_name);
+    rsp[0] = len + 1;
+    rsp[1] = BLE_GAP_AD_TYPE_COMPLETE_NAME;
+    memcpy(&rsp[2], new_name, len);
+    ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_SCAN_RSP, rsp, len + 2);
     
-    // 如果正在广播，先停止广播
-    bool was_advertising = false;
-    if (uart_at_dev_state_get() == ADVERTISING)
-    {
-        was_advertising = true;
-        ble_gap_adv_stop(0);
-        APP_LOG_INFO("Stopped advertising to update BLE name");
-        sys_delay_ms(50);  // 短暂延迟确保广播完全停止
-    }
-    
-    // 更新设备名称
-    ble_gap_device_name_set(BLE_GAP_WRITE_PERM_DISABLE, 
-                           (uint8_t *)new_ble_name, 
-                           strlen(new_ble_name));
-    
-    // 更新广播响应数据
-    uint8_t adv_rsp_data[28] = {0};
-    uint8_t name_len = strlen(new_ble_name);
-    adv_rsp_data[0] = name_len + 1;
-    adv_rsp_data[1] = BLE_GAP_AD_TYPE_COMPLETE_NAME;
-    memcpy(&adv_rsp_data[2], new_ble_name, name_len);
-    
-    ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_SCAN_RSP, adv_rsp_data, name_len + 2);
-    
-    // 如果之前在广播，重新启动广播
-    if (was_advertising)
-    {
-        sdk_err_t err_code = ble_gap_adv_start(0, &g_gap_adv_time_param);
-        if (BLE_SUCCESS == err_code)
-        {
-            APP_LOG_INFO("Advertising restarted with new BLE name: %s", new_ble_name);
-        }
-        else
-        {
-            APP_LOG_ERROR("Failed to restart advertising: 0x%02X", err_code);
-        }
-    }
-    else
-    {
-        APP_LOG_INFO("BLE name updated to: %s (not advertising)", new_ble_name);
-    }
+    if (was_adv) ble_gap_adv_start(0, &g_gap_adv_time_param);
 }

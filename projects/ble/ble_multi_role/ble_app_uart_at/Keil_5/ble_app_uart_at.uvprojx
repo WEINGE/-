@@ -670,11 +670,6 @@
               <FilePath>..\Src\user\water_sensor.c</FilePath>
             </File>
             <File>
-              <FileName>water_sensor_test.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\user\water_sensor_test.c</FilePath>
-            </File>
-            <File>
               <FileName>ble_4g_param_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\user\ble_4g_param_handler.c</FilePath>

@@ -28,97 +28,48 @@ static sensor_data_t s_latest_sensor_data = {0};
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
-/**
- *****************************************************************************************
- * @brief Calculate checksum for sensor data using XOR method.
- * 
- * 校验码计算规则：
- * - 从第1个字符开始到第25个字符（不包括校验码本身和CRLF）
- * - 逐个进行异或运算：第1个字符 XOR 第2个字符 XOR ... XOR 第25个字符
- * - 得到的结果转换为2位十六进制字符串作为校验码
- *
- * @param[in] p_data: Pointer to data string (without checksum and CRLF).
- * @param[in] length: Length of data string (should be 25 for valid sensor data).
- *
- * @return Calculated checksum.
- *****************************************************************************************
- */
+
+/** 字符串拷贝到临时缓冲区 */
+static void str_copy_safe(char *dst, const char *src, uint16_t src_len, uint16_t dst_size)
+{
+    uint16_t len = (src_len < dst_size - 1) ? src_len : dst_size - 1;
+    memcpy(dst, src, len);
+    dst[len] = '\0';
+}
+
+/** 计算XOR校验码 (前25字符) */
 static uint8_t calculate_checksum(const uint8_t *p_data, uint16_t length)
 {
     uint8_t checksum = 0;
-    
-    // 按照协议，校验前25个字符
-    uint16_t check_length = (length > 25) ? 25 : length;
-    
-    for (uint16_t i = 0; i < check_length; i++)
-    {
+    uint16_t len = (length > 25) ? 25 : length;
+    for (uint16_t i = 0; i < len; i++) {
         checksum ^= p_data[i];
     }
-    
     return checksum;
 }
 
-/**
- *****************************************************************************************
- * @brief Parse float value from string.
- *
- * @param[in] p_str: Pointer to string.
- * @param[in] length: Maximum length to parse.
- *
- * @return Parsed float value.
- *****************************************************************************************
- */
-static float parse_float_from_string(const char *p_str, uint16_t length)
+/** 解析浮点数 */
+static float parse_float(const char *str, uint16_t len)
 {
-    char temp_str[16] = {0};
-    uint16_t copy_len = (length < sizeof(temp_str) - 1) ? length : sizeof(temp_str) - 1;
-    
-    memcpy(temp_str, p_str, copy_len);
-    temp_str[copy_len] = '\0';
-    
-    return (float)atof(temp_str);
+    char buf[16];
+    str_copy_safe(buf, str, len, sizeof(buf));
+    return (float)atof(buf);
 }
 
-/**
- *****************************************************************************************
- * @brief Parse integer value from string.
- *
- * @param[in] p_str: Pointer to string.
- * @param[in] length: Maximum length to parse.
- *
- * @return Parsed integer value.
- *****************************************************************************************
- */
-static uint32_t parse_int_from_string(const char *p_str, uint16_t length)
+/** 解析整数 */
+static uint32_t parse_int(const char *str, uint16_t len)
 {
-    char temp_str[16] = {0};
-    uint16_t copy_len = (length < sizeof(temp_str) - 1) ? length : sizeof(temp_str) - 1;
-    
-    memcpy(temp_str, p_str, copy_len);
-    temp_str[copy_len] = '\0';
-    
-    return (uint32_t)atol(temp_str);
+    char buf[16];
+    str_copy_safe(buf, str, len, sizeof(buf));
+    return (uint32_t)atol(buf);
 }
 
-/**
- *****************************************************************************************
- * @brief Parse hexadecimal value from string.
- *
- * @param[in] p_str: Pointer to string.
- * @param[in] length: Maximum length to parse.
- *
- * @return Parsed hexadecimal value.
- *****************************************************************************************
- */
-static uint8_t parse_hex_from_string(const char *p_str, uint16_t length)
+/** 解析十六进制 */
+static uint8_t parse_hex(const char *str, uint16_t len)
 {
-    char temp_str[8] = {0};
-    uint16_t copy_len = (length < sizeof(temp_str) - 1) ? length : sizeof(temp_str) - 1;
-    
-    memcpy(temp_str, p_str, copy_len);
-    temp_str[copy_len] = '\0';
-    
-    return (uint8_t)strtol(temp_str, NULL, 16);
+    char buf[8];
+    str_copy_safe(buf, str, len, sizeof(buf));
+    return (uint8_t)strtol(buf, NULL, 16);
 }
 
 /*
@@ -160,7 +111,7 @@ sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, 
     {
         return SENSOR_PARSE_ERROR_INVALID_FORMAT;
     }
-    p_sensor_data->concentration = parse_float_from_string(token, strlen(token));
+    p_sensor_data->concentration = parse_float(token, strlen(token));
     field_count++;
     
     // 解析温度字段 (+26.5)
@@ -169,7 +120,7 @@ sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, 
     {
         return SENSOR_PARSE_ERROR_INVALID_FORMAT;
     }
-    p_sensor_data->temperature = parse_float_from_string(token, strlen(token));
+    p_sensor_data->temperature = parse_float(token, strlen(token));
     field_count++;
     
     // 解析预留字段 (0000000)
@@ -178,7 +129,7 @@ sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, 
     {
         return SENSOR_PARSE_ERROR_INVALID_FORMAT;
     }
-    p_sensor_data->reserved_field = parse_int_from_string(token, strlen(token));
+    p_sensor_data->reserved_field = parse_int(token, strlen(token));
     field_count++;
     
     // 解析状态码 (00) - 十六进制格式
@@ -187,7 +138,7 @@ sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, 
     {
         return SENSOR_PARSE_ERROR_INVALID_FORMAT;
     }
-    p_sensor_data->status_code = parse_hex_from_string(token, strlen(token));
+    p_sensor_data->status_code = parse_hex(token, strlen(token));
     field_count++;
     
     // 解析校验码 (31) - 十六进制格式
@@ -196,7 +147,7 @@ sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, 
     {
         return SENSOR_PARSE_ERROR_INVALID_FORMAT;
     }
-    p_sensor_data->checksum = parse_hex_from_string(token, strlen(token));
+    p_sensor_data->checksum = parse_hex(token, strlen(token));
     field_count++;
     
     // 检查字段数量

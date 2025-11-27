@@ -576,7 +576,8 @@ void uart_at_adv_param_set(at_cmd_parse_t *p_cmd_param)
         g_gap_adv_param.adv_intv_max  = adv_interval;
         g_gap_adv_time_param.duration = adv_duration;
 
-        error_code = ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_STATIC, &g_gap_adv_param);
+        // 使用非可解析随机地址进行广播，保证不同设备MAC不同
+        error_code = ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_GEN_NON_RSLV, &g_gap_adv_param);
 
         cmd_rsp.error_code = at_cmd_ble_err_convert(error_code);
 
@@ -594,7 +595,8 @@ void uart_at_adv_start(at_cmd_parse_t *p_cmd_param)
     AT_CMD_RSP_DEF(cmd_rsp);
     sdk_err_t   error_code;
 
-    ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_STATIC, &g_gap_adv_param);
+    // 启动广播时同样使用随机私有地址
+    ble_gap_adv_param_set(0, BLE_GAP_OWN_ADDR_GEN_NON_RSLV, &g_gap_adv_param);
 
     ble_gap_adv_data_set(0, BLE_GAP_ADV_DATA_TYPE_DATA, g_adv_data_set, ADV_DATA_DEFAULT_LEN);
 

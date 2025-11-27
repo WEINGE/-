@@ -58,7 +58,7 @@ extern void ble_4g_protocol_mark_server_config_changed(void);
 #define SEND_AT_COMMAND_ASYNC(cmd) do { \
     uart1_tx_data_send((uint8_t*)(cmd), strlen(cmd)); \
 } while(0)
-#define DEBUG_TAG                   "[4G_PROTOCOL]"
+#define TAG                         "BLE_PROTO"
 #define JSON_BUFFER_SIZE            1024
 #define DEVICE_ID_SIZE              32
 #define PROTOCOL_CMD_SERVER_ADDRESS_QUERY   123
@@ -105,7 +105,7 @@ static void handle_4g_response(const char* response, uint16_t length)
     // JSON数据以 '{' 开头
     if (response != NULL && length > 0 && response[0] == '{')
     {
-        APP_LOG_INFO("%s Detected JSON command from platform, forwarding to 4G protocol handler", DEBUG_TAG);
+        APP_LOG_INFO("%s Detected JSON command from platform, forwarding to 4G protocol handler", TAG);
         // 调用4G协议处理函数处理平台下发的JSON指令
         ble_4g_protocol_data_process((const uint8_t*)response, length);
         return;
@@ -123,7 +123,7 @@ static void handle_4g_response(const char* response, uint16_t length)
 /*
 static void parse_super_device_info_response(const char* response, uint16_t length)
 {
-    APP_LOG_INFO("%s Parsing super device info response", DEBUG_TAG);
+    APP_LOG_INFO("%s Parsing super device info response", TAG);
     
     // 示例超级指令响应格式: SUPER_RESP_DEVICE_INFO:IMEI=123456789012345,ICCID=89860123456789012345,LAT=39.9042,LON=116.4074
     
@@ -140,7 +140,7 @@ static void parse_super_device_info_response(const char* response, uint16_t leng
             {
                 strncpy(s_device_info.device_id, imei_start, imei_len);
                 s_device_info.device_id[imei_len] = '\0';
-                APP_LOG_INFO("%s Got IMEI: %s", DEBUG_TAG, s_device_info.device_id);
+                APP_LOG_INFO("%s Got IMEI: %s", TAG, s_device_info.device_id);
             }
         }
     }
@@ -155,7 +155,7 @@ static void parse_super_device_info_response(const char* response, uint16_t leng
         {
             int iccid_len = iccid_end - iccid_start;
             // TODO: 存储ICCID到适当的变量中
-            APP_LOG_INFO("%s Got ICCID: %.*s", DEBUG_TAG, iccid_len, iccid_start);
+            APP_LOG_INFO("%s Got ICCID: %.*s", TAG, iccid_len, iccid_start);
         }
     }
     
@@ -170,7 +170,7 @@ static void parse_super_device_info_response(const char* response, uint16_t leng
         float lat = atof(lat_start);
         float lon = atof(lon_start);
         shared_params_set_location(lat, lon);
-        APP_LOG_INFO("%s Got GPS: lat=%.6f, lon=%.6f", DEBUG_TAG, lat, lon);
+        APP_LOG_INFO("%s Got GPS: lat=%.6f, lon=%.6f", TAG, lat, lon);
     }
     
     // 发送设备信息查询响应
@@ -191,7 +191,7 @@ static void parse_super_device_info_response(const char* response, uint16_t leng
 /*
 static void parse_super_status_info_response(const char* response, uint16_t length)
 {
-    APP_LOG_INFO("%s Parsing super status info response", DEBUG_TAG);
+    APP_LOG_INFO("%s Parsing super status info response", TAG);
     
     // 示例超级指令响应格式: SUPER_RESP_STATUS_INFO:SIGNAL=25,NET_STATUS=1,GPS_STATUS=1,WATER=0,MOVE=0
     
@@ -201,7 +201,7 @@ static void parse_super_status_info_response(const char* response, uint16_t leng
     {
         signal_start += 7; // 跳过"SIGNAL="
         s_status_info.communication_status = atoi(signal_start);
-        APP_LOG_INFO("%s Got signal strength: %d", DEBUG_TAG, s_status_info.communication_status);
+        APP_LOG_INFO("%s Got signal strength: %d", TAG, s_status_info.communication_status);
     }
     
     // 提取网络状态
@@ -211,7 +211,7 @@ static void parse_super_status_info_response(const char* response, uint16_t leng
         net_start += 11; // 跳过"NET_STATUS="
         int net_status = atoi(net_start);
         s_status_info.device_status = (s_status_info.device_status & 0xFE) | (net_status & 0x01);
-        APP_LOG_INFO("%s Got network status: %d", DEBUG_TAG, net_status);
+        APP_LOG_INFO("%s Got network status: %d", TAG, net_status);
     }
     
     // 提取GPS状态
@@ -221,7 +221,7 @@ static void parse_super_status_info_response(const char* response, uint16_t leng
         gps_start += 11; // 跳过"GPS_STATUS="
         int gps_status = atoi(gps_start);
         s_status_info.device_status = (s_status_info.device_status & 0xFB) | ((gps_status & 0x01) << 2);
-        APP_LOG_INFO("%s Got GPS status: %d", DEBUG_TAG, gps_status);
+        APP_LOG_INFO("%s Got GPS status: %d", TAG, gps_status);
     }
     
     // 提取水浸状态
@@ -231,7 +231,7 @@ static void parse_super_status_info_response(const char* response, uint16_t leng
         water_start += 6; // 跳过"WATER="
         int water_status = atoi(water_start);
         s_status_info.device_status = (s_status_info.device_status & 0xFE) | (water_status & 0x01);
-        APP_LOG_INFO("%s Got water status: %d", DEBUG_TAG, water_status);
+        APP_LOG_INFO("%s Got water status: %d", TAG, water_status);
     }
     
     // 提取防盗状态
@@ -241,7 +241,7 @@ static void parse_super_status_info_response(const char* response, uint16_t leng
         move_start += 5; // 跳过"MOVE="
         int move_status = atoi(move_start);
         s_status_info.device_status = (s_status_info.device_status & 0xFD) | ((move_status & 0x01) << 1);
-        APP_LOG_INFO("%s Got move status: %d", DEBUG_TAG, move_status);
+        APP_LOG_INFO("%s Got move status: %d", TAG, move_status);
     }
     
     // 发送状态信息查询响应
@@ -261,169 +261,55 @@ static void parse_super_status_info_response(const char* response, uint16_t leng
  */
 static void parse_at_command_response(const char* response, uint16_t length)
 {
-    APP_LOG_INFO("%s Parsing AT command response", DEBUG_TAG);
-    APP_LOG_INFO("%s AT response: %.*s", DEBUG_TAG, length, response);
-    
-    // 跳过空行和OK响应
+    // 跳过空行、OK、ERROR和命令回显
     if (length == 0 || strncmp(response, "OK", 2) == 0 || 
-        strncmp(response, "ERROR", 5) == 0 || response[0] == '\0')
-    {
-        APP_LOG_DEBUG("%s Skipping empty/status response: %.*s", DEBUG_TAG, length, response);
+        strncmp(response, "ERROR", 5) == 0 || strncmp(response, "AT+", 3) == 0)
         return;
-    }
     
-    // 处理超级指令的回显（如：AT+IMEI?）
-    if (strncmp(response, "AT+", 3) == 0)
-    {
-        APP_LOG_DEBUG("%s Received command echo: %.*s", DEBUG_TAG, length, response);
-        return; // 跳过命令回显
-    }
-    
-    // 解析AT指令响应，格式为 +TYPE:VALUE
-    
-    if (strncmp(response, "+CSQ:", 5) == 0)
-    {
-        // 信号质量: +CSQ:27,0 (格式: rssi,ber)
+    if (strncmp(response, "+CSQ:", 5) == 0) {
         int rssi, ber;
-        if (sscanf(response + 5, "%d,%d", &rssi, &ber) == 2)
-        {
-            // 验证rssi范围 (0-31, 99表示未知)
-            if ((rssi >= 0 && rssi <= 31) || rssi == 99)
-            {
-                g_at_collector.signal_quality = rssi;
-                APP_LOG_INFO("%s Collected signal quality: RSSI=%d, BER=%d", DEBUG_TAG, rssi, ber);
-            }
-            else
-            {
-                APP_LOG_WARNING("%s Invalid RSSI value: %d", DEBUG_TAG, rssi);
-                g_at_collector.signal_quality = 0; // 默认值
-            }
-        }
-        else if (sscanf(response + 5, "%d", &rssi) == 1)
-        {
-            // 兼容只有一个数字的情况
-            if ((rssi >= 0 && rssi <= 31) || rssi == 99)
-            {
-                g_at_collector.signal_quality = rssi;
-                APP_LOG_INFO("%s Collected signal quality (single value): %d", DEBUG_TAG, rssi);
-            }
-            else
-            {
-                APP_LOG_WARNING("%s Invalid signal quality value: %d", DEBUG_TAG, rssi);
-                g_at_collector.signal_quality = 0;
-            }
+        if (sscanf(response + 5, "%d,%d", &rssi, &ber) >= 1) {
+            g_at_collector.signal_quality = ((rssi >= 0 && rssi <= 31) || rssi == 99) ? rssi : 0;
         }
     }
-    else if (strncmp(response, "+VER:", 5) == 0)
-    {
-        // 固件版本: +VER:V1.0.0
-        snprintf(g_4g_response_buffer, sizeof(g_4g_response_buffer), 
-                "\"firmware_version\":\"%s\"", response + 5);
-        // g_4g_response_len = strlen(g_4g_response_buffer); // 暂未使用
-        APP_LOG_INFO("%s Parsed firmware version: %s", DEBUG_TAG, response + 5);
+    else if (strncmp(response, "+VER:", 5) == 0) {
+        snprintf(g_4g_response_buffer, sizeof(g_4g_response_buffer), "\"firmware_version\":\"%s\"", response + 5);
     }
-    else if (strncmp(response, "+BUILD:", 7) == 0)
-    {
-        // 编译时间: +BUILD:Nov  6 2023 19:52:47
-        snprintf(g_4g_response_buffer, sizeof(g_4g_response_buffer), 
-                "\"build_time\":\"%s\"", response + 7);
-        // g_4g_response_len = strlen(g_4g_response_buffer); // 暂未使用
-        APP_LOG_INFO("%s Parsed build time: %s", DEBUG_TAG, response + 7);
+    else if (strncmp(response, "+BUILD:", 7) == 0) {
+        snprintf(g_4g_response_buffer, sizeof(g_4g_response_buffer), "\"build_time\":\"%s\"", response + 7);
     }
-    else if (strncmp(response, "+SN:", 4) == 0)
-    {
-        // SN码: +SN:2022020287653698
-        snprintf(g_4g_response_buffer, sizeof(g_4g_response_buffer), 
-                "\"serial_number\":\"%s\"", response + 4);
-        // g_4g_response_len = strlen(g_4g_response_buffer); // 暂未使用
-        APP_LOG_INFO("%s Parsed serial number: %s", DEBUG_TAG, response + 4);
+    else if (strncmp(response, "+SN:", 4) == 0) {
+        snprintf(g_4g_response_buffer, sizeof(g_4g_response_buffer), "\"serial_number\":\"%s\"", response + 4);
     }
-    else if (strncmp(response, "+IMEI:", 6) == 0)
-    {
-        // IMEI: +IMEI:86433******2457
+    else if (strncmp(response, "+IMEI:", 6) == 0) {
         strncpy(g_at_collector.imei, response + 6, sizeof(g_at_collector.imei) - 1);
         g_at_collector.imei[sizeof(g_at_collector.imei) - 1] = '\0';
-        APP_LOG_INFO("%s Collected IMEI: %s", DEBUG_TAG, g_at_collector.imei);
-        
-        // 动态更新蓝牙名称（如果IMEI后四位与当前名称不符）
         extern void update_ble_name_with_imei(void);
         update_ble_name_with_imei();
     }
-    else if (strncmp(response, "+ICCID:", 7) == 0)
-    {
-        // ICCID: +ICCID:89860***********1314 或 +ICCID:SIM not inserted
+    else if (strncmp(response, "+ICCID:", 7) == 0) {
         strncpy(g_at_collector.iccid, response + 7, sizeof(g_at_collector.iccid) - 1);
         g_at_collector.iccid[sizeof(g_at_collector.iccid) - 1] = '\0';
-        APP_LOG_INFO("%s Collected ICCID: %s", DEBUG_TAG, g_at_collector.iccid);
     }
-
-    else if (strncmp(response, "+CCLK:", 6) == 0)
-    {
-        // 固定格式: +CCLK:YYYY/MM/DD,HH:MM:SS （无引号、无时区）
-
-
-        const char* time_data = response + 6; // 跳过“+CCLK:”
-
-        // 直接使用 bm8563_set_time_from_network 函数解析并设置时间
-        if (!bm8563_set_time_from_network(time_data))
-        {
-            APP_LOG_ERROR("%s Failed to synchronize RTC time from DTU: %s", DEBUG_TAG, time_data);
+    else if (strncmp(response, "+CCLK:", 6) == 0) {
+        bm8563_set_time_from_network(response + 6);
+    }
+    else if (strncmp(response, "+GPS:", 5) == 0) {
+        if (sscanf(response + 5, "%15[^,],%15s", g_at_collector.latitude, g_at_collector.longitude) == 2) {
+            float lat = atof(g_at_collector.latitude), lon = atof(g_at_collector.longitude);
+            g_at_collector.gps_status = (lat == 0.0f && lon == 0.0f) ? 1 : 0;
+            shared_params_set_device_gps_status(g_at_collector.gps_status);
+            if (g_at_collector.gps_status == 0) shared_params_set_location(lat, lon);
         }
     }
-    else if (strncmp(response, "+GPS:", 5) == 0)
-    {
-        // GPS位置: +GPS:0,0 或 +GPS:39.9042,116.4074
-        if (sscanf(response + 5, "%15[^,],%15s", g_at_collector.latitude, g_at_collector.longitude) == 2)
-        {
-            // 检查是否是有效坐标
-            float lat = atof(g_at_collector.latitude);
-            float lon = atof(g_at_collector.longitude);
-            
-            if (lat == 0.0f && lon == 0.0f)
-            {
-                g_at_collector.gps_status = 1;  // GPS异常
-                shared_params_set_device_gps_status(1); // 更新全局GPS状态
-                APP_LOG_INFO("%s GPS not positioned: %s,%s", DEBUG_TAG, g_at_collector.latitude, g_at_collector.longitude);
-            }
-            else
-            {
-                g_at_collector.gps_status = 0;  // GPS正常
-                shared_params_set_device_gps_status(0); // 更新全局GPS状态
-                APP_LOG_INFO("%s Collected GPS: LAT=%s, LON=%s", DEBUG_TAG, g_at_collector.latitude, g_at_collector.longitude);
-                
-                // [修复] 将获取到的GPS坐标更新到全局共享参数中
-                shared_params_set_location(lat, lon);
-            }
-        }
-    }
-    else if (strncmp(response, "+CREG:", 6) == 0)
-    {
-        // 网络注册状态: +CREG:1 (1=已注册, 0=未注册)
-        int reg_status;
+    else if (strncmp(response, "+CREG:", 6) == 0) {
+        int reg_status = 0;
         if (sscanf(response + 6, "%d", &reg_status) == 1)
-        {
             g_at_collector.network_reg_status = reg_status;
-            APP_LOG_INFO("%s Collected network registration status: %d (%s)", 
-                        DEBUG_TAG, reg_status, 
-                        (reg_status == 1) ? "Registered" : "Not registered");
-        }
-        else
-        {
-            APP_LOG_WARNING("%s Failed to parse CREG response: %s", DEBUG_TAG, response);
-            g_at_collector.network_reg_status = 0; // 默认为未注册
-        }
     }
-
-    else
-    {
-        // 如果没有匹配的解析器，存储原始响应
-        if (length < sizeof(g_4g_response_buffer))
-        {
-            memcpy(g_4g_response_buffer, response, length);
-            g_4g_response_buffer[length] = '\0';
-            // g_4g_response_len = length; // 暂未使用
-            APP_LOG_INFO("%s Stored raw response", DEBUG_TAG);
-        }
+    else if (length < sizeof(g_4g_response_buffer)) {
+        memcpy(g_4g_response_buffer, response, length);
+        g_4g_response_buffer[length] = '\0';
     }
 }
 
@@ -448,7 +334,7 @@ static void ble_protocol_get_device_id(void)
     snprintf(s_device_id, sizeof(s_device_id), "%02X:%02X:%02X:%02X:%02X:%02X",
              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     
-    APP_LOG_INFO("%s Device ID: %s", DEBUG_TAG, s_device_id);
+    APP_LOG_INFO("%s Device ID: %s", TAG, s_device_id);
 }
 
 /**
@@ -487,7 +373,7 @@ static void ble_protocol_init_param_settings(void)
 {
     // 使用共享参数模块统一管理参数
     shared_params_init();
-    APP_LOG_INFO("%s Parameter settings initialized via shared_params", DEBUG_TAG);
+    APP_LOG_INFO("%s Parameter settings initialized via shared_params", TAG);
 }
 
 /**
@@ -503,7 +389,7 @@ static char* ble_protocol_create_json_report(const ble_sensor_data_t *p_data)
     
     if (json == NULL || header == NULL || body == NULL)
     {
-        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to create JSON objects", TAG);
         if (json) cJSON_Delete(json);
         if (header) cJSON_Delete(header);
         if (body) cJSON_Delete(body);
@@ -561,7 +447,7 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
     
     if (json == NULL || header == NULL || body == NULL)
     {
-        APP_LOG_ERROR("%s Failed to create JSON objects", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to create JSON objects", TAG);
         if (json) cJSON_Delete(json);
         if (header) cJSON_Delete(header);
         if (body) cJSON_Delete(body);
@@ -618,10 +504,10 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             // 如果4G模块的信号值为0，尝试使用AT收集器的值作为备用
             if (lte_signal == 0 && g_at_collector.signal_quality > 0 && g_at_collector.signal_quality != 99) {
                 lte_signal = g_at_collector.signal_quality;
-                APP_LOG_INFO("%s Using AT collector signal as fallback: %d", DEBUG_TAG, lte_signal);
+                APP_LOG_INFO("%s Using AT collector signal as fallback: %d", TAG, lte_signal);
             }
             APP_LOG_INFO("%s Status query - 4G signal: %d, AT signal: %d, final: %d", 
-                        DEBUG_TAG, ble_4g_status.device_LTE_signal, g_at_collector.signal_quality, lte_signal);
+                        TAG, ble_4g_status.device_LTE_signal, g_at_collector.signal_quality, lte_signal);
             cJSON_AddNumberToObject(body, "device_LTE_signal", lte_signal);
             cJSON_AddNumberToObject(body, "device_GPS_status", g_shared_params.device_GPS_status); // GPS状态
             break;
@@ -687,7 +573,7 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
     
     if (json == NULL || header == NULL)
     {
-        APP_LOG_ERROR("%s Failed to create JSON object", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to create JSON object", TAG);
         if (json) cJSON_Delete(json);
         if (header) cJSON_Delete(header);
         if (body) cJSON_Delete(body);
@@ -759,7 +645,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
     cJSON *json = cJSON_Parse(json_str);
     if (json == NULL)
     {
-        APP_LOG_ERROR("%s Failed to parse JSON: %s", DEBUG_TAG, json_str);
+        APP_LOG_ERROR("%s Failed to parse JSON: %s", TAG, json_str);
         return;
     }
     
@@ -767,7 +653,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
     cJSON *header = cJSON_GetObjectItem(json, "header");
     if (header == NULL)
     {
-        APP_LOG_ERROR("%s Missing header in JSON", DEBUG_TAG);
+        APP_LOG_ERROR("%s Missing header in JSON", TAG);
         cJSON_Delete(json);
         return;
     }
@@ -775,19 +661,19 @@ static void ble_protocol_parse_json_command(const char* json_str)
     cJSON *code_item = cJSON_GetObjectItem(header, "code");
     if (code_item == NULL || !cJSON_IsNumber(code_item))
     {
-        APP_LOG_ERROR("%s Missing or invalid code in header", DEBUG_TAG);
+        APP_LOG_ERROR("%s Missing or invalid code in header", TAG);
         cJSON_Delete(json);
         return;
     }
     
     uint16_t cmd_code = (uint16_t)code_item->valueint;
-    APP_LOG_INFO("%s Received command code: %d", DEBUG_TAG, cmd_code);
+    APP_LOG_INFO("%s Received command code: %d", TAG, cmd_code);
     
     // 解析body
     cJSON *body = cJSON_GetObjectItem(json, "body");
     if (body == NULL)
     {
-        APP_LOG_ERROR("%s Missing body in JSON", DEBUG_TAG);
+        APP_LOG_ERROR("%s Missing body in JSON", TAG);
         cJSON_Delete(json);
         return;
     }
@@ -799,12 +685,12 @@ static void ble_protocol_parse_json_command(const char* json_str)
             cJSON *type_item = cJSON_GetObjectItem(body, "type");
             if (type_item == NULL || !cJSON_IsNumber(type_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid type in query body", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid type in query body", TAG);
                 break;
             }
             
             uint8_t query_type = (uint8_t)type_item->valueint;
-            APP_LOG_INFO("%s Processing query type: %d", DEBUG_TAG, query_type);
+            APP_LOG_INFO("%s Processing query type: %d", TAG, query_type);
             ble_protocol_handle_query(query_type);
             break;
         }
@@ -815,7 +701,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             cJSON *interval_item = cJSON_GetObjectItem(body, "collect_time_set");
             if (interval_item == NULL || !cJSON_IsNumber(interval_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid collect_time_set in body", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid collect_time_set in body", TAG);
                 // 按照协议文档3.6格式发送失败回文
                 cJSON *response = cJSON_CreateObject();
                 cJSON *header = cJSON_CreateObject();
@@ -853,7 +739,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             char *json_string = cJSON_Print(response);
             if (json_string) {
                 ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
-                APP_LOG_INFO("%s Collect time set response sent", DEBUG_TAG);
+                APP_LOG_INFO("%s Collect time set response sent", TAG);
                 free(json_string);
             }
             cJSON_Delete(response);
@@ -866,7 +752,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             cJSON *interval_item = cJSON_GetObjectItem(body, "updata_time_set");
             if (interval_item == NULL || !cJSON_IsNumber(interval_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid updata_time_set in body", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid updata_time_set in body", TAG);
                 // 按照协议文档3.7格式发送失败回文
                 cJSON *response = cJSON_CreateObject();
                 cJSON *header = cJSON_CreateObject();
@@ -904,7 +790,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             char *json_string = cJSON_Print(response);
             if (json_string) {
                 ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
-                APP_LOG_INFO("%s Update time set response sent", DEBUG_TAG);
+                APP_LOG_INFO("%s Update time set response sent", TAG);
                 free(json_string);
             }
             cJSON_Delete(response);
@@ -922,7 +808,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 temp_h_item == NULL || !cJSON_IsNumber(temp_h_item) ||
                 temp_l_item == NULL || !cJSON_IsNumber(temp_l_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid thresholds in threshold set", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid thresholds in threshold set", TAG);
                 break;
             }
             
@@ -947,22 +833,22 @@ static void ble_protocol_parse_json_command(const char* json_str)
             if (location_set_item == NULL || !cJSON_IsNumber(location_set_item) ||
                 coordinate_item == NULL || !cJSON_IsString(coordinate_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid location parameters in location set", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid location parameters in location set", TAG);
                 break;
             }
             
             int location_set = location_set_item->valueint;
             const char* coordinate_str = coordinate_item->valuestring;
             
-            APP_LOG_INFO("%s Location set mode: %d (0=auto GPS, 1=manual)", DEBUG_TAG, location_set);
+            APP_LOG_INFO("%s Location set mode: %d (0=auto GPS, 1=manual)", TAG, location_set);
             
             // 如果是自动获取模式，需要从GPS获取坐标
             if (location_set == 0)
             {
-                APP_LOG_INFO("%s Auto GPS mode selected, will use GPS coordinates", DEBUG_TAG);
+                APP_LOG_INFO("%s Auto GPS mode selected, will use GPS coordinates", TAG);
                 // TODO: 实现从GPS自动获取坐标的逻辑
                 // 当前暂不支持，返回错误
-                APP_LOG_ERROR("%s Auto GPS mode not implemented yet", DEBUG_TAG);
+                APP_LOG_ERROR("%s Auto GPS mode not implemented yet", TAG);
                 
                 // 发送失败回文
                 cJSON *response = cJSON_CreateObject();
@@ -986,18 +872,18 @@ static void ble_protocol_parse_json_command(const char* json_str)
             int parsed = sscanf(coordinate_str, "%f,%f", &longitude, &latitude);
             if (parsed != 2)
             {
-                APP_LOG_ERROR("%s Invalid coordinate format: %s (expected: longitude,latitude)", DEBUG_TAG, coordinate_str);
+                APP_LOG_ERROR("%s Invalid coordinate format: %s (expected: longitude,latitude)", TAG, coordinate_str);
                 break;
             }
             
             // 验证坐标范围：经度 [-180, 180]，纬度 [-90, 90]
             if (longitude < -180.0f || longitude > 180.0f || latitude < -90.0f || latitude > 90.0f)
             {
-                APP_LOG_ERROR("%s Coordinate out of range: lon=%.6f, lat=%.6f", DEBUG_TAG, longitude, latitude);
+                APP_LOG_ERROR("%s Coordinate out of range: lon=%.6f, lat=%.6f", TAG, longitude, latitude);
                 break;
             }
             
-            APP_LOG_INFO("%s Parsed coordinates: longitude=%.6f, latitude=%.6f", DEBUG_TAG, longitude, latitude);
+            APP_LOG_INFO("%s Parsed coordinates: longitude=%.6f, latitude=%.6f", TAG, longitude, latitude);
             
             uint8_t data[12];
             memcpy(&data[0], &location_set, 4);
@@ -1012,7 +898,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             cJSON *threshold_item = cJSON_GetObjectItem(body, "threshold");
             if (threshold_item == NULL || !cJSON_IsNumber(threshold_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid threshold in water threshold set", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid threshold in water threshold set", TAG);
                 break;
             }
             
@@ -1040,7 +926,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 user_item == NULL || !cJSON_IsString(user_item)   ||
                 pass_item == NULL || !cJSON_IsString(pass_item))
             {
-                APP_LOG_ERROR("%s Missing or invalid fields in server address set", DEBUG_TAG);
+                APP_LOG_ERROR("%s Missing or invalid fields in server address set", TAG);
 
                 // 按照协议：仅返回 header.code 和 result=1
                 cJSON *resp   = cJSON_CreateObject();
@@ -1119,7 +1005,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 if (resp)      cJSON_Delete(resp);
                 if (header)    cJSON_Delete(header);
                 if (body_resp) cJSON_Delete(body_resp);
-                APP_LOG_ERROR("%s Failed to create JSON response for server address set", DEBUG_TAG);
+                APP_LOG_ERROR("%s Failed to create JSON response for server address set", TAG);
                 break;
             }
 
@@ -1156,7 +1042,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 if (resp)      cJSON_Delete(resp);
                 if (header)    cJSON_Delete(header);
                 if (body_resp) cJSON_Delete(body_resp);
-                APP_LOG_ERROR("%s Failed to create JSON response for server address query", DEBUG_TAG);
+                APP_LOG_ERROR("%s Failed to create JSON response for server address query", TAG);
                 break;
             }
 
@@ -1186,7 +1072,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
         }
         
         default:
-            APP_LOG_ERROR("%s Unknown command code: %d", DEBUG_TAG, cmd_code);
+            APP_LOG_ERROR("%s Unknown command code: %d", TAG, cmd_code);
             break;
     }
     
@@ -1198,127 +1084,52 @@ static void ble_protocol_parse_json_command(const char* json_str)
  *****************************************************************************************
  */
 
+/** @brief 初始化BLE协议模块 */
 void ble_protocol_init(void)
 {
-    if (s_protocol_initialized)
-    {
-        APP_LOG_WARNING("%s Protocol already initialized", DEBUG_TAG);
-        return;
-    }
+    if (s_protocol_initialized) return;
     
-    // 初始化 AT 响应收集器
     memset(&g_at_collector, 0, sizeof(g_at_collector));
-    
-    // 获取设备ID
     ble_protocol_get_device_id();
-    
-    // 初始化各种信息结构
     ble_protocol_init_device_info();
     ble_protocol_init_status_info();
     ble_protocol_init_param_settings();
-    
-    // 初始化传感器数据
     memset(&s_current_sensor_data, 0, sizeof(s_current_sensor_data));
-    
     s_protocol_initialized = true;
 }
 
+/** @brief 处理BLE接收的JSON数据 */
 void ble_protocol_data_process(const uint8_t *p_data, uint16_t length)
 {
-    if (!s_protocol_initialized)
-    {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
-        return;
-    }
+    if (!s_protocol_initialized || !p_data || length == 0 || length >= JSON_BUFFER_SIZE) return;
     
-    if (p_data == NULL || length == 0)
-    {
-        APP_LOG_ERROR("%s Invalid parameters", DEBUG_TAG);
-        return;
-    }
-    
-    APP_LOG_INFO("%s Processing JSON data: %d bytes", DEBUG_TAG, length);
-    
-    // 确保字符串以null结尾
     char json_str[JSON_BUFFER_SIZE];
-    if (length >= JSON_BUFFER_SIZE)
-    {
-        APP_LOG_ERROR("%s JSON data too large: %d bytes", DEBUG_TAG, length);
-        return;
-    }
-    
     memcpy(json_str, p_data, length);
     json_str[length] = '\0';
-    
-    APP_LOG_INFO("%s Received JSON: %s", DEBUG_TAG, json_str);
-    
-    // 解析并处理JSON命令
     ble_protocol_parse_json_command(json_str);
 }
 
-
-
-/**
- *****************************************************************************************
- * @brief 超级指令无法处理时的AT指令模式回退（已禁用，仅保留日志）
- *****************************************************************************************
- */
-
-
+/** @brief 处理查询请求 */
 void ble_protocol_handle_query(uint8_t query_type)
 {
-    if (!s_protocol_initialized)
-    {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
-        return;
-    }
-    
-    APP_LOG_INFO("%s ========== START QUERY HANDLING ==========", DEBUG_TAG);
-    APP_LOG_INFO("%s Handling query type: %d by reading from cache", DEBUG_TAG, query_type);
-    
-    // 直接从缓存创建响应，不再实时查询4G模块
-    char *json_string = ble_protocol_create_query_response(query_type);
-    if (json_string)
-    {
-        APP_LOG_INFO("%s JSON response created successfully", DEBUG_TAG);
-        ble_protocol_send_json_response(json_string);
-        free(json_string);
-        APP_LOG_INFO("%s Sent cached response for query type %d", DEBUG_TAG, query_type);
-    }
-    else
-    {
-        APP_LOG_ERROR("%s Failed to create response for query type %d", DEBUG_TAG, query_type);
-    }
-    APP_LOG_INFO("%s ========== END QUERY HANDLING ==========", DEBUG_TAG);
+    if (!s_protocol_initialized) return;
+    char *json = ble_protocol_create_query_response(query_type);
+    if (json) { ble_protocol_send_json_response(json); free(json); }
 }
 
+/** @brief 发送传感器数据报告 */
 void ble_protocol_send_data_report(const ble_sensor_data_t *p_sensor_data)
 {
-    if (!s_protocol_initialized)
-    {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
-        return;
-    }
-    
-    if (p_sensor_data == NULL)
-    {
-        APP_LOG_ERROR("%s Invalid sensor data pointer", DEBUG_TAG);
-        return;
-    }
-    
-    char *json_string = ble_protocol_create_json_report(p_sensor_data);
-    if (json_string)
-    {
-        ble_protocol_send_json_response(json_string);
-        free(json_string);
-    }
+    if (!s_protocol_initialized || !p_sensor_data) return;
+    char *json = ble_protocol_create_json_report(p_sensor_data);
+    if (json) { ble_protocol_send_json_response(json); free(json); }
 }
 
 void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uint16_t length)
 {
     if (!s_protocol_initialized)
     {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
+        APP_LOG_ERROR("%s Protocol not initialized", TAG);
         return;
     }
     
@@ -1337,12 +1148,12 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     if (shared_params_set_collect_time(new_interval))
                     {
                         result = PROTOCOL_RESULT_SET_SUCCESS;
-                        APP_LOG_INFO("%s Set collect interval: %d minutes", DEBUG_TAG, new_interval);
+                        APP_LOG_INFO("%s Set collect interval: %d minutes", TAG, new_interval);
                     }
                     else
                     {
                         result = PROTOCOL_RESULT_SET_FAILED;
-                        APP_LOG_ERROR("%s Failed to set collect interval", DEBUG_TAG);
+                        APP_LOG_ERROR("%s Failed to set collect interval", TAG);
                     }
                     
                     // 通知4G模块重启采集定时器
@@ -1354,7 +1165,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 }
                 else
                 {
-                    APP_LOG_ERROR("%s Invalid collect interval: %d (range: 1-1440)", DEBUG_TAG, new_interval);
+                    APP_LOG_ERROR("%s Invalid collect interval: %d (range: 1-1440)", TAG, new_interval);
                     // 按照协议文档3.6格式发送失败回文
                     cJSON *response = cJSON_CreateObject();
                     cJSON *header = cJSON_CreateObject();
@@ -1367,7 +1178,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     char *json_string = cJSON_Print(response);
                     if (json_string) {
                         ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
-                        APP_LOG_INFO("%s Collect time set failed response sent", DEBUG_TAG);
+                        APP_LOG_INFO("%s Collect time set failed response sent", TAG);
                         free(json_string);
                     }
                     cJSON_Delete(response);
@@ -1386,12 +1197,12 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     if (shared_params_set_update_time(new_interval))
                     {
                         result = PROTOCOL_RESULT_SET_SUCCESS;
-                        APP_LOG_INFO("%s Set report interval: %d minutes", DEBUG_TAG, new_interval);
+                        APP_LOG_INFO("%s Set report interval: %d minutes", TAG, new_interval);
                     }
                     else
                     {
                         result = PROTOCOL_RESULT_SET_FAILED;
-                        APP_LOG_ERROR("%s Failed to set report interval", DEBUG_TAG);
+                        APP_LOG_ERROR("%s Failed to set report interval", TAG);
                     }
                     
                     // 通知4G模块重启上报定时器
@@ -1403,7 +1214,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 }
                 else
                 {
-                    APP_LOG_ERROR("%s Invalid report interval: %d (range: 1-1440)", DEBUG_TAG, new_interval);
+                    APP_LOG_ERROR("%s Invalid report interval: %d (range: 1-1440)", TAG, new_interval);
                     // 按照协议文档3.7格式发送失败回文
                     cJSON *response = cJSON_CreateObject();
                     cJSON *header = cJSON_CreateObject();
@@ -1416,7 +1227,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     char *json_string = cJSON_Print(response);
                     if (json_string) {
                         ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
-                        APP_LOG_INFO("%s Update time set failed response sent", DEBUG_TAG);
+                        APP_LOG_INFO("%s Update time set failed response sent", TAG);
                         free(json_string);
                     }
                     cJSON_Delete(response);
@@ -1435,7 +1246,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 memcpy(&temp_low, &p_data[6], 2);
                 
                 APP_LOG_DEBUG("%s Received thresholds: CH4=%.2f, TEMP_H=%d, TEMP_L=%d", 
-                             DEBUG_TAG, methane_thresh, temp_high, temp_low);
+                             TAG, methane_thresh, temp_high, temp_low);
                 
                 // 使用共享参数API设置阈值
                 if (shared_params_set_methane_threshold(methane_thresh) && 
@@ -1443,12 +1254,12 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 {
                     result = PROTOCOL_RESULT_SET_SUCCESS;
                     APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP_H=%d°C, TEMP_L=%d°C", 
-                               DEBUG_TAG, methane_thresh, temp_high, temp_low);
+                               TAG, methane_thresh, temp_high, temp_low);
                 }
                 else
                 {
                     result = PROTOCOL_RESULT_SET_FAILED;
-                    APP_LOG_ERROR("%s Failed to set thresholds", DEBUG_TAG);
+                    APP_LOG_ERROR("%s Failed to set thresholds", TAG);
                 }
                 
 
@@ -1466,7 +1277,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 memcpy(&lat, &p_data[8], 4);
                 
                 APP_LOG_INFO("%s Location set mode: %d, lon=%.6f, lat=%.6f", 
-                           DEBUG_TAG, location_set_mode, lon, lat);
+                           TAG, location_set_mode, lon, lat);
                 
                 // 使用共享参数API设置位置
                 if (shared_params_set_install_location(lat, lon))
@@ -1475,18 +1286,18 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     shared_params_save_to_flash();
                     
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set install location success and saved to flash", DEBUG_TAG);
+                    APP_LOG_INFO("%s Set install location success and saved to flash", TAG);
                 }
                 else
                 {
                     result = PROTOCOL_RESULT_SET_FAILED;
-                    APP_LOG_ERROR("%s Failed to set install location", DEBUG_TAG);
+                    APP_LOG_ERROR("%s Failed to set install location", TAG);
                 }
             }
             else
             {
                 APP_LOG_ERROR("%s Invalid data length for location set: %d (expected >= 12)", 
-                            DEBUG_TAG, length);
+                            TAG, length);
                 result = PROTOCOL_RESULT_SET_FAILED;
             }
             break;
@@ -1502,12 +1313,12 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 if (shared_params_set_water_threshold((uint16_t)water_thresh))
                 {
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set water threshold: %.2f", DEBUG_TAG, water_thresh);
+                    APP_LOG_INFO("%s Set water threshold: %.2f", TAG, water_thresh);
                 }
                 else
                 {
                     result = PROTOCOL_RESULT_SET_FAILED;
-                    APP_LOG_ERROR("%s Failed to set water threshold", DEBUG_TAG);
+                    APP_LOG_ERROR("%s Failed to set water threshold", TAG);
                 }
             }
             break;
@@ -1518,13 +1329,13 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                 strncpy(g_shared_params.server_address, (char*)p_data, length);
                 g_shared_params.server_address[length] = '\0';
                 result = PROTOCOL_RESULT_SET_SUCCESS;
-                APP_LOG_INFO("%s Set server address: %s", DEBUG_TAG, g_shared_params.server_address);
+                APP_LOG_INFO("%s Set server address: %s", TAG, g_shared_params.server_address);
                 shared_params_save_to_flash();
             }
             break;
             
         default:
-            APP_LOG_ERROR("%s Unknown parameter set command: %d", DEBUG_TAG, cmd_code);
+            APP_LOG_ERROR("%s Unknown parameter set command: %d", TAG, cmd_code);
             break;
     }
     
@@ -1537,72 +1348,44 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
     }
 }
 
+/** @brief %vol转%LEL (5%vol=100%LEL) */
 float ble_protocol_vol_to_lel(float vol_percent)
 {
-    // 甲烷LEL转换: 5%vol = 100%LEL
     return (vol_percent / METHANE_MAX_VOL_PERCENT) * METHANE_MAX_LEL_PERCENT;
 }
 
+/** @brief 获取传感器数据 */
 bool ble_protocol_get_sensor_data(ble_sensor_data_t *p_sensor_data)
 {
-    if (p_sensor_data == NULL)
-    {
-        return false;
-    }
-    
+    if (!p_sensor_data) return false;
     update_sensor_data_from_parser();
     memcpy(p_sensor_data, &s_current_sensor_data, sizeof(ble_sensor_data_t));
-    
     return s_current_sensor_data.is_valid;
 }
 
+/** @brief 获取当前数据(别名) */
 bool ble_protocol_get_current_data(ble_sensor_data_t *p_sensor_data)
 {
     return ble_protocol_get_sensor_data(p_sensor_data);
 }
 
+/** @brief 发送JSON响应到BLE */
 void ble_protocol_send_json_response(const char *p_json_str)
 {
-    if (!s_protocol_initialized)
-    {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
-        return;
-    }
-    
-    if (p_json_str == NULL)
-    {
-        APP_LOG_ERROR("%s Invalid JSON string", DEBUG_TAG);
-        return;
-    }
-    
-    uint16_t json_len = strlen(p_json_str);
-    APP_LOG_INFO("%s Sending JSON response via BLE only, length: %d", DEBUG_TAG, json_len);
-    APP_LOG_INFO("%s JSON content: %s", DEBUG_TAG, p_json_str);
-    
-    // 只发送到BLE，不发送到4G模块
-    uart_to_ble_buff_data_push((uint8_t*)p_json_str, json_len);
-    
-    APP_LOG_INFO("%s BLE response pushed to buffer successfully", DEBUG_TAG);
+    if (!s_protocol_initialized || !p_json_str) return;
+    uart_to_ble_buff_data_push((uint8_t*)p_json_str, strlen(p_json_str));
 }
 
+/** @brief 调试打印(发送到4G模块) */
 void ble_debug_printf(const char *format, ...)
 {
     char buffer[256];
     va_list args;
-    
     va_start(args, format);
     vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
-    
-    // 通过UART发送调试信息
-    APP_LOG_DEBUG("%s %s", DEBUG_TAG, buffer);
-    
-    // 发送到4G模块 (UART1) 用于调试
     SEND_AT_COMMAND_ASYNC(buffer);
-    
-    // 发送换行符
-    const char* crlf = "\r\n";
-    SEND_AT_COMMAND_ASYNC(crlf);
+    SEND_AT_COMMAND_ASYNC("\r\n");
 }
 
 void ble_protocol_get_device_info(device_info_t *p_device_info)
@@ -1672,14 +1455,14 @@ void ble_protocol_handle_4g_data(const uint8_t *p_data, uint16_t length)
     char response[512];
     if (length >= sizeof(response))
     {
-        APP_LOG_WARNING("%s 4G response too large: %d bytes", DEBUG_TAG, length);
+        APP_LOG_WARNING("%s 4G response too large: %d bytes", TAG, length);
         length = sizeof(response) - 1;
     }
     
     memcpy(response, p_data, length);
     response[length] = '\0';
     
-    APP_LOG_DEBUG("%s Processing 4G response: [%d] %s", DEBUG_TAG, length, response);
+    APP_LOG_DEBUG("%s Processing 4G response: [%d] %s", TAG, length, response);
     
     // 处理4G模块响应
     handle_4g_response(response, length);
@@ -1713,7 +1496,7 @@ void ble_protocol_handle_4g_data(const uint8_t *p_data, uint16_t length)
         
         if (has_required_data)
         {
-            APP_LOG_DEBUG("%s Sufficient data collected, checking for response send", DEBUG_TAG);
+            APP_LOG_DEBUG("%s Sufficient data collected, checking for response send", TAG);
         }
     }
 }
@@ -1759,7 +1542,7 @@ void ble_protocol_send_success_response(const char* message)
     // 创建成功响应JSON
     cJSON *response = cJSON_CreateObject();
     if (!response) {
-        APP_LOG_ERROR("%s Failed to create success response JSON", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to create success response JSON", TAG);
         return;
     }
     
@@ -1770,7 +1553,7 @@ void ble_protocol_send_success_response(const char* message)
     if (json_string) {
         // 通过BLE发送响应
         ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
-        APP_LOG_INFO("%s Success response sent: %s", DEBUG_TAG, message);
+        APP_LOG_INFO("%s Success response sent: %s", TAG, message);
         free(json_string);
     }
     
@@ -1793,7 +1576,7 @@ void ble_protocol_send_error_response(const char* message)
     // 创建错误响应JSON
     cJSON *response = cJSON_CreateObject();
     if (!response) {
-        APP_LOG_ERROR("%s Failed to create error response JSON", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to create error response JSON", TAG);
         return;
     }
     
@@ -1804,7 +1587,7 @@ void ble_protocol_send_error_response(const char* message)
     if (json_string) {
         // 通过BLE发送响应
         ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
-        APP_LOG_ERROR("%s Error response sent: %s", DEBUG_TAG, message);
+        APP_LOG_ERROR("%s Error response sent: %s", TAG, message);
         free(json_string);
     }
     

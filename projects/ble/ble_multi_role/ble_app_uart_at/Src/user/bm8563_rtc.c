@@ -1,11 +1,6 @@
 /**
- *****************************************************************************************
- *
  * @file bm8563_rtc.c
- *
- * @brief BM8563EHA RTC芯片驱动实现（软件I2C）
- *
- *****************************************************************************************
+ * @brief BM8563 RTC驱动（软件I2C）
  */
 
 #include "bm8563_rtc.h"
@@ -14,248 +9,97 @@
 #include <stdio.h>
 #include <string.h>
 
-/*
- * DEFINES
- *****************************************************************************************
- */
-#define DEBUG_TAG               "BM8563"
+/*==============================================================================
+ *                              宏定义
+ *============================================================================*/
+#define TAG                 "RTC"
+#define I2C_DELAY_LOOPS     80
+#define BCD_TO_DEC(bcd)     (((bcd) >> 4) * 10 + ((bcd) & 0x0F))
+#define DEC_TO_BCD(dec)     ((((dec) / 10) << 4) | ((dec) % 10))
 
-/** I2C时序延时参数（微秒） */
-#define I2C_DELAY_US            5     // I2C时钟延时，影响速率
-
-/** BCD编码转换宏 */
-#define BCD_TO_DEC(bcd)         (((bcd) >> 4) * 10 + ((bcd) & 0x0F))
-#define DEC_TO_BCD(dec)         ((((dec) / 10) << 4) | ((dec) % 10))
-
-/*
- * LOCAL FUNCTION DECLARATIONS
- *****************************************************************************************
- */
+/*==============================================================================
+ *                              I2C底层函数声明
+ *============================================================================*/
 static void i2c_delay(void);
 static void i2c_start(void);
 static void i2c_stop(void);
-static void i2c_send_ack(void);
-static void i2c_send_nack(void);
+static void i2c_ack(void);
+static void i2c_nack(void);
 static bool i2c_wait_ack(void);
-static void i2c_send_byte(uint8_t byte);
-static uint8_t i2c_read_byte(void);
-static void sda_out(void);
-static void sda_in(void);
+static void i2c_write(uint8_t byte);
+static uint8_t i2c_read(void);
+static void sda_mode(uint8_t output);
 static void sda_set(uint8_t val);
-static uint8_t sda_read(void);
+static uint8_t sda_get(void);
 static void scl_set(uint8_t val);
 
-/*
- * LOCAL FUNCTIONS
- *****************************************************************************************
- */
-
-/**
- * @brief I2C时序延时
- */
-static void i2c_delay(void)
-{
-    for (volatile uint32_t i = 0; i < (I2C_DELAY_US * 16); i++) // 粗略延时
-    {
-        __NOP();
-    }
+/*==============================================================================
+ *                              I2C底层实现
+ *============================================================================*/
+static void i2c_delay(void) {
+    for (volatile uint32_t i = 0; i < I2C_DELAY_LOOPS; i++) __NOP();
 }
 
-/**
- * @brief 配置SDA为输出模式
- */
-static void sda_out(void)
-{
-    app_io_init_t io_init = {
-        .pin  = RTC_SDA_AON_GPIO,
-        .mode = APP_IO_MODE_OUTPUT,
-        .pull = APP_IO_PULLUP,
-        .mux  = APP_IO_MUX
-    };
-    app_io_init(APP_IO_TYPE_AON, &io_init);
+static void sda_mode(uint8_t output) {
+    app_io_init_t io = {RTC_SDA_AON_GPIO, output ? APP_IO_MODE_OUTPUT : APP_IO_MODE_INPUT, APP_IO_PULLUP, APP_IO_MUX};
+    app_io_init(APP_IO_TYPE_AON, &io);
 }
 
-/**
- * @brief 配置SDA为输入模式
- */
-static void sda_in(void)
-{
-    app_io_init_t io_init = {
-        .pin  = RTC_SDA_AON_GPIO,
-        .mode = APP_IO_MODE_INPUT,
-        .pull = APP_IO_PULLUP,
-        .mux  = APP_IO_MUX
-    };
-    app_io_init(APP_IO_TYPE_AON, &io_init);
+static void sda_set(uint8_t val) {
+    app_io_write_pin(APP_IO_TYPE_AON, RTC_SDA_AON_GPIO, val ? APP_IO_PIN_SET : APP_IO_PIN_RESET);
 }
 
-/**
- * @brief 设置SDA电平
- */
-static void sda_set(uint8_t val)
-{
-    if (val) {
-        app_io_write_pin(APP_IO_TYPE_AON, RTC_SDA_AON_GPIO, APP_IO_PIN_SET);
-    } else {
-        app_io_write_pin(APP_IO_TYPE_AON, RTC_SDA_AON_GPIO, APP_IO_PIN_RESET);
-    }
-}
-
-/**
- * @brief 读取SDA电平
- */
-static uint8_t sda_read(void)
-{
+static uint8_t sda_get(void) {
     return (app_io_read_pin(APP_IO_TYPE_AON, RTC_SDA_AON_GPIO) == APP_IO_PIN_SET) ? 1 : 0;
 }
 
-/**
- * @brief 设置SCL电平
- */
-static void scl_set(uint8_t val)
-{
-    if (val) {
-        app_io_write_pin(APP_IO_TYPE_AON, RTC_SCL_AON_GPIO, APP_IO_PIN_SET);
-    } else {
-        app_io_write_pin(APP_IO_TYPE_AON, RTC_SCL_AON_GPIO, APP_IO_PIN_RESET);
-    }
+static void scl_set(uint8_t val) {
+    app_io_write_pin(APP_IO_TYPE_AON, RTC_SCL_AON_GPIO, val ? APP_IO_PIN_SET : APP_IO_PIN_RESET);
 }
 
-/**
- * @brief I2C启动信号
- */
-static void i2c_start(void)
-{
-    sda_out();
-    sda_set(1);
-    scl_set(1);
-    i2c_delay();
-    sda_set(0);  // SCL高电平时，SDA下降沿产生START信号
-    i2c_delay();
-    scl_set(0);  // 钳住I2C总线，准备发送或接收数据
-    i2c_delay();
+static void i2c_start(void) {
+    sda_mode(1); sda_set(1); scl_set(1); i2c_delay();
+    sda_set(0); i2c_delay(); scl_set(0); i2c_delay();
 }
 
-/**
- * @brief I2C停止信号
- */
-static void i2c_stop(void)
-{
-    sda_out();
-    scl_set(0);
-    sda_set(0);
-    i2c_delay();
-    scl_set(1);
-    i2c_delay();
-    sda_set(1);  // SCL高电平时，SDA上升沿产生STOP信号
-    i2c_delay();
+static void i2c_stop(void) {
+    sda_mode(1); scl_set(0); sda_set(0); i2c_delay();
+    scl_set(1); i2c_delay(); sda_set(1); i2c_delay();
 }
 
-/**
- * @brief I2C发送ACK应答
- */
-static void i2c_send_ack(void)
-{
-    scl_set(0);
-    sda_out();
-    sda_set(0);
-    i2c_delay();
-    scl_set(1);
-    i2c_delay();
-    scl_set(0);
+static void i2c_ack(void) {
+    scl_set(0); sda_mode(1); sda_set(0); i2c_delay();
+    scl_set(1); i2c_delay(); scl_set(0);
 }
 
-/**
- * @brief I2C发送NACK应答
- */
-static void i2c_send_nack(void)
-{
-    scl_set(0);
-    sda_out();
-    sda_set(1);
-    i2c_delay();
-    scl_set(1);
-    i2c_delay();
-    scl_set(0);
+static void i2c_nack(void) {
+    scl_set(0); sda_mode(1); sda_set(1); i2c_delay();
+    scl_set(1); i2c_delay(); scl_set(0);
 }
 
-/**
- * @brief I2C等待ACK应答
- * 
- * @return true: 收到ACK
- * @return false: 未收到ACK
- */
-static bool i2c_wait_ack(void)
-{
-    uint8_t timeout = 0;
-    
-    sda_in();
-    sda_set(1);
-    i2c_delay();
-    scl_set(1);
-    i2c_delay();
-    
-    while (sda_read())
-    {
-        timeout++;
-        if (timeout > 250)
-        {
-            i2c_stop();
-            return false;
-        }
-    }
-    
+static bool i2c_wait_ack(void) {
+    uint8_t t = 0;
+    sda_mode(0); sda_set(1); i2c_delay(); scl_set(1); i2c_delay();
+    while (sda_get()) { if (++t > 250) { i2c_stop(); return false; } }
     scl_set(0);
     return true;
 }
 
-/**
- * @brief I2C发送一个字节
- */
-static void i2c_send_byte(uint8_t byte)
-{
-    sda_out();
-    scl_set(0);
-    
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        if ((byte & 0x80) != 0) {
-            sda_set(1);
-        } else {
-            sda_set(0);
-        }
-        byte <<= 1;
-        i2c_delay();
-        scl_set(1);
-        i2c_delay();
-        scl_set(0);
-        i2c_delay();
+static void i2c_write(uint8_t byte) {
+    sda_mode(1); scl_set(0);
+    for (uint8_t i = 0; i < 8; i++) {
+        sda_set((byte & 0x80) ? 1 : 0);
+        byte <<= 1; i2c_delay(); scl_set(1); i2c_delay(); scl_set(0); i2c_delay();
     }
 }
 
-/**
- * @brief I2C读取一个字节
- * 
- * @return 读取的字节
- */
-static uint8_t i2c_read_byte(void)
-{
+static uint8_t i2c_read(void) {
     uint8_t byte = 0;
-    
-    sda_in();
-    
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        scl_set(0);
-        i2c_delay();
-        scl_set(1);
-        byte <<= 1;
-        if (sda_read()) {
-            byte |= 0x01;
-        }
-        i2c_delay();
+    sda_mode(0);
+    for (uint8_t i = 0; i < 8; i++) {
+        scl_set(0); i2c_delay(); scl_set(1);
+        byte = (byte << 1) | sda_get(); i2c_delay();
     }
-    
     scl_set(0);
     return byte;
 }
@@ -275,24 +119,24 @@ static bool bm8563_write_regs(uint8_t reg_addr, const uint8_t *p_data, uint8_t l
     i2c_start();
     
     // 发送设备地址+写命令
-    i2c_send_byte((BM8563_I2C_ADDR << 1) | 0x00);
+    i2c_write((BM8563_I2C_ADDR << 1) | 0x00);
     if (!i2c_wait_ack()) {
-        APP_LOG_ERROR("%s Write: No ACK for device address", DEBUG_TAG);
+        APP_LOG_ERROR("%s Write: No ACK for device address", TAG);
         return false;
     }
     
     // 发送寄存器地址
-    i2c_send_byte(reg_addr);
+    i2c_write(reg_addr);
     if (!i2c_wait_ack()) {
-        APP_LOG_ERROR("%s Write: No ACK for register address", DEBUG_TAG);
+        APP_LOG_ERROR("%s Write: No ACK for register address", TAG);
         return false;
     }
     
     // 发送数据
     for (uint8_t i = 0; i < len; i++) {
-        i2c_send_byte(p_data[i]);
+        i2c_write(p_data[i]);
         if (!i2c_wait_ack()) {
-            APP_LOG_ERROR("%s Write: No ACK for data[%d]", DEBUG_TAG, i);
+            APP_LOG_ERROR("%s Write: No ACK for data[%d]", TAG, i);
             return false;
         }
     }
@@ -316,16 +160,16 @@ static bool bm8563_read_regs(uint8_t reg_addr, uint8_t *p_data, uint8_t len)
     i2c_start();
     
     // 发送设备地址+写命令
-    i2c_send_byte((BM8563_I2C_ADDR << 1) | 0x00);
+    i2c_write((BM8563_I2C_ADDR << 1) | 0x00);
     if (!i2c_wait_ack()) {
-        APP_LOG_ERROR("%s Read: No ACK for device address (write)", DEBUG_TAG);
+        APP_LOG_ERROR("%s Read: No ACK for device address (write)", TAG);
         return false;
     }
     
     // 发送寄存器地址
-    i2c_send_byte(reg_addr);
+    i2c_write(reg_addr);
     if (!i2c_wait_ack()) {
-        APP_LOG_ERROR("%s Read: No ACK for register address", DEBUG_TAG);
+        APP_LOG_ERROR("%s Read: No ACK for register address", TAG);
         return false;
     }
     
@@ -333,19 +177,19 @@ static bool bm8563_read_regs(uint8_t reg_addr, uint8_t *p_data, uint8_t len)
     i2c_start();
     
     // 发送设备地址+读命令
-    i2c_send_byte((BM8563_I2C_ADDR << 1) | 0x01);
+    i2c_write((BM8563_I2C_ADDR << 1) | 0x01);
     if (!i2c_wait_ack()) {
-        APP_LOG_ERROR("%s Read: No ACK for device address (read)", DEBUG_TAG);
+        APP_LOG_ERROR("%s Read: No ACK for device address (read)", TAG);
         return false;
     }
     
     // 读取数据
     for (uint8_t i = 0; i < len; i++) {
-        p_data[i] = i2c_read_byte();
+        p_data[i] = i2c_read();
         if (i < len - 1) {
-            i2c_send_ack();   // 未读完，发送ACK继续读取
+            i2c_ack();   // 未读完，发送ACK继续读取
         } else {
-            i2c_send_nack();  // 最后一个字节，发送NACK
+            i2c_nack();  // 最后一个字节，发送NACK
         }
     }
     
@@ -386,17 +230,17 @@ bool bm8563_init(void)
     // 复位BM8563
     uint8_t ctrl_status1 = 0x00;  // 清除TESTC位，正常工作模式
     if (!bm8563_write_regs(BM8563_REG_CTRL_STATUS1, &ctrl_status1, 1)) {
-        APP_LOG_ERROR("%s Failed to reset BM8563", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to reset BM8563", TAG);
         return false;
     }
     
     // 启动RTC
     if (!bm8563_start()) {
-        APP_LOG_ERROR("%s Failed to start BM8563", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to start BM8563", TAG);
         return false;
     }
     
-    APP_LOG_INFO("%s BM8563 RTC initialized successfully", DEBUG_TAG);
+    APP_LOG_INFO("%s BM8563 RTC initialized successfully", TAG);
     return true;
 }
 
@@ -410,7 +254,7 @@ bool bm8563_read_time(rtc_time_t *p_time)
     
     // 从寄存器读取时间数据
     if (!bm8563_read_regs(BM8563_REG_SECOND, time_data, 7)) {
-        APP_LOG_ERROR("%s Failed to read time registers", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to read time registers", TAG);
         return false;
     }
     
@@ -445,12 +289,12 @@ bool bm8563_set_time(const rtc_time_t *p_time)
     
     // 写入时间寄存器
     if (!bm8563_write_regs(BM8563_REG_SECOND, time_data, 7)) {
-        APP_LOG_ERROR("%s Failed to write time registers", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to write time registers", TAG);
         return false;
     }
     
     APP_LOG_INFO("%s Time set: %04d-%02d-%02d %02d:%02d:%02d", 
-                 DEBUG_TAG, p_time->year, p_time->month, p_time->day,
+                 TAG, p_time->year, p_time->month, p_time->day,
                  p_time->hour, p_time->minute, p_time->second);
     
     return true;
@@ -503,7 +347,7 @@ bool bm8563_start(void)
         return false;
     }
     
-    APP_LOG_INFO("%s RTC started", DEBUG_TAG);
+    APP_LOG_INFO("%s RTC started", TAG);
     return true;
 }
 
@@ -523,7 +367,7 @@ bool bm8563_stop(void)
         return false;
     }
     
-    APP_LOG_INFO("%s RTC stopped", DEBUG_TAG);
+    APP_LOG_INFO("%s RTC stopped", TAG);
     return true;
 }
 
@@ -570,11 +414,11 @@ static uint8_t calculate_weekday(uint16_t year, uint8_t month, uint8_t day)
 bool bm8563_set_time_from_network(const char *network_time)
 {
     if (network_time == NULL) {
-        APP_LOG_ERROR("%s Network time string is NULL", DEBUG_TAG);
+        APP_LOG_ERROR("%s Network time string is NULL", TAG);
         return false;
     }
     
-    APP_LOG_INFO("%s Parsing network time: %s", DEBUG_TAG, network_time);
+    APP_LOG_INFO("%s Parsing network time: %s", TAG, network_time);
     
     rtc_time_t time = {0};
     int year, month, day, hour, minute, second;
@@ -603,7 +447,7 @@ bool bm8563_set_time_from_network(const char *network_time)
         }
     }
     else {
-        APP_LOG_ERROR("%s Failed to parse network time format", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to parse network time format", TAG);
         return false;
     }
     
@@ -615,12 +459,12 @@ bool bm8563_set_time_from_network(const char *network_time)
         minute < 0 || minute > 59 ||
         second < 0 || second > 59) {
         APP_LOG_ERROR("%s Invalid time values: %04d/%02d/%02d %02d:%02d:%02d", 
-                     DEBUG_TAG, year, month, day, hour, minute, second);
+                     TAG, year, month, day, hour, minute, second);
         return false;
     }
     
     APP_LOG_INFO("%s Time validation passed: %04d/%02d/%02d %02d:%02d:%02d", 
-                DEBUG_TAG, year, month, day, hour, minute, second);
+                TAG, year, month, day, hour, minute, second);
     
     // 填充时间结构体
     time.year = year;
@@ -632,16 +476,16 @@ bool bm8563_set_time_from_network(const char *network_time)
     time.weekday = calculate_weekday(year, month, day);
     
     APP_LOG_INFO("%s Parsed time: %04d/%02d/%02d(%d) %02d:%02d:%02d", 
-                DEBUG_TAG, time.year, time.month, time.day, time.weekday,
+                TAG, time.year, time.month, time.day, time.weekday,
                 time.hour, time.minute, time.second);
     
     // 设置RTC时间
     if (!bm8563_set_time(&time)) {
-        APP_LOG_ERROR("%s Failed to set RTC time", DEBUG_TAG);
+        APP_LOG_ERROR("%s Failed to set RTC time", TAG);
         return false;
     }
     
-    APP_LOG_INFO("%s Successfully set RTC time from network", DEBUG_TAG);
+    APP_LOG_INFO("%s Successfully set RTC time from network", TAG);
     return true;
 }
 
