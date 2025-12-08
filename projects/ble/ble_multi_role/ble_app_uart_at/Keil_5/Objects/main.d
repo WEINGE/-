@@ -130,3 +130,4 @@
 .\objects\main.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
 .\objects\main.o: ..\..\..\..\..\drivers\inc\app_dma.h
 .\objects\main.o: ..\Src\user\shared_params.h
+.\objects\main.o: ..\Src\user\water_level_sensor.h

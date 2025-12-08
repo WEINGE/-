@@ -130,3 +130,4 @@
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\app_key\app_key.h
 .\objects\user_app.o: ..\..\..\..\..\components\libraries\app_key\app_key_core.h
 .\objects\user_app.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
+.\objects\user_app.o: ..\Src\user\water_level_sensor.h

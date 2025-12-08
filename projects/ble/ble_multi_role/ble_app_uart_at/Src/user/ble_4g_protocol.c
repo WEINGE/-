@@ -37,6 +37,7 @@
 #include "ble_4g_param_handler.h"  // 为了处理参数设置命令
 #include "battery_voltage_reader.h"  // 为了使用电池电压读取功能
 #include "user_periph_setup.h"       // 为了使用看门狗喂狗功能
+#include "water_level_sensor.h"      // MER-MCP1081-22-150 电子水尺液位传感模组
 
 /*
  * EXTERNAL FUNCTION DECLARATIONS
@@ -303,11 +304,11 @@ static void send_json_with_delay(char *json_string, const char *message_type)
     
     APP_LOG_INFO("%s Sending %s", DEBUG_TAG, message_type);
     uart1_send_json_to_4g(json_string);
-    uart1_tx_data_send((uint8_t*)"\n", 1);  // 添加换行符作为消息分隔
+    // 注意：移除换行符发送，因为DTU可能将换行符作为消息结束标志导致解析异常
     free(json_string);
     
     // 标准化延时，等待DTU发送完成，避免JSON消息粘连
-    sys_delay_ms(1000);
+    sys_delay_ms(300);  // 恢复为300ms，与test2.0保持一致
 }
 
 /**
@@ -554,6 +555,26 @@ static char* ble_4g_protocol_create_data_report_json(const ble_4g_sensor_data_t 
     
     cJSON_AddStringToObject(body, "collect_time", p_data->collect_time);
     
+    // 水位传感器数据 (MER-MCP1081-22-150 电子水尺)
+    // water_level: "档位,水位高度cm,温度" 格式
+    if (p_data->water_level_grade != 0xFF) {
+        char water_level_str[48];
+        snprintf(water_level_str, sizeof(water_level_str), "%d,%.1f,%.1f", 
+                 p_data->water_level_grade, 
+                 p_data->water_level_height_cm,
+                 p_data->water_level_temp_c);
+        cJSON_AddStringToObject(body, "water_level", water_level_str);
+        
+        // water_level_cap: "C0,C1,C2,C3,C4,C5,C6" 电容值(pF)
+        char cap_str[128];
+        snprintf(cap_str, sizeof(cap_str), "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+                 p_data->water_level_cap[0], p_data->water_level_cap[1],
+                 p_data->water_level_cap[2], p_data->water_level_cap[3],
+                 p_data->water_level_cap[4], p_data->water_level_cap[5],
+                 p_data->water_level_cap[6]);
+        cJSON_AddStringToObject(body, "water_level_cap", cap_str);
+    }
+    
     cJSON_AddItemToObject(json, "body", body);
     
     char *json_string = cJSON_Print(json);
@@ -671,9 +692,23 @@ static char* ble_4g_protocol_create_status_info_json(void)
     }
     cJSON_AddNumberToObject(body, "device_GPS_status", g_shared_params.device_GPS_status);
     
-    // 使用特殊字段获取定位信息
-    cJSON_AddStringToObject(body, "device_location", SPECIAL_FIELD_LON "," SPECIAL_FIELD_LAT);
-    cJSON_AddStringToObject(body, "device_installation_location", SPECIAL_FIELD_LON "," SPECIAL_FIELD_LAT);
+    // 使用缓存的GPS数据（特殊字段不是所有位置都能替换）
+    // 当前位置
+    char location_str[48];
+    if (strlen(g_at_collector.longitude) > 0 && strlen(g_at_collector.latitude) > 0) {
+        snprintf(location_str, sizeof(location_str), "%s,%s", 
+                 g_at_collector.longitude, g_at_collector.latitude);
+    } else {
+        snprintf(location_str, sizeof(location_str), "%.6f,%.6f", 
+                 g_shared_params.location_lon, g_shared_params.location_lat);
+    }
+    cJSON_AddStringToObject(body, "device_location", location_str);
+    
+    // 安装位置（使用保存的安装坐标）
+    char install_location_str[48];
+    snprintf(install_location_str, sizeof(install_location_str), "%.6f,%.6f", 
+             g_shared_params.install_lon, g_shared_params.install_lat);
+    cJSON_AddStringToObject(body, "device_installation_location", install_location_str);
     
     cJSON_AddItemToObject(json, "body", body);
     
@@ -811,43 +846,39 @@ static void sensor_collect_timer_handler(void *p_context)
         
         bool flood_detected_single = wf5803f_detect_flood(pressure_threshold_hpa);
         
-        if (flood_detected_single) {
-            // 疑似水浸，进行3次采样确认
-            APP_LOG_WARNING("%s ⚠️ Suspected flood detected! Confirming with multi-sample reading...", DEBUG_TAG);
-            
-            wf5803f_data_t multi_sample_data;
-            if (wf5803f_read_multi_samples(3, &multi_sample_data)) {
-                // 使用多次采样的平均值再次检测
-                bool flood_confirmed = wf5803f_detect_flood(pressure_threshold_hpa);
-                
-                if (flood_confirmed && !s_flood_mode_active) {
-                    // 确认水浸，进入报警模式
-                    APP_LOG_WARNING("%s [OK] FLOOD CONFIRMED by multi-sample! Entering flood mode...", DEBUG_TAG);
-                    ble_4g_protocol_enter_flood_mode();
-                    shared_params_set_device_water(1);
-                } else if (!flood_confirmed && s_flood_mode_active) {
-                    // 水浸消除
-                    APP_LOG_INFO("%s [OK] Flood cleared (confirmed by multi-sample). Exiting flood mode...", DEBUG_TAG);
-                    ble_4g_protocol_exit_flood_mode();
-                    shared_params_set_device_water(0);
-                }
-            } else {
-                APP_LOG_ERROR("%s Multi-sample confirmation failed, using single sample result", DEBUG_TAG);
+        // ✅ 简化水浸检测：直接使用滤波后的缓存数据判断，不再进行多次采样确认
+        // （因为传感器已经deinit省电，无法进行多次采样）
+        if (flood_detected_single && !s_flood_mode_active) {
+            // 检测到水浸，进入报警模式
+            APP_LOG_WARNING("%s ⚠️ FLOOD DETECTED! Water depth exceeds threshold. Entering flood mode...", DEBUG_TAG);
+            ble_4g_protocol_enter_flood_mode();
+            shared_params_set_device_water(1);
+        } else if (!flood_detected_single && s_flood_mode_active) {
+            // 水浸消除，退出报警模式
+            APP_LOG_INFO("%s [OK] Flood cleared. Exiting flood mode...", DEBUG_TAG);
+            ble_4g_protocol_exit_flood_mode();
+            shared_params_set_device_water(0);
+        }
+        
+        // ✅ 额外保护：验证水浸模式下采集/上传时间是否正确
+        if (s_flood_mode_active) {
+            bool need_fix = false;
+            if (g_shared_params.device_collect_time != FLOOD_MODE_COLLECT_INTERVAL) {
+                APP_LOG_WARNING("%s Flood mode: collect time incorrect (%d != %d), fixing...", 
+                               DEBUG_TAG, g_shared_params.device_collect_time, FLOOD_MODE_COLLECT_INTERVAL);
+                g_shared_params.device_collect_time = FLOOD_MODE_COLLECT_INTERVAL;
+                need_fix = true;
             }
-        } else if (s_flood_mode_active) {
-            // 当前在水浸模式，但单次检测未发现水浸，进行确认
-            APP_LOG_INFO("%s In flood mode but no flood detected, confirming with multi-sample...", DEBUG_TAG);
-            
-            wf5803f_data_t multi_sample_data;
-            if (wf5803f_read_multi_samples(3, &multi_sample_data)) {
-                bool flood_confirmed = wf5803f_detect_flood(pressure_threshold_hpa);
-                
-                if (!flood_confirmed) {
-                    // 确认水浸消除
-                    APP_LOG_INFO("%s [OK] Flood cleared confirmed. Exiting flood mode...", DEBUG_TAG);
-                    ble_4g_protocol_exit_flood_mode();
-                    shared_params_set_device_water(0);
-                }
+            if (g_shared_params.device_updata_time != FLOOD_MODE_UPLOAD_INTERVAL) {
+                APP_LOG_WARNING("%s Flood mode: upload time incorrect (%d != %d), fixing...", 
+                               DEBUG_TAG, g_shared_params.device_updata_time, FLOOD_MODE_UPLOAD_INTERVAL);
+                g_shared_params.device_updata_time = FLOOD_MODE_UPLOAD_INTERVAL;
+                need_fix = true;
+            }
+            if (need_fix) {
+                APP_LOG_INFO("%s Restarting timers with correct flood mode intervals", DEBUG_TAG);
+                ble_4g_protocol_restart_collect_timer();
+                ble_4g_protocol_restart_report_timer();
             }
         }
         
@@ -1316,8 +1347,15 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
                         if (validate_timer_intervals())
                         {
                             result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                            // 立即重启采集定时器
-                            ble_4g_protocol_restart_collect_timer();
+                            
+                            // ✅ 修复：如果处于水浸模式，保存为正常间隔但不重启定时器
+                            if (s_flood_mode_active) {
+                                s_normal_collect_interval = new_interval;
+                                APP_LOG_INFO("%s In flood mode, saved as normal interval (timer stays at 3min)", DEBUG_TAG);
+                            } else {
+                                // 立即重启采集定时器
+                                ble_4g_protocol_restart_collect_timer();
+                            }
                         }
                         else
                         {
@@ -1355,8 +1393,15 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
                         if (validate_timer_intervals())
                         {
                             result = PROTOCOL_4G_RESULT_SET_SUCCESS;
-                            // 立即重启上报定时器
-                            ble_4g_protocol_restart_report_timer();
+                            
+                            // ✅ 修复：如果处于水浸模式，保存为正常间隔但不重启定时器
+                            if (s_flood_mode_active) {
+                                s_normal_upload_interval = new_interval;
+                                APP_LOG_INFO("%s In flood mode, saved as normal interval (timer stays at 3min)", DEBUG_TAG);
+                            } else {
+                                // 立即重启上报定时器
+                                ble_4g_protocol_restart_report_timer();
+                            }
                         }
                         else
                         {
@@ -1715,6 +1760,7 @@ void ble_4g_protocol_send_static_info(void)
 
 void ble_4g_protocol_sensor_power_control(bool enable)
 {
+    // 只控制 S_EN(GPIO25)，P_M_EN是外设电源域总开关，由main.c统一管理
     if (enable) {
         app_io_write_pin(POWER_GPIO_TYPE, SENSOR_POWER_PIN, APP_IO_PIN_SET);
         APP_LOG_INFO("%s Sensor power ON (S_EN)", DEBUG_TAG);
@@ -1749,6 +1795,37 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         return false;
     }
     
+    // ✅ 2.6 初始化并立即读取水位传感器 MER-MCP1081-22-150（UART0, Modbus-RTU）
+    // 必须在初始化后立即读取，不能等太久
+    water_level_data_t wl_data = {0};
+    water_level_cap_data_t wl_cap_data = {0};
+    bool wl_read_success = false;
+    
+    if (water_level_sensor_init()) {
+        sys_delay_ms(200);  // 等待传感器通信稳定
+        APP_LOG_INFO("%s Reading water level sensor (MER-MCP1081-22-150)...", DEBUG_TAG);
+        
+        if (water_level_sensor_read_basic(&wl_data) && wl_data.is_valid) {
+            APP_LOG_INFO("%s Water level: Grade=%d, Temp=%.1fC", DEBUG_TAG, 
+                         wl_data.level_grade, wl_data.temperature_c);
+            
+            // 读取C0-C6电容值
+            if (water_level_sensor_read_capacitance(&wl_cap_data) && wl_cap_data.is_valid) {
+                APP_LOG_INFO("%s Cap: C0=%.2f C1=%.2f C2=%.2f C3=%.2f C4=%.2f C5=%.2f C6=%.2f pF", DEBUG_TAG,
+                             wl_cap_data.c_pf[0], wl_cap_data.c_pf[1], wl_cap_data.c_pf[2],
+                             wl_cap_data.c_pf[3], wl_cap_data.c_pf[4], wl_cap_data.c_pf[5], wl_cap_data.c_pf[6]);
+            }
+            wl_read_success = true;
+        } else {
+            APP_LOG_WARNING("%s Failed to read water level sensor", DEBUG_TAG);
+        }
+        
+        // 读取完成后立即反初始化UART0（避免与其他UART0使用冲突）
+        water_level_sensor_deinit();
+    } else {
+        APP_LOG_WARNING("%s Failed to initialize water level sensor", DEBUG_TAG);
+    }
+    
     // ✅ 3. 主动通过I2C读取WF5803F传感器数据（问答式）
     // 不再等待自动发送，直接主动读取
     // 使用无电源管理版本（因为这里已经上电了，避免重复上电浪费10秒）
@@ -1769,6 +1846,10 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         p_sensor_data->battery_voltage = 0.0f;  // 电池电压将在后续填充
         p_sensor_data->battery_percent = 0;     // 电池百分比将在后续填充
         p_sensor_data->is_valid = true;
+        
+        // ✅ 修复：使用统一的水深计算函数（与蓝牙保持一致，使用滤波后的压力值）
+        p_sensor_data->water_depth_cm = sensor_data_get_water_depth();
+        APP_LOG_INFO("%s Water depth (filtered): %.1f cm", DEBUG_TAG, p_sensor_data->water_depth_cm);
         
         // 更新传感器状态为正常
         shared_params_set_sensor_status(0);
@@ -1816,10 +1897,30 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
             p_sensor_data->battery_voltage = 3.3f;   // 默认值
             p_sensor_data->battery_percent = 100;     // 默认值
         }
+        
+        // ✅ 使用前面已读取的水位传感器数据
+        if (wl_read_success) {
+            p_sensor_data->water_level_grade = wl_data.level_grade;
+            p_sensor_data->water_level_temp_c = wl_data.temperature_c;
+            p_sensor_data->water_level_height_cm = WLS_GRADE_TO_CM(wl_data.level_grade);
+            
+            // 复制电容值
+            for (int i = 0; i < 7; i++) {
+                p_sensor_data->water_level_cap[i] = wl_cap_data.c_pf[i];
+            }
+        } else {
+            p_sensor_data->water_level_grade = 0xFF;  // 无效值
+            p_sensor_data->water_level_temp_c = 0.0f;
+            p_sensor_data->water_level_height_cm = 0.0f;
+            for (int i = 0; i < 7; i++) {
+                p_sensor_data->water_level_cap[i] = 0.0f;
+            }
+        }
     }
     
     // 6. 反初始化并断电传感器
     wf5803f_deinit();
+    // 注：water_level_sensor已在读取后立即反初始化
     ble_4g_protocol_sensor_power_control(false);
     
     if (result) {
@@ -1930,10 +2031,16 @@ void ble_4g_protocol_upload_with_power_mgmt(void)
             uint8_t current_index = (start_index + i) % MAX_COLLECTED_DATA_COUNT;
             // 发送 105 监测数据
             ble_4g_protocol_send_data_report(&s_collected_data_array[current_index]);
-            sys_delay_ms(300);  // 每条数据发送后等待2秒，确保传输完成
+            sys_delay_ms(300);  // 每条数据发送后等待，确保传输完成
             // 每次105后都跟一个103状态信息
             ble_4g_protocol_send_status_info_report();
-            sys_delay_ms(300);  // 状态信息发送后也等待2秒
+            sys_delay_ms(300);  // 状态信息发送后也等待
+            
+            // ✅ 每5条数据喂狗一次，防止批量上传时看门狗超时
+            if ((i + 1) % 5 == 0) {
+                watchdog_feed();
+                APP_LOG_DEBUG("%s Watchdog fed after %d data points", DEBUG_TAG, i + 1);
+            }
         }
         // 发送完批量数据后清空缓冲
         ble_4g_protocol_clear_collected_data();

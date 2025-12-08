@@ -64,6 +64,7 @@
 #include "gr55xx_delay.h"     // 系统延迟函数
 #include "shared_params.h"    // 共享参数管理模块
 #include "battery_voltage_reader.h"  // 电池电压读取模块
+#include "water_level_sensor.h"      // MER-MCP1081-22-150 电子水尺液位传感模组
 /*
  * 宏定义配置
  *****************************************************************************************
@@ -630,6 +631,55 @@ void update_sensor_data_from_parser_ex(bool force_read)
         battery_percent = battery_data.battery_percent;
     }
 
+    // 读取水位传感器数据 (MER-MCP1081-22-150 电子水尺)
+    water_level_data_t wl_data = {0};
+    water_level_cap_data_t wl_cap_data = {0};
+    uint8_t water_level_grade = 0xFF;  // 默认无效
+    float water_level_temp_c = 0.0f;
+    float water_level_height_cm = 0.0f;
+    float water_level_cap[7] = {0};
+    
+    // ✅ 修复：蓝牙查询时需要上电并初始化水位传感器才能读取数据
+    if (force_read) {
+        APP_LOG_INFO("Powering on and initializing water level sensor for BLE query...");
+        // 开启传感器电源（S_EN引脚）
+        extern void ble_4g_protocol_sensor_power_control(bool enable);
+        ble_4g_protocol_sensor_power_control(true);
+        sys_delay_ms(500);  // 等待传感器上电稳定
+        
+        if (water_level_sensor_init()) {
+            sys_delay_ms(200);  // 等待传感器通信稳定
+        } else {
+            APP_LOG_WARNING("Water level sensor init failed");
+        }
+    }
+    
+    if (water_level_sensor_read_basic(&wl_data) && wl_data.is_valid) {
+        water_level_grade = wl_data.level_grade;
+        water_level_temp_c = wl_data.temperature_c;
+        water_level_height_cm = WLS_GRADE_TO_CM(wl_data.level_grade);  // 档位*1.8cm
+        APP_LOG_INFO("Water level: Grade=%d, Height=%.1fcm, Temp=%.1fC", 
+                     water_level_grade, water_level_height_cm, water_level_temp_c);
+        
+        // 读取C0-C6电容值
+        if (water_level_sensor_read_capacitance(&wl_cap_data) && wl_cap_data.is_valid) {
+            for (int i = 0; i < 7; i++) {
+                water_level_cap[i] = wl_cap_data.c_pf[i];
+            }
+            APP_LOG_INFO("Cap: C0=%.2f C1=%.2f C2=%.2f C3=%.2f C4=%.2f C5=%.2f C6=%.2f pF",
+                         water_level_cap[0], water_level_cap[1], water_level_cap[2],
+                         water_level_cap[3], water_level_cap[4], water_level_cap[5], water_level_cap[6]);
+        }
+    }
+    
+    // ✅ 蓝牙查询完成后反初始化并断电水位传感器
+    if (force_read) {
+        water_level_sensor_deinit();
+        extern void ble_4g_protocol_sensor_power_control(bool enable);
+        ble_4g_protocol_sensor_power_control(false);
+        APP_LOG_INFO("Water level sensor powered off after BLE query");
+    }
+
     // 更新BLE协议数据（水位检测）
     ble_sensor_data_t ble_sensor_data = {0};
     ble_sensor_data.pressure_hpa = raw_data.pressure_hpa;
@@ -638,6 +688,12 @@ void update_sensor_data_from_parser_ex(bool force_read)
     ble_sensor_data.altitude_m = raw_data.altitude_m;
     ble_sensor_data.battery_voltage = battery_voltage;
     ble_sensor_data.battery_percent = battery_percent;
+    ble_sensor_data.water_level_grade = water_level_grade;
+    ble_sensor_data.water_level_temp_c = water_level_temp_c;
+    ble_sensor_data.water_level_height_cm = water_level_height_cm;
+    for (int i = 0; i < 7; i++) {
+        ble_sensor_data.water_level_cap[i] = water_level_cap[i];
+    }
     ble_sensor_data.is_valid = raw_data.data_valid;
     ble_protocol_update_sensor_data(&ble_sensor_data);
 
@@ -649,6 +705,12 @@ void update_sensor_data_from_parser_ex(bool force_read)
     ble_4g_sensor_data.altitude_m = raw_data.altitude_m;
     ble_4g_sensor_data.battery_voltage = battery_voltage;
     ble_4g_sensor_data.battery_percent = battery_percent;
+    ble_4g_sensor_data.water_level_grade = water_level_grade;
+    ble_4g_sensor_data.water_level_temp_c = water_level_temp_c;
+    ble_4g_sensor_data.water_level_height_cm = water_level_height_cm;
+    for (int i = 0; i < 7; i++) {
+        ble_4g_sensor_data.water_level_cap[i] = water_level_cap[i];
+    }
     ble_4g_sensor_data.is_valid = raw_data.data_valid;
 
     // 生成时间戳

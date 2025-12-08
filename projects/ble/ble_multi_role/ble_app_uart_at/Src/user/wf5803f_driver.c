@@ -90,6 +90,10 @@ static void kalman_filter_init(kalman_filter_t *kf, float initial_value)
     kf->R = KF_MEASUREMENT_NOISE;
     kf->K = 0.0f;
     kf->initialized = true;
+    kf->update_count = 0;  // 初始化更新计数器
+    
+    APP_LOG_INFO("WF5803F: Kalman filter initialized with x=%.2f hPa (fast convergence mode for first %d samples)",
+                 initial_value, KF_FAST_CONVERGENCE_COUNT);
 }
 
 /**
@@ -106,7 +110,12 @@ static float kalman_filter_update(kalman_filter_t *kf, float measurement)
 {
     if (!kf->initialized) {
         kalman_filter_init(kf, measurement);
-        return measurement;
+        return measurement;  // 第一次测量直接返回测量值，不做滤波
+    }
+    
+    // 更新计数器
+    if (kf->update_count < 255) {
+        kf->update_count++;
     }
     
     // 预测步骤（简化模型：假设压力恒定）
@@ -118,40 +127,39 @@ static float kalman_filter_update(kalman_filter_t *kf, float measurement)
     // K = P_pred / (P_pred + R)
     kf->K = P_pred / (P_pred + kf->R);
     
-    // 计算测量值与滤波值的差异百分比
-    float diff = measurement - kf->x;
-    float diff_percent = 0.0f;
-    if (fabsf(kf->x) > 0.1f) {  // 避免除以接近0的数
-        diff_percent = fabsf(diff / kf->x) * 100.0f;
+    // 快速收敛模式：前N次测量使用更高的卡尔曼增益
+    bool fast_convergence = (kf->update_count <= KF_FAST_CONVERGENCE_COUNT);
+    if (fast_convergence && kf->K < KF_FAST_CONVERGENCE_GAIN) {
+        kf->K = KF_FAST_CONVERGENCE_GAIN;  // 强制使用更高的增益以快速跟踪测量值
+        APP_LOG_DEBUG("WF5803F: Fast convergence mode - K forced to %.2f (sample %d/%d)",
+                     kf->K, kf->update_count, KF_FAST_CONVERGENCE_COUNT);
     }
     
-    // 如果差异超过20%，采取快速响应策略
-    if (diff_percent > 20.0f) {
-        APP_LOG_WARNING("WF5803F: Large pressure change detected - diff=%.2f%% (%.2f hPa), fast tracking enabled", 
-                       diff_percent, diff);
+    // 计算测量值与滤波值的差异
+    float diff = measurement - kf->x;
+    float abs_diff = fabsf(diff);
+    
+    // 使用绝对压力差（hPa）判断，而非百分比
+    // 原因：对于水浸检测，10cm水深≈10hPa，相对于1010hPa大气压只有1%
+    //       使用百分比会导致阈值过高（20%≈200cm水深）
+    bool large_change = (abs_diff > KF_LARGE_CHANGE_THRESHOLD);
+    
+    // 如果差异超过阈值（默认2 hPa≈2cm水深），采取快速响应策略
+    if (large_change) {
+        APP_LOG_WARNING("WF5803F: Large pressure change detected - diff=%.2f hPa (threshold=%.1f hPa), fast tracking enabled", 
+                       diff, KF_LARGE_CHANGE_THRESHOLD);
         
-        // 策略1：限制滤波输出与测量值的偏差不超过20%
-        // 允许的最大偏差
-        float max_allowed_diff = fabsf(measurement) * 0.20f;
-        
-        // 计算限制后的滤波值
-        float filtered_value;
-        if (diff > 0) {
-            // 测量值大于滤波值：限制滤波值不能低于测量值的80%
-            filtered_value = measurement - max_allowed_diff;
-        } else {
-            // 测量值小于滤波值：限制滤波值不能高于测量值的120%
-            filtered_value = measurement + max_allowed_diff;
-        }
-        
-        // 应用限制后的值
-        kf->x = filtered_value;
+        // 策略1：直接使用测量值（而不是限制到20%）
+        // 这样可以确保第一次检测到水浸时立即响应
+        kf->x = measurement;
         
         // 策略2：重置P值以加快后续收敛
-        kf->P = KF_INITIAL_ESTIMATE_ERROR * 0.5f;  // 提高不确定度，加快追踪
+        kf->P = KF_INITIAL_ESTIMATE_ERROR;
         
-        APP_LOG_INFO("WF5803F: Filtered value adjusted - measurement=%.2f, filtered=%.2f (limited to +/-20%%)", 
-                    measurement, kf->x);
+        // 重置快速收敛计数器，以便后续测量也使用快速响应
+        kf->update_count = 0;
+        
+        APP_LOG_INFO("WF5803F: Filter reset to measurement value - measurement=%.2f hPa", measurement);
     } else {
         // 正常卡尔曼滤波更新
         // x = x_pred + K * (z - x_pred)
@@ -159,6 +167,12 @@ static float kalman_filter_update(kalman_filter_t *kf, float measurement)
         
         // P = (1 - K) * P_pred
         kf->P = (1.0f - kf->K) * P_pred;
+        
+        // 调试输出：显示当前滤波状态
+        if (kf->update_count <= KF_FAST_CONVERGENCE_COUNT + 1) {
+            APP_LOG_INFO("WF5803F: Kalman update #%d - meas=%.2f, filtered=%.2f, K=%.3f, diff=%.2f hPa",
+                        kf->update_count, measurement, kf->x, kf->K, diff);
+        }
     }
     
     return kf->x;
@@ -575,23 +589,29 @@ bool wf5803f_read_multi_samples(uint8_t samples, wf5803f_data_t *data)
  */
 bool wf5803f_set_baseline_pressure(float baseline_hpa)
 {
-    if (!s_initialized) {
-        APP_LOG_ERROR("WF5803F: Not initialized");
-        return false;
-    }
-    
-    // 如果传入0，使用当前读数作为基准
+    // 如果传入0，使用缓存的读数作为基准（不再要求传感器初始化）
     if (baseline_hpa == 0.0f) {
-        wf5803f_data_t current_data;
-        if (wf5803f_read_data(&current_data) && current_data.data_valid) {
-            s_baseline_pressure = current_data.pressure_filtered;
+        // ✅ 修复：优先使用缓存数据，因为传感器可能已经deinit
+        if (s_latest_data.data_valid && s_latest_data.pressure_filtered > 0.0f) {
+            s_baseline_pressure = s_latest_data.pressure_filtered;
             s_baseline_set = true;
-            APP_LOG_INFO("WF5803F: Baseline pressure set to current reading: %.2f hPa", s_baseline_pressure);
+            APP_LOG_INFO("WF5803F: Baseline pressure set from cached data: %.2f hPa", s_baseline_pressure);
             return true;
-        } else {
-            APP_LOG_ERROR("WF5803F: Failed to read current pressure for baseline");
-            return false;
         }
+        
+        // 如果缓存无效且传感器已初始化，尝试读取
+        if (s_initialized) {
+            wf5803f_data_t current_data;
+            if (wf5803f_read_data(&current_data) && current_data.data_valid) {
+                s_baseline_pressure = current_data.pressure_filtered;
+                s_baseline_set = true;
+                APP_LOG_INFO("WF5803F: Baseline pressure set to current reading: %.2f hPa", s_baseline_pressure);
+                return true;
+            }
+        }
+        
+        APP_LOG_ERROR("WF5803F: No valid data for baseline (cached or fresh)");
+        return false;
     }
     
     // 验证基准压力是否合理
@@ -629,8 +649,10 @@ float wf5803f_get_baseline_pressure(void)
  */
 bool wf5803f_detect_flood(float threshold_hpa)
 {
-    if (!s_initialized) {
-        APP_LOG_ERROR("WF5803F: Not initialized");
+    // ✅ 修复：不再检查s_initialized，因为水浸检测只使用缓存的s_latest_data
+    // 传感器可能已经deinit（省电），但缓存数据仍然有效
+    if (!s_latest_data.data_valid) {
+        APP_LOG_WARNING("WF5803F: No valid cached data for flood detection");
         return false;
     }
     

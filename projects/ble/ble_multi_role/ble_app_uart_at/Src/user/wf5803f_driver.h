@@ -50,11 +50,14 @@
 #define WF5803F_ADC_POSITIVE_SAT        0x7FFFFF // 正满量程饱和值
 #define WF5803F_ADC_NEGATIVE_SAT        0x800000 // 负满量程饱和值
 
-// 卡尔曼滤波器配置参数（针对水浸检测优化）
-// 精度优先模式：Q值降低以提高平滑度，R值提高以减少噪声影响
-#define KF_PROCESS_NOISE        0.1f   // 过程噪声协方差Q（气压变化的不确定性）- 精度优先
-#define KF_MEASUREMENT_NOISE    1.8f   // 测量噪声协方差R（传感器噪声，约±2 hPa）- 平滑优先
-#define KF_INITIAL_ESTIMATE_ERROR 10.0f // 初始估计误差P0
+// 卡尔曼滤波器配置参数（针对水浸检测优化 - 快速响应版本）
+// 响应优先模式：平衡滤波效果与响应速度，确保首次测量误差<5%
+#define KF_PROCESS_NOISE        0.5f   // 过程噪声协方差Q - 增大以提高响应速度
+#define KF_MEASUREMENT_NOISE    0.8f   // 测量噪声协方差R - 降低以更信任测量值
+#define KF_INITIAL_ESTIMATE_ERROR 1.0f // 初始估计误差P0 - 降低以加快收敛
+#define KF_FAST_CONVERGENCE_COUNT 3    // 快速收敛阶段的测量次数
+#define KF_FAST_CONVERGENCE_GAIN  0.8f // 快速收敛阶段的最小卡尔曼增益
+#define KF_LARGE_CHANGE_THRESHOLD 0.5f // 大变化阈值（hPa）- 约0.5cm水深变化即触发快速响应（5%误差控制）
 
 /*
  * TYPE DEFINITIONS
@@ -62,7 +65,7 @@
  */
 
 /**
- * @brief 卡尔曼滤波器状态结构（一维卡尔曼滤波）
+ * @brief 卡尔曼滤波器状态结构（一维卡尔曼滤波 - 带快速收敛支持）
  */
 typedef struct {
     float x;        // 状态估计值（滤波后的气压）
@@ -71,6 +74,7 @@ typedef struct {
     float R;        // 测量噪声协方差
     float K;        // 卡尔曼增益
     bool initialized; // 是否已初始化
+    uint8_t update_count; // 更新计数器（用于快速收敛模式）
 } kalman_filter_t;
 
 /**

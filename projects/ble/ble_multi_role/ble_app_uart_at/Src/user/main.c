@@ -39,6 +39,7 @@
 #include "battery_voltage_reader.h" // 电池电压读取模块
 #include "app_timer.h"            // 应用定时器模块
 #include "shared_params.h"        // 共享设备参数（包括服务器配置）
+#include "water_level_sensor.h"   // MER-MCP1081-22-150 电子水尺液位传感模组
 
 /*
  * 本地变量定义
@@ -255,6 +256,39 @@ int main(void)
     } else {
         APP_LOG_ERROR("Failed to initialize battery voltage reader");
     }
+
+    // 第六步：初始化水位传感器（MER-MCP1081-22-150）
+    // 需要先上电传感器，才能初始化UART通信
+    APP_LOG_INFO("Initializing water level sensor (MER-MCP1081-22-150)...");
+    extern void ble_4g_protocol_sensor_power_control(bool enable);
+    ble_4g_protocol_sensor_power_control(true);  // 开启S_EN电源
+    delay_ms(500);  // 等待传感器上电稳定
+    
+    if (water_level_sensor_init()) {
+        APP_LOG_INFO("Water level sensor initialized successfully");
+        
+        // 启动时自动执行空载校准
+        APP_LOG_INFO("Performing auto calibration...");
+        if (water_level_sensor_calibrate()) {
+            APP_LOG_INFO("Water level sensor calibration successful");
+        } else {
+            APP_LOG_WARNING("Water level sensor calibration failed, using default");
+        }
+        
+        // 读取并显示初始数据
+        water_level_data_t wl_data;
+        if (water_level_sensor_read_basic(&wl_data) && wl_data.is_valid) {
+            APP_LOG_INFO("Initial water level: Grade=%d, Temp=%.1fC",
+                        wl_data.level_grade, 
+                        wl_data.temperature_c);
+        }
+        
+        // 初始化完成后反初始化UART并断电（后续按需使用）
+        water_level_sensor_deinit();
+    } else {
+        APP_LOG_ERROR("Failed to initialize water level sensor");
+    }
+    ble_4g_protocol_sensor_power_control(false);  // 关闭S_EN电源
 
     // 初始化4G协议 
      ble_4g_protocol_init();

@@ -382,17 +382,11 @@ void uart_init(uint32_t baud_rate)
     // 先反初始化，确保干净配置
     app_uart_deinit(APP_UART_ID);
 
-    // 初始化UART（中断/事件回调用于DMA接收完成通知）
+    // 初始化UART（使用中断模式，与水位传感器保持一致，不使用DMA）
     app_uart_init(&s_uart_param, app_uart_evt_handler, &s_uart_buffer);
-
-    // 仅启用DMA接收（TX仍采用原有同步发送方式）
-    memset(&s_uart_param.dma_cfg, 0, sizeof(s_uart_param.dma_cfg));
-    s_uart_param.dma_cfg.rx_dma_instance = DMA0;
-    s_uart_param.dma_cfg.rx_dma_channel  = DMA_Channel0; // 如有冲突可调整为其它空闲通道
-
-    // 配置UART的DMA功能并启动首次DMA接收
-    app_uart_dma_init(&s_uart_param);
-    app_uart_dma_receive_async(APP_UART_ID, s_uart_dma_rx_buf, UART_RX_BUFFER_SIZE);
+    
+    // 启动异步接收（使用已有的接收缓冲区）
+    app_uart_receive_async(APP_UART_ID, s_uart_dma_rx_buf, UART_RX_BUFFER_SIZE);
 }
 
 uint32_t app_uart_baud_get(void)
@@ -425,7 +419,6 @@ void sensor_uart_close(void)
 {
     if (s_sensor_uart_opened)
     {
-        app_uart_dma_deinit(APP_UART_ID);
         app_uart_deinit(APP_UART_ID);
         s_sensor_uart_opened = false;
     }
@@ -460,7 +453,7 @@ void app_periph_init(void)
 {
     SYS_SET_BD_ADDR(s_bd_addr);
     app_assert_init();
-    uart_init(APP_UART_BAUDRATE);
+    // 注意：UART0不在启动时初始化，由水位传感器按需使用（参考备份1.01）
     uart1_init(APP_UART1_BAUDRATE); // 参考2.0：启动时初始化UART1，上传后关闭省电
     s_fourg_uart_opened = true;    // 同步状态标志
 
