@@ -1413,7 +1413,7 @@ void ble_protocol_send_json_response(const char *p_json_str)
 {
     if (!s_protocol_initialized || !p_json_str) return;
     uart_to_ble_buff_data_push((uint8_t*)p_json_str, strlen(p_json_str));
-    sys_delay_ms(500);  // 添加200ms延时，避免多条JSON粘连
+    sys_delay_ms(500);  // 添加500ms延时，避免多条JSON粘连
 }
 
 /** @brief 调试打印(发送到4G模块) */
