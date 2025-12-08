@@ -1,8 +1,8 @@
 .\objects\app_key.o: ..\..\..\..\..\components\libraries\app_key\app_key.c
 .\objects\app_key.o: ..\..\..\..\..\components\libraries\app_key\app_key.h
 .\objects\app_key.o: ..\..\..\..\..\components\libraries\app_key\app_key_core.h
-.\objects\app_key.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\app_key.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\app_key.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\app_key.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\app_key.o: ..\..\..\..\..\drivers\inc\app_gpiote.h
 .\objects\app_key.o: ..\..\..\..\..\drivers\inc\app_io.h
 .\objects\app_key.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
@@ -22,16 +22,16 @@
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
-.\objects\app_key.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\app_key.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\app_key.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
 .\objects\app_key.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\app_key.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\app_key.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\app_key.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\app_key.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -39,4 +39,4 @@
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\app_key.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\app_key.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\app_key.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h

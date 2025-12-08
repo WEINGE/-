@@ -24,30 +24,30 @@
  * DEFINES
  *****************************************************************************************
  */
-// 4G协议命令定义（根据4g协议.md文档）
+// 4G协议命令定义（根�?g协议.md文档�?
 #define PROTOCOL_4G_CMD_DEVICE_INFO_REPORT     102     /**< 设备信息上报 */
-#define PROTOCOL_4G_CMD_STATUS_INFO_REPORT     103     /**< 状态信息上报 */
+#define PROTOCOL_4G_CMD_STATUS_INFO_REPORT     103     /**< 状态信息上�?*/
 #define PROTOCOL_4G_CMD_PARAM_INFO_REPORT      104     /**< 当前设置参数上报 */
 #define PROTOCOL_4G_CMD_DATA_REPORT            105     /**< 监测数据上报 */
-#define PROTOCOL_4G_CMD_COLLECT_TIME_SET       106     /**< 检测周期设置 */
+#define PROTOCOL_4G_CMD_COLLECT_TIME_SET       106     /**< 检测周期设�?*/
 #define PROTOCOL_4G_CMD_UPDATE_TIME_SET        107     /**< 数据上报周期设置 */
-#define PROTOCOL_4G_CMD_THRESHOLD_SET          108     /**< 甲烷及温度报警阈值设置 */
-#define PROTOCOL_4G_CMD_WATER_THRESHOLD_SET    110     /**< 水浸报警阈值设置 */
+#define PROTOCOL_4G_CMD_THRESHOLD_SET          108     /**< 水位及温度报警阈值设�?*/
+#define PROTOCOL_4G_CMD_WATER_THRESHOLD_SET    110     /**< 水浸深度报警阈值设�?*/
 #define PROTOCOL_4G_CMD_QUERY_SETTINGS         120     /**< 查询设置变更 */
 
 // 4G协议结果定义
 #define PROTOCOL_4G_RESULT_SET_SUCCESS         0   /**< 设置成功 */
 #define PROTOCOL_4G_RESULT_SET_FAILED          1   /**< 设置失败 */
 
-// 设备ID缓冲区长度定义
+// 设备ID缓冲区长度定�?
 #define DEVICE_ID_SIZE                         32
 
 // 特殊字段定义（根据图片中的特殊字段说明）
-#define SPECIAL_FIELD_IMEI          "${IMEI}"        /**< IMEI号 */
+#define SPECIAL_FIELD_IMEI          "${IMEI}"        /**< IMEI�?*/
 #define SPECIAL_FIELD_ICCID         "${ICCID}"       /**< SIM卡ICCID */
-#define SPECIAL_FIELD_SN            "${SN}"          /**< 设备序列号 */
+#define SPECIAL_FIELD_SN            "${SN}"          /**< 设备序列�?*/
 #define SPECIAL_FIELD_CSQ           "${CSQ}"         /**< 信号质量 */
-#define SPECIAL_FIELD_UNIX          "${UNIX}"        /**< Unix时间戳 */
+#define SPECIAL_FIELD_UNIX          "${UNIX}"        /**< Unix时间�?*/
 #define SPECIAL_FIELD_LAC           "${LAC}"         /**< 基站LAC */
 #define SPECIAL_FIELD_CID           "${CID}"         /**< 基站CID */
 #define SPECIAL_FIELD_LON           "${LON}"         /**< GPS经度 */
@@ -55,51 +55,53 @@
 #define SPECIAL_FIELD_ALT           "${ALT}"         /**< GPS海拔 */
 #define SPECIAL_FIELD_UTC_TIME      "${UTC_TIME}"    /**< UTC时间 */
 
-#define METHANE_MAX_VOL_PERCENT     5.0f    /**< 甲烷最大浓度 5%vol */
-#define METHANE_MAX_LEL_PERCENT     100.0f  /**< 对应100%LEL */
+// 水位检测相关定�?
+#define WATER_DEPTH_HPA_PER_CM      0.98f   /**< 1cm水深约等�?.98hPa压力变化 */
+#define MAX_WATER_DEPTH_CM          500.0f  /**< 最大检测水�?500cm */
 
 /*
  * TYPE DEFINITIONS
  *****************************************************************************************
  */
-/**@brief 4G protocol sensor data structure. */
+/**@brief 4G protocol sensor data structure (water level detection). */
 typedef struct
 {
-    float methane_vol;      /**< 甲烷浓度 %vol */
-    float methane_lel;      /**< 甲烷浓度 %LEL */
-    int16_t temperature;    /**< 温度 ℃ */
+    float pressure_hpa;     /**< 气压hPa（用于水位检测） */
+    float water_depth_cm;   /**< 水深cm（根据压力变化计算） */
+    float temperature_c;    /**< 温度 �?*/
+    float altitude_m;       /**< 海拔 m */
     float battery_voltage;  /**< 电池电压 V */
     uint8_t battery_percent; /**< 电池电量 % */
     char collect_time[16];  /**< 数据收集时间 */
-    bool is_valid;          /**< 数据有效性 */
+    bool is_valid;          /**< 数据有效�?*/
 } ble_4g_sensor_data_t;
 
 /**@brief 4G device information structure. */
 typedef struct
 {
     char device_id[32];         /**< 设备ID */
-    char device_ver[16];        /**< 设备固件版本号 */
+    char device_ver[16];        /**< 设备固件版本�?*/
 } ble_4g_device_info_t;
 
 /**@brief 4G status information structure. */
 typedef struct
 {
-    uint8_t device_water;       /**< 水浸状态（1：水浸，0：未水浸） */
-    uint8_t sensor_status;      /**< 激光传感器状态（0：正常，1：异常） */
+    uint8_t device_water;       /**< 水浸状态（1：水浸，0：未水浸�?*/
+    uint8_t sensor_status;      /**< 传感器状态（0：正常，1：异常） */
     uint8_t device_move;        /**< 防盗状态（0：定位与安装坐标一致，1：定位与安装坐标不一致） */
     uint8_t device_LTE_signal;  /**< 4G信号值，0-31 */
     uint8_t device_GPS_status;  /**< GPS信号状态（0：正常，1：异常） */
 } ble_4g_status_info_t;
 
-/**@brief 4G parameter settings structure. */
+/**@brief 4G parameter settings structure (water level detection). */
 typedef struct
 {
-    uint16_t device_collect_time;   /**< 传感器采集间隔，单位分钟 */
-    uint16_t device_updata_time;    /**< 数据上报间隔，单位分钟 */
-    float methane_threshold;        /**< 甲烷报警阈值浓度，单位%vol */
-    int16_t TEMPH_threshold;        /**< 高温报警阈值，单位℃ */
-    int16_t TEMPL_threshold;        /**< 低温报警阈值，单位℃ */
-    int16_t water_threshold;        /**< 水浸报警阈值 */
+    uint16_t device_collect_time;       /**< 传感器采集间隔，单位分钟 */
+    uint16_t device_updata_time;        /**< 数据上报间隔，单位分�?*/
+    float water_depth_threshold_cm;     /**< 水深报警阈值cm */
+    int16_t TEMPH_threshold;            /**< 高温报警阈值，单位�?*/
+    int16_t TEMPL_threshold;            /**< 低温报警阈值，单位�?*/
+    uint16_t water_threshold;           /**< 水浸报警阈值（兼容字段�?*/
 } ble_4g_param_settings_t;
 
 /*
@@ -173,14 +175,14 @@ void ble_4g_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, 
 
 /**
  *****************************************************************************************
- * @brief Convert methane %vol to %LEL.
+ * @brief Convert pressure change (hPa) to water depth (cm).
  *
- * @param[in] vol_percent: Methane concentration in %vol.
+ * @param[in] pressure_delta_hpa: Pressure change from baseline in hPa.
  *
- * @return Methane concentration in %LEL.
+ * @return Water depth in cm.
  *****************************************************************************************
  */
-float ble_4g_protocol_vol_to_lel(float vol_percent);
+float ble_4g_protocol_pressure_to_depth(float pressure_delta_hpa);
 
 /**
  *****************************************************************************************
@@ -385,7 +387,10 @@ void ble_4g_protocol_upload(void);
  */
 void ble_4g_protocol_upload_with_power_mgmt(void);
 
-// 内部工具函数，用于获取当前设备ID（IMEI或回退ID）
+// 内部工具函数，用于获取当前设备ID（IMEI或回退ID�?
 void ble_4g_protocol_get_device_id(char *p_device_id_buffer, uint16_t buffer_size);
 
+void ble_4g_protocol_mark_server_config_changed(void);
+
 #endif /* __BLE_4G_PROTOCOL_H__ */
+

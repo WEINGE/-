@@ -1,7 +1,7 @@
 .\objects\water_sensor.o: ..\Src\user\water_sensor.c
 .\objects\water_sensor.o: ..\Src\user\water_sensor.h
-.\objects\water_sensor.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\water_sensor.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\water_sensor.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\water_sensor.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\app_io.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
@@ -24,7 +24,7 @@
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
-.\objects\water_sensor.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\water_sensor.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\water_sensor.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -101,9 +101,9 @@
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\water_sensor.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\water_sensor.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\water_sensor.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\water_sensor.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -111,4 +111,4 @@
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\water_sensor.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\water_sensor.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\water_sensor.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h

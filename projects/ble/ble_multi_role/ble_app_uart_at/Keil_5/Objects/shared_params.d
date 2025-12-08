@@ -1,7 +1,7 @@
 .\objects\shared_params.o: ..\Src\user\shared_params.c
 .\objects\shared_params.o: ..\Src\user\shared_params.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\shared_params.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\shared_params.o: ..\Src\config\custom_config.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\grx_sys.h
@@ -17,16 +17,16 @@
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\shared_params.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
 .\objects\shared_params.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -34,7 +34,7 @@
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\shared_params.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\shared_params.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
 .\objects\shared_params.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h
 .\objects\shared_params.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
@@ -103,4 +103,4 @@
 .\objects\shared_params.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_bod.h
 .\objects\shared_params.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_delay.h
 .\objects\shared_params.o: ..\..\..\..\..\components\libraries\hal_flash\hal_flash.h
-.\objects\shared_params.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\shared_params.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdlib.h

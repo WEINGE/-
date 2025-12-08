@@ -401,14 +401,14 @@ static char* ble_protocol_create_json_report(const ble_sensor_data_t *p_data)
     cJSON_AddItemToObject(json, "header", header);
     
     // 构建body - 符合BLE协议格式
-    // sensor_methane: 字符串格式 "vol,lel"
-    char methane_str[32];
-    snprintf(methane_str, sizeof(methane_str), "%.2f,%.1f", 
-             p_data->methane_vol, p_data->methane_lel);
-    cJSON_AddStringToObject(body, "sensor_methane", methane_str);
+    // sensor_pressure: 字符串格式 "pressure_hPa,water_depth_cm"
+    char water_str[32];
+    snprintf(water_str, sizeof(water_str), "%.2f,%.1f", 
+             p_data->pressure_hpa, p_data->water_depth_cm);
+    cJSON_AddStringToObject(body, "sensor_pressure", water_str);
     
     // sensor_TEMP: 整数类型
-    cJSON_AddNumberToObject(body, "sensor_TEMP", (int)p_data->temperature);
+    cJSON_AddNumberToObject(body, "sensor_TEMP", (int)p_data->temperature_c);
     
     // sensor_battery: 字符串格式 "voltage,percent"
     char battery_str[32];
@@ -422,6 +422,26 @@ static char* ble_protocol_create_json_report(const ble_sensor_data_t *p_data)
     // TODO: 获取实际时间戳，这里使用示例格式
     snprintf(time_str, sizeof(time_str), "202411141642");
     cJSON_AddStringToObject(body, "collect_time", time_str);
+    
+    // 水位传感器数据 (MER-MCP1081-22-150 电子水尺)
+    // water_level: "档位,水位高度cm,温度" 格式
+    if (p_data->water_level_grade != 0xFF) {
+        char water_level_str[48];
+        snprintf(water_level_str, sizeof(water_level_str), "%d,%.1f,%.1f", 
+                 p_data->water_level_grade,
+                 p_data->water_level_height_cm,
+                 p_data->water_level_temp_c);
+        cJSON_AddStringToObject(body, "water_level", water_level_str);
+        
+        // water_level_cap: "C0,C1,C2,C3,C4,C5,C6" 电容值(pF)
+        char cap_str[128];
+        snprintf(cap_str, sizeof(cap_str), "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+                 p_data->water_level_cap[0], p_data->water_level_cap[1],
+                 p_data->water_level_cap[2], p_data->water_level_cap[3],
+                 p_data->water_level_cap[4], p_data->water_level_cap[5],
+                 p_data->water_level_cap[6]);
+        cJSON_AddStringToObject(body, "water_level_cap", cap_str);
+    }
     
     cJSON_AddItemToObject(json, "body", body);
     
@@ -517,9 +537,9 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             // 按照蓝牙协议文档3.4的字段名称
             cJSON_AddNumberToObject(body, "device_collect_time", g_shared_params.device_collect_time);
             cJSON_AddNumberToObject(body, "device_updata_time", g_shared_params.device_updata_time);
-            // 甲烷阈值改为float类型（协议V1.4更新）
+            // 水位阈值改为float类型（协议V1.4更新）
             // 按两位小数四舍五入后写入JSON，避免2.0999999046等显示
-            cJSON_AddNumberToObject(body, "methane_threshold", round_to_2_decimal(g_shared_params.methane_threshold));
+            cJSON_AddNumberToObject(body, "water_depth_threshold_cm", round_to_2_decimal(g_shared_params.water_depth_threshold_cm));
             cJSON_AddNumberToObject(body, "TEMPH_threshold", g_shared_params.temp_high_threshold);
             cJSON_AddNumberToObject(body, "TEMPL_threshold", g_shared_params.temp_low_threshold);
             cJSON_AddNumberToObject(body, "water_threshold", g_shared_params.water_threshold);
@@ -527,19 +547,38 @@ static char* ble_protocol_create_query_response(uint8_t query_type)
             
         case PROTOCOL_QUERY_TYPE_CURRENT_DATA:
             response_code = 105; // 监测数据上报
-            update_sensor_data_from_parser();
+            update_sensor_data_from_parser_ex(true);  // 强制读取实时传感器数据
             // 按照蓝牙协议文档3.5的字段名称
-            // 组合甲烷数据字符串 "vol,lel"
-            char methane_str[32];
-            snprintf(methane_str, sizeof(methane_str), "%.2f,%.1f", 
-                    s_current_sensor_data.methane_vol, s_current_sensor_data.methane_lel);
-            cJSON_AddStringToObject(body, "sensor_methane", methane_str);
-            cJSON_AddNumberToObject(body, "sensor_TEMP", (int)s_current_sensor_data.temperature);
+            // 组合水位数据字符串 "pressure_hPa,water_depth_cm"
+            char water_str[32];
+            snprintf(water_str, sizeof(water_str), "%.2f,%.1f", 
+                    s_current_sensor_data.pressure_hpa, s_current_sensor_data.water_depth_cm);
+            cJSON_AddStringToObject(body, "sensor_pressure", water_str);
+            cJSON_AddNumberToObject(body, "sensor_TEMP", (int)s_current_sensor_data.temperature_c);
             // 组合电池信息字符串 "电压,百分比" - 使用update_sensor_data_from_parser()中已更新的真实电池数据
             char battery_str[32];
             snprintf(battery_str, sizeof(battery_str), "%.2f,%d", 
                     s_current_sensor_data.battery_voltage, s_current_sensor_data.battery_percent);
             cJSON_AddStringToObject(body, "sensor_battery", battery_str);
+            // 水位传感器数据 (MER-MCP1081-22-150 电子水尺)
+            // water_level: "档位,水位高度cm,温度" 格式
+            if (s_current_sensor_data.water_level_grade != 0xFF) {
+                char water_level_str[48];
+                snprintf(water_level_str, sizeof(water_level_str), "%d,%.1f,%.1f", 
+                         s_current_sensor_data.water_level_grade,
+                         s_current_sensor_data.water_level_height_cm,
+                         s_current_sensor_data.water_level_temp_c);
+                cJSON_AddStringToObject(body, "water_level", water_level_str);
+                
+                // water_level_cap: "C0,C1,C2,C3,C4,C5,C6" 电容值(pF)
+                char cap_str[128];
+                snprintf(cap_str, sizeof(cap_str), "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+                         s_current_sensor_data.water_level_cap[0], s_current_sensor_data.water_level_cap[1],
+                         s_current_sensor_data.water_level_cap[2], s_current_sensor_data.water_level_cap[3],
+                         s_current_sensor_data.water_level_cap[4], s_current_sensor_data.water_level_cap[5],
+                         s_current_sensor_data.water_level_cap[6]);
+                cJSON_AddStringToObject(body, "water_level_cap", cap_str);
+            }
             break;
             
         default:
@@ -596,9 +635,9 @@ static char* ble_protocol_create_param_set_response(uint16_t cmd_code, uint8_t r
             case 107: // 上报周期设置
                 cJSON_AddNumberToObject(body, "updata_time_set", g_shared_params.device_updata_time);
                 break;
-            case 108: // 甲烷及温度报警阈值设置
-                // 甲烷阈值按两位小数四舍五入后写入JSON，避免2.0999999046等显示
-                cJSON_AddNumberToObject(body, "methane_threshold_set", round_to_2_decimal(g_shared_params.methane_threshold));
+            case 108: // 水位及温度报警阈值设置
+                // 水位阈值按两位小数四舍五入后写入JSON，避免2.0999999046等显示
+                cJSON_AddNumberToObject(body, "water_depth_threshold_cm_set", round_to_2_decimal(g_shared_params.water_depth_threshold_cm));
                 cJSON_AddNumberToObject(body, "TEMPH_threshold_set", g_shared_params.temp_high_threshold);
                 cJSON_AddNumberToObject(body, "TEMPL_threshold_set", g_shared_params.temp_low_threshold);
                 break;
@@ -713,7 +752,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 
                 char *json_string = cJSON_Print(response);
                 if (json_string) {
-                    ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                    ble_protocol_send_json_response(json_string);
                     free(json_string);
                 }
                 cJSON_Delete(response);
@@ -738,7 +777,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             
             char *json_string = cJSON_Print(response);
             if (json_string) {
-                ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                ble_protocol_send_json_response(json_string);
                 APP_LOG_INFO("%s Collect time set response sent", TAG);
                 free(json_string);
             }
@@ -764,7 +803,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 
                 char *json_string = cJSON_Print(response);
                 if (json_string) {
-                    ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                    ble_protocol_send_json_response(json_string);
                     free(json_string);
                 }
                 cJSON_Delete(response);
@@ -789,7 +828,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             
             char *json_string = cJSON_Print(response);
             if (json_string) {
-                ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                ble_protocol_send_json_response(json_string);
                 APP_LOG_INFO("%s Update time set response sent", TAG);
                 free(json_string);
             }
@@ -799,12 +838,12 @@ static void ble_protocol_parse_json_command(const char* json_str)
         
         case PROTOCOL_CMD_THRESHOLD_SET:
         {
-            // 按照蓝牙协议文档3.8，字段名为 methane_threshold_set, TEMPH_threshold_set, TEMPL_threshold_set
-            cJSON *methane_item = cJSON_GetObjectItem(body, "methane_threshold_set");
+            // 按照蓝牙协议文档3.8，字段名为 water_depth_threshold_cm_set, TEMPH_threshold_set, TEMPL_threshold_set
+            cJSON *water_item = cJSON_GetObjectItem(body, "water_depth_threshold_cm_set");
             cJSON *temp_h_item = cJSON_GetObjectItem(body, "TEMPH_threshold_set");
             cJSON *temp_l_item = cJSON_GetObjectItem(body, "TEMPL_threshold_set");
             
-            if (methane_item == NULL || !cJSON_IsNumber(methane_item) ||
+            if (water_item == NULL || !cJSON_IsNumber(water_item) ||
                 temp_h_item == NULL || !cJSON_IsNumber(temp_h_item) ||
                 temp_l_item == NULL || !cJSON_IsNumber(temp_l_item))
             {
@@ -812,12 +851,12 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 break;
             }
             
-            float methane_threshold = (float)methane_item->valuedouble;
+            float water_depth_threshold_cm = (float)water_item->valuedouble;
             int16_t temp_h_threshold = (int16_t)temp_h_item->valueint;
             int16_t temp_l_threshold = (int16_t)temp_l_item->valueint;
             
             uint8_t data[8];
-            memcpy(&data[0], &methane_threshold, 4);
+            memcpy(&data[0], &water_depth_threshold_cm, 4);
             memcpy(&data[4], &temp_h_threshold, 2);
             memcpy(&data[6], &temp_l_threshold, 2);
             ble_protocol_handle_param_set(cmd_code, data, 8);
@@ -859,7 +898,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
                 
                 char *json_string = cJSON_Print(response);
                 if (json_string) {
-                    ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                    ble_protocol_send_json_response(json_string);
                     free(json_string);
                 }
                 cJSON_Delete(response);
@@ -1177,7 +1216,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     
                     char *json_string = cJSON_Print(response);
                     if (json_string) {
-                        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                        ble_protocol_send_json_response(json_string);
                         APP_LOG_INFO("%s Collect time set failed response sent", TAG);
                         free(json_string);
                     }
@@ -1226,7 +1265,7 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
                     
                     char *json_string = cJSON_Print(response);
                     if (json_string) {
-                        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+                        ble_protocol_send_json_response(json_string);
                         APP_LOG_INFO("%s Update time set failed response sent", TAG);
                         free(json_string);
                     }
@@ -1238,23 +1277,23 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
         case PROTOCOL_CMD_THRESHOLD_SET:
             if (length >= 8)
             {
-                // 解析甲烷和温度阈值
-                float methane_thresh;
+                // 解析水位和温度阈值
+                float water_thresh;
                 int16_t temp_high, temp_low;
-                memcpy(&methane_thresh, &p_data[0], 4);
+                memcpy(&water_thresh, &p_data[0], 4);
                 memcpy(&temp_high, &p_data[4], 2);
                 memcpy(&temp_low, &p_data[6], 2);
                 
-                APP_LOG_DEBUG("%s Received thresholds: CH4=%.2f, TEMP_H=%d, TEMP_L=%d", 
-                             TAG, methane_thresh, temp_high, temp_low);
+                APP_LOG_DEBUG("%s Received thresholds: WATER=%.2f, TEMP_H=%d, TEMP_L=%d", 
+                             TAG, water_thresh, temp_high, temp_low);
                 
                 // 使用共享参数API设置阈值
-                if (shared_params_set_methane_threshold(methane_thresh) && 
+                if (shared_params_set_water_depth_threshold(water_thresh) && 
                     shared_params_set_temp_thresholds(temp_high, temp_low))
                 {
                     result = PROTOCOL_RESULT_SET_SUCCESS;
-                    APP_LOG_INFO("%s Set thresholds: CH4=%.2f%%vol, TEMP_H=%d°C, TEMP_L=%d°C", 
-                               TAG, methane_thresh, temp_high, temp_low);
+                    APP_LOG_INFO("%s Set thresholds: WATER=%.2f%%vol, TEMP_H=%d°C, TEMP_L=%d°C", 
+                               TAG, water_thresh, temp_high, temp_low);
                 }
                 else
                 {
@@ -1348,10 +1387,10 @@ void ble_protocol_handle_param_set(uint16_t cmd_code, const uint8_t *p_data, uin
     }
 }
 
-/** @brief %vol转%LEL (5%vol=100%LEL) */
-float ble_protocol_vol_to_lel(float vol_percent)
+/** @brief 压力变化(hPa)转换为水深(cm) */
+float ble_protocol_pressure_to_depth(float pressure_delta_hpa)
 {
-    return (vol_percent / METHANE_MAX_VOL_PERCENT) * METHANE_MAX_LEL_PERCENT;
+    if (pressure_delta_hpa <= 0.0f) return 0.0f; return pressure_delta_hpa / WATER_DEPTH_HPA_PER_CM;
 }
 
 /** @brief 获取传感器数据 */
@@ -1374,6 +1413,7 @@ void ble_protocol_send_json_response(const char *p_json_str)
 {
     if (!s_protocol_initialized || !p_json_str) return;
     uart_to_ble_buff_data_push((uint8_t*)p_json_str, strlen(p_json_str));
+    sys_delay_ms(500);  // 添加200ms延时，避免多条JSON粘连
 }
 
 /** @brief 调试打印(发送到4G模块) */
@@ -1411,7 +1451,7 @@ void ble_protocol_get_param_settings(param_settings_t *p_param_settings)
         // 从共享参数复制到旧格式结构体（兼容性）
         p_param_settings->device_collect_time = g_shared_params.device_collect_time;
         p_param_settings->device_updata_time = g_shared_params.device_updata_time;
-        p_param_settings->methane_threshold = g_shared_params.methane_threshold;
+        p_param_settings->water_depth_threshold_cm = g_shared_params.water_depth_threshold_cm;
         p_param_settings->temp_threshold = (g_shared_params.temp_high_threshold + g_shared_params.temp_low_threshold) / 2.0f;
         p_param_settings->water_threshold = g_shared_params.water_threshold;
         p_param_settings->location_lat = g_shared_params.location_lat;
@@ -1552,7 +1592,7 @@ void ble_protocol_send_success_response(const char* message)
     char *json_string = cJSON_Print(response);
     if (json_string) {
         // 通过BLE发送响应
-        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+        ble_protocol_send_json_response(json_string);
         APP_LOG_INFO("%s Success response sent: %s", TAG, message);
         free(json_string);
     }
@@ -1586,10 +1626,25 @@ void ble_protocol_send_error_response(const char* message)
     char *json_string = cJSON_Print(response);
     if (json_string) {
         // 通过BLE发送响应
-        ble_to_uart_buff_data_push((uint8_t*)json_string, strlen(json_string));
+        ble_protocol_send_json_response(json_string);
         APP_LOG_ERROR("%s Error response sent: %s", TAG, message);
         free(json_string);
     }
     
     cJSON_Delete(response);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

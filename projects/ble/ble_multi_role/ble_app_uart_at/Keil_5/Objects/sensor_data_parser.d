@@ -1,11 +1,13 @@
 .\objects\sensor_data_parser.o: ..\Src\user\sensor_data_parser.c
 .\objects\sensor_data_parser.o: ..\Src\user\sensor_data_parser.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
-.\objects\sensor_data_parser.o: ..\Src\config\custom_config.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\grx_sys.h
+.\objects\sensor_data_parser.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\sensor_data_parser.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\sensor_data_parser.o: ..\Src\user\wf5803f_driver.h
+.\objects\sensor_data_parser.o: ..\Src\platform\user_periph_setup.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
+.\objects\sensor_data_parser.o: ..\Src\config\custom_config.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\core_cm4.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_version.h
@@ -13,33 +15,10 @@
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\mpu_armv7.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\platform\soc\include\system_gr55xx.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_sys.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_att.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_error.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gatt.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gattc.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gatts.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_l2cap.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_prf.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_event.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
-.\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
+.\objects\sensor_data_parser.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -102,4 +81,26 @@
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_bod.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_bod.h
 .\objects\sensor_data_parser.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_delay.h
-.\objects\sensor_data_parser.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\grx_sys.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_sys.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_att.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_error.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gapc.h
+.\objects\sensor_data_parser.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gapm.h
+.\objects\sensor_data_parser.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gatt.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gattc.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_gatts.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_l2cap.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_prf.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_event.h
+.\objects\sensor_data_parser.o: ..\..\..\..\..\components\sdk\ble_sec.h
+.\objects\sensor_data_parser.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h

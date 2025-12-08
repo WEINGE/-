@@ -3,7 +3,7 @@
 .\objects\gus_c.o: ..\..\..\..\..\components\profiles\common\ble_prf_types.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\gr_includes.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
-.\objects\gus_c.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\gus_c.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\gus_c.o: ..\Src\config\custom_config.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_att.h
@@ -12,10 +12,10 @@
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
-.\objects\gus_c.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
-.\objects\gus_c.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\gus_c.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\gus_c.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\gus_c.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\gus_c.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -23,7 +23,7 @@
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\gus_c.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\gus_c.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
@@ -103,4 +103,4 @@
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\gus_c.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
 .\objects\gus_c.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
-.\objects\gus_c.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\gus_c.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h

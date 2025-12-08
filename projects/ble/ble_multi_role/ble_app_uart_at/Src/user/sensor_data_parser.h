@@ -3,7 +3,11 @@
  *
  * @file sensor_data_parser.h
  *
- * @brief Sensor data parser header file.
+ * @brief Sensor data parser header file - WF5803F Pressure Sensor
+ *        Replacing original methane sensor with barometer sensor for water level detection
+ *
+ * @note  Ported from test2.0 water level detection project
+ *        Adapted for test1.0.1 with low-power support
  *
  *****************************************************************************************
  */
@@ -15,56 +19,67 @@
 #include <stdbool.h>
 
 /*
- * DEFINES
+ * TYPE DEFINITIONS
  *****************************************************************************************
  */
-#define SENSOR_DATA_MAX_LEN         64
-#define SENSOR_DATA_FIELDS_COUNT    5
 
-/*
- * ENUMERATIONS
- *****************************************************************************************
+/**
+ * @brief Sensor data structure (pressure sensor for water level detection)
  */
-/**@brief Sensor data parse result. */
-typedef enum
-{
-    SENSOR_PARSE_SUCCESS = 0,
-    SENSOR_PARSE_ERROR_INVALID_FORMAT,
-    SENSOR_PARSE_ERROR_CHECKSUM,
-    SENSOR_PARSE_ERROR_LENGTH,
-} sensor_parse_result_t;
-
-/*
- * STRUCTURES
- *****************************************************************************************
- */
-/**@brief Sensor data structure. */
 typedef struct
 {
-    float concentration;        // 浓度 (%vol)
-    float temperature;         // 温度 (°C)
-    uint32_t reserved_field;   // 预留字段
-    uint8_t status_code;       // 状态码
-    uint8_t checksum;          // 校验码
-    bool data_valid;           // 数据有效标志
+    float pressure_hpa;         // 气压（hPa）- 用于水位检测
+    float temperature_c;        // 温度（°C）
+    float altitude_m;           // 海拔（米）
+    bool data_valid;            // 数据有效标志
 } sensor_data_t;
 
 /*
  * FUNCTION DECLARATIONS
  *****************************************************************************************
  */
+
 /**
  *****************************************************************************************
- * @brief Parse sensor data from received string.
+ * @brief Initialize sensor module (WF5803F pressure sensor).
  *
- * @param[in]  p_data: Pointer to received data string.
- * @param[in]  length: Length of received data.
- * @param[out] p_sensor_data: Pointer to parsed sensor data structure.
- *
- * @return Parse result.
+ * @return true if successful, false otherwise.
  *****************************************************************************************
  */
-sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, sensor_data_t *p_sensor_data);
+bool sensor_data_init(void);
+
+/**
+ *****************************************************************************************
+ * @brief Deinitialize sensor module (for low-power mode).
+ *****************************************************************************************
+ */
+void sensor_data_deinit(void);
+
+/**
+ *****************************************************************************************
+ * @brief Read sensor data with full power management (上电→读取→断电).
+ *
+ * @param[out] p_sensor_data: Pointer to sensor data structure.
+ *
+ * @return true if successful, false otherwise.
+ * 
+ * @note This function includes power control. Use for BLE queries or when sensor is off.
+ *****************************************************************************************
+ */
+bool sensor_data_read(sensor_data_t *p_sensor_data);
+
+/**
+ *****************************************************************************************
+ * @brief Read sensor data without power management (assumes sensor is already on).
+ *
+ * @param[out] p_sensor_data: Pointer to sensor data structure.
+ *
+ * @return true if successful, false otherwise.
+ * 
+ * @note This function assumes the sensor is already powered. Use for timed collections.
+ *****************************************************************************************
+ */
+bool sensor_data_read_no_power_mgmt(sensor_data_t *p_sensor_data);
 
 /**
  *****************************************************************************************
@@ -76,6 +91,21 @@ sensor_parse_result_t sensor_data_parse(const uint8_t *p_data, uint16_t length, 
  *****************************************************************************************
  */
 bool sensor_data_get_latest(sensor_data_t *p_sensor_data);
+
+/**
+ *****************************************************************************************
+ * @brief Get latest sensor data with optional force refresh (extended version).
+ *
+ * @param[out] p_sensor_data: Pointer to sensor data structure.
+ * @param[in] force_read: If true, actively read fresh data from sensor before returning.
+ *                        If false, return cached data.
+ *
+ * @return true if data is valid, false otherwise.
+ *
+ * @note Use this for on-demand scenarios where fresh data is critical (BLE/4G queries).
+ *****************************************************************************************
+ */
+bool sensor_data_get_latest_ex(sensor_data_t *p_sensor_data, bool force_read);
 
 /**
  *****************************************************************************************
@@ -95,9 +125,40 @@ bool sensor_data_is_available(void);
 
 /**
  *****************************************************************************************
- * @brief Test checksum calculation with known examples.
+ * @brief Test checksum calculation with known examples (preserved for compatibility).
  *****************************************************************************************
  */
 void sensor_data_test_checksum(void);
+
+/**
+ *****************************************************************************************
+ * @brief Detect flood/water level condition.
+ *
+ * @param[in] threshold_hpa: Pressure increase threshold for flood alarm (e.g., 10 hPa).
+ *
+ * @return true if flood detected, false otherwise.
+ *****************************************************************************************
+ */
+bool sensor_data_detect_flood(float threshold_hpa);
+
+/**
+ *****************************************************************************************
+ * @brief Set baseline pressure for flood detection.
+ *
+ * @param[in] baseline_hpa: Baseline pressure in hPa (if 0, use current reading).
+ *
+ * @return true if successful, false otherwise.
+ *****************************************************************************************
+ */
+bool sensor_data_set_baseline(float baseline_hpa);
+
+/**
+ *****************************************************************************************
+ * @brief Get current water depth estimate (cm).
+ *
+ * @return Water depth in cm (0 if no flood detected or baseline not set).
+ *****************************************************************************************
+ */
+float sensor_data_get_water_depth(void);
 
 #endif /* __SENSOR_DATA_PARSER_H__ */

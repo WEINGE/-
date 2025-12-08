@@ -1,4 +1,4 @@
-/**
+﻿/**
  *****************************************************************************************
  *
  * @file main.c
@@ -57,57 +57,43 @@
  */
 STACK_HEAP_INIT(heaps_table);
 
-/* 预留接口：时间同步完成后，在关闭UART1和4G电源之前进行DTU参数设置 */
+/* DTU参数设置：时间同步完成后配置MQTT服务器和主题 */
 void dtu_param_setup_after_time_sync(void)
 {
     char at_cmd[128];
-    extern shared_device_params_t g_shared_params;
-
-    // 使用共享参数中的服务器配置构造MQTT服务器设置超级指令
-    // 例如：adminAT+MQTTSV1=1.194.166.152,1883\r\n
-    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTSV1=%s,%d\r\n",
-             g_shared_params.server_address,
-             (int)g_shared_params.server_port);
-
-    uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
     
+    // 第一步：设置通道1工作模式为MQTT
+    uart1_tx_data_send((uint8_t*)"adminAT+WKMOD1=MQTT\r\n", 21);
     delay_ms(500);
-    {
-        const char *client_id = "${IMEI}";
-        snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTCONN1=%s,%s,%s,60,1\r\n",
-                 client_id,
-                 g_shared_params.username,
-                 g_shared_params.password);
-        
-        uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
-        delay_ms(500);
-    }
-
-    // 配置发布主题，用于设备上报数据
-    // adminAT+MQTTPUB[CH]=<topic>,<qos>,<retain>
-    {
-        const char *report_topic = "/methane_sensor/test/report";
-        snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTPUB1=%s,0,0\r\n", report_topic);
-        uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
-        delay_ms(500);
-    }
-
-    // 配置订阅主题，用于接收平台下发指令
-    // adminAT+MQTTSUB[CH]=<topic>,<qos>
-    {
-        const char *command_topic = "/methane_sensor/test/command";
-        snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTSUB1=%s,0\r\n", command_topic);
-        uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
-        delay_ms(500);
-    }
-    {
-        const char *save_cmd = "adminAT+S\r\n";
-        uart1_tx_data_send((uint8_t*)save_cmd, (uint16_t)strlen(save_cmd));
-        delay_ms(2000);
-    }
+    
+    // 配置MQTT服务器
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTSV1=%s,%d\r\n",
+             g_shared_params.server_address, (int)g_shared_params.server_port);
+    uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
+    delay_ms(500);
+    
+    // 配置MQTT连接参数
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTCONN1=${IMEI},%s,%s,60,1\r\n",
+             g_shared_params.username, g_shared_params.password);
+    uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
+    delay_ms(500);
+    
+    // 配置发布主题
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTPUB1=%s,0,0\r\n", g_shared_params.pub_topic);
+    uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
+    delay_ms(500);
+    
+    // 配置订阅主题
+    snprintf(at_cmd, sizeof(at_cmd), "adminAT+MQTTSUB1=%s,0\r\n", g_shared_params.sub_topic);
+    uart1_tx_data_send((uint8_t*)at_cmd, (uint16_t)strlen(at_cmd));
+    delay_ms(500);
+    
+    // 保存配置
+    uart1_tx_data_send((uint8_t*)"adminAT+S\r\n", 11);
+    delay_ms(2000);
 }
 
-/* 封装DTU时间同步流程（上电/开串口/同步RTC/参数设置/关串口/断电） */
+/* DTU时间同步流程（上电/开串口/同步RTC/参数设置/关串口/断电）*/
 static void dtu_time_sync_with_power_mgmt(void)
 {
     // 首先初始化RTC芯片
@@ -116,60 +102,76 @@ static void dtu_time_sync_with_power_mgmt(void)
     } else {
         APP_LOG_INFO("RTC chip initialized successfully");
     }
-
-    // 启动阶段：为时间同步临时上电4G并初始化UART1
-    gpio_p_m_en_set(true);
+    
+    // 上电4G模块并打开串口（参考备份版本）
+    gpio_p_m_en_set(true);  // 开启外设电源域
     gpio_4g_power_en_set(true);
     fourg_uart_open();
-
-    // 等待DTU完全初始化完成
-    delay_ms(3000);
+    
+    // 等待DTU完全初始化完成（4G模块需要10-15秒识别SIM卡和注册网络）
+    delay_ms(10000);
     APP_LOG_INFO("Starting time synchronization with DTU...");
-
-    // 多次尝试时间同步，确保成功
+    
+    // 多次尝试时间同步
     bool time_sync_success = false;
     for (int retry = 0; retry < 3 && !time_sync_success; retry++) {
         APP_LOG_INFO("Time sync attempt %d/3", retry + 1);
-
-        // 向DTU发送获取网络时间的超级指令
-        const char* time_sync_cmd = "adminAT+CCLK?\r\n";
-        uart1_tx_data_send((uint8_t*)time_sync_cmd, strlen(time_sync_cmd));
-        APP_LOG_INFO("Sent time sync command to DTU: %s", time_sync_cmd);
-
-        // 等待DTU响应并处理时间同步（响应将在UART接收中断中处理）
-        delay_ms(10000);  // 增加等待时间
-
+        
+        // 发送时间查询超级指令（DTU返回格式: +CCLK:2022/06/19,20:05:19）
+        const char* time_cmd = "adminAT+CCLK?\r\n";
+        uart1_tx_data_send((uint8_t*)time_cmd, strlen(time_cmd));
+        delay_ms(10000);
+        
         // 检查时间同步是否成功
         char rtc_time_check[RTC_TIME_STRING_LEN];
         if (bm8563_get_time_string(rtc_time_check)) {
-            // 检查是否不再是默认的2000年时间
             if (strncmp(rtc_time_check, "2000", 4) != 0) {
                 time_sync_success = true;
-                APP_LOG_INFO("Time synchronization successful! RTC time: %s", rtc_time_check);
-                break;
-            } else {
-                APP_LOG_WARNING("Time sync attempt %d failed, RTC still shows default time: %s", retry + 1, rtc_time_check);
+                APP_LOG_INFO("Time sync successful! RTC: %s", rtc_time_check);
             }
-        } else {
-            APP_LOG_WARNING("Time sync attempt %d failed, cannot read RTC time", retry + 1);
         }
-
-        if (retry < 2) {
-            delay_ms(2000);  // 重试前等待
-        }
+        if (!time_sync_success && retry < 2) delay_ms(2000);
     }
-
+    
     if (!time_sync_success) {
-        APP_LOG_ERROR("Time synchronization failed after 3 attempts, continuing with default time");
+        APP_LOG_ERROR("Time sync failed after 3 attempts");
     }
-
-    // 在关闭UART1和4G电源之前预留接口进行DTU参数设置
+    
+    // 先获取DTU信息（在参数设置之前，避免adminAT+S导致DTU重启影响查询）
+    APP_LOG_INFO("Querying DTU info before param setup...");
+    
+    // 获取 IMEI 并更新蓝牙名称
+    const char* imei_cmd = "adminAT+IMEI?\r\n";
+    uart1_tx_data_send((uint8_t*)imei_cmd, strlen(imei_cmd));
+    delay_ms(1000);
+    
+    // 获取 ICCID（SIM卡ID）
+    const char* iccid_cmd = "adminAT+ICCID?\r\n";
+    uart1_tx_data_send((uint8_t*)iccid_cmd, strlen(iccid_cmd));
+    delay_ms(1000);
+    
+    // 获取 CSQ 信号强度（网络注册后才能获取有效信号）
+    const char* csq_cmd = "adminAT+CSQ\r\n";
+    uart1_tx_data_send((uint8_t*)csq_cmd, strlen(csq_cmd));
+    delay_ms(500);
+    
+    // 获取 GPS 信息
+    const char* gps_cmd = "adminAT+GPS?\r\n";
+    uart1_tx_data_send((uint8_t*)gps_cmd, strlen(gps_cmd));
+    delay_ms(1000);
+    
+    extern void update_ble_name_with_imei(void);
+    update_ble_name_with_imei();
+    
+    APP_LOG_INFO("DTU info cached: IMEI, CSQ, ICCID, GPS");
+    
+    // 设置DTU参数（在获取信息之后，避免adminAT+S重启影响查询）
     dtu_param_setup_after_time_sync();
-
-    // 时间同步完成后，关闭4G模块并反初始化UART1
-    gpio_4g_power_en_set(false);
+    
+    // 关闭串口和4G模块
     fourg_uart_close();
-    gpio_p_m_en_set(false);
+    gpio_4g_power_en_set(false);
+    APP_LOG_INFO("DTU powered off after time sync");
 }
 
 /**
@@ -185,11 +187,17 @@ static void dtu_time_sync_with_power_mgmt(void)
  */
 int main(void)
 {
-    // 第一步：初始化用户外设
-			// 配置GPIO引脚、UART通信接口、定时器、中断等硬件资源
+    // 第一步：初始化用户外设和共享参数
     app_periph_init();
     if (!shared_params_init()) {
-        APP_LOG_ERROR("Failed to initialize shared parameters");
+        APP_LOG_ERROR("Failed to initialize shared params");
+    }
+    
+    // 初始化看门狗（30秒超时防止程序卡死）
+    if (watchdog_init()) {
+        APP_LOG_INFO("Watchdog initialized successfully");
+    } else {
+        APP_LOG_WARNING("Watchdog init failed, running without watchdog");
     }
 
     // 第二步：初始化BLE协议栈
@@ -206,10 +214,22 @@ int main(void)
     // 第3.5步：时间同步 - 向DTU发送超级指令获取网络时间并同步到RTC
     dtu_time_sync_with_power_mgmt();
 
-    // 第四步：启动时运行传感器数据校验测试
-    // 验证传感器数据的完整性和校验和算法的正确性
-    APP_LOG_INFO("Running sensor checksum validation test...");
-    sensor_data_test_checksum();
+    // 第四步：初始化WF5803F气压传感器（替换原UART0甲烷传感器）
+    APP_LOG_INFO("Initializing WF5803F pressure sensor...");
+    if (sensor_data_init()) {
+        APP_LOG_INFO("WF5803F sensor initialized successfully");
+        
+        // 读取并显示初始数据
+        sensor_data_t sensor_data;
+        if (sensor_data_read(&sensor_data) && sensor_data.data_valid) {
+            APP_LOG_INFO("Initial sensor data: P=%.2f hPa, Alt=%.1f m, T=%.1f°C",
+                        sensor_data.pressure_hpa, 
+                        sensor_data.altitude_m,
+                        sensor_data.temperature_c);
+        }
+    } else {
+        APP_LOG_ERROR("Failed to initialize WF5803F sensor");
+    }
 
     // 第五步：初始化电池电压读取模块
     APP_LOG_INFO("Initializing battery voltage reader...");
@@ -249,12 +269,12 @@ int main(void)
     {
         // 任务1：刷新应用日志缓冲区
         // 将缓存的日志信息输出到调试接口，避免日志丢失
-   //     app_log_flush();
+        app_log_flush();
         
         // 任务2：AT命令调度处理
         // 检查UART接收缓冲区，解析并执行AT命令
         // 支持的AT命令包括：连接控制、参数设置、状态查询等
-    //    at_cmd_schedule();
+        at_cmd_schedule();
         
         // 任务3：传输调度管理
         // 管理BLE数据传输的时序，处理发送队列和重传机制
@@ -263,11 +283,14 @@ int main(void)
         
         // 任务4：UART轮询任务
         // 处理UART数据的回显功能，实现串口通信的双向确认
-    //    uart_polling_task(); // Polling UART for echo
+        uart_polling_task(); // Polling UART for echo
         
         // 任务5：电源管理调度
         // 根据系统状态进入相应的低功耗模式，延长电池续航
         // 在无活动时自动进入睡眠模式，有事件时快速唤醒
         pwr_mgmt_schedule();
+        
+        // 任务6：喂狗（刷新看门狗计数器，防止系统复位）
+        watchdog_feed();
     }
 }

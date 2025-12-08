@@ -1,4 +1,4 @@
-#ifndef SHARED_PARAMS_H
+﻿#ifndef SHARED_PARAMS_H
 #define SHARED_PARAMS_H
 
 #include <stdint.h>
@@ -14,10 +14,10 @@ typedef struct {
     uint16_t device_updata_time;        /**< 数据上报间隔，单位分钟 (1-1440) */
     
     // 阈值设置 - 统一数据类型
-    float    methane_threshold;         /**< 甲烷报警阈值，单位%vol */
+    float    water_depth_threshold_cm;  /**< 水深报警阈值，单位cm */
     int16_t  temp_high_threshold;       /**< 高温报警阈值，单位℃ */
     int16_t  temp_low_threshold;        /**< 低温报警阈值，单位℃ */
-    uint16_t water_threshold;           /**< 水浸报警阈值 */
+    uint16_t water_threshold;           /**< 水浸报警阈值 (保留用于兼容) */
     
     // 位置信息
     float    location_lat;              /**< 纬度 */
@@ -66,9 +66,9 @@ bool shared_params_validate(void);
 // 参数设置函数 - 带同步通知
 bool shared_params_set_collect_time(uint16_t time_minutes);
 bool shared_params_set_update_time(uint16_t time_minutes);
-bool shared_params_set_methane_threshold(float threshold);
+bool shared_params_set_water_depth_threshold(float threshold_cm);
 bool shared_params_set_temp_thresholds(int16_t high, int16_t low);
-bool shared_params_set_water_threshold(uint16_t threshold);
+bool shared_params_set_water_threshold(uint16_t threshold);  // 保留兼容
 bool shared_params_set_location(float lat, float lon);
 bool shared_params_set_install_location(float lat, float lon);
 
@@ -81,10 +81,10 @@ void shared_params_set_device_gps_status(uint8_t status);
 // 参数获取函数
 uint16_t shared_params_get_collect_time(void);
 uint16_t shared_params_get_update_time(void);
-float shared_params_get_methane_threshold(void);
+float shared_params_get_water_depth_threshold(void);
 int16_t shared_params_get_temp_high_threshold(void);
 int16_t shared_params_get_temp_low_threshold(void);
-uint16_t shared_params_get_water_threshold(void);
+uint16_t shared_params_get_water_threshold(void);  // 保留兼容
 
 // 同步回调函数类型
 typedef void (*param_change_callback_t)(uint16_t param_type, const void* param_data);
@@ -93,13 +93,13 @@ typedef void (*param_change_callback_t)(uint16_t param_type, const void* param_d
 void shared_params_register_callback(param_change_callback_t callback);
 
 // 参数类型定义
-#define PARAM_TYPE_COLLECT_TIME     0x0001
-#define PARAM_TYPE_UPDATE_TIME      0x0002
-#define PARAM_TYPE_METHANE_THRESH   0x0003
-#define PARAM_TYPE_TEMP_THRESH      0x0004
-#define PARAM_TYPE_WATER_THRESH     0x0005
-#define PARAM_TYPE_LOCATION         0x0006
-#define PARAM_TYPE_INSTALL_LOC      0x0007
+#define PARAM_TYPE_COLLECT_TIME         0x0001
+#define PARAM_TYPE_UPDATE_TIME          0x0002
+#define PARAM_TYPE_WATER_DEPTH_THRESH   0x0003
+#define PARAM_TYPE_TEMP_THRESH          0x0004
+#define PARAM_TYPE_WATER_THRESH         0x0005
+#define PARAM_TYPE_LOCATION             0x0006
+#define PARAM_TYPE_INSTALL_LOC          0x0007
 
 #define PARAM_TYPE_SENSOR_STATUS    0x0101
 #define PARAM_TYPE_DEVICE_WATER     0x0102
@@ -109,6 +109,7 @@ void shared_params_register_callback(param_change_callback_t callback);
 // 参数版本号定义
 // 每次修改 shared_device_params_t 结构体时，请递增此版本号
 // 这样可以确保Flash中的旧数据不会被错误加载
-#define PARAMS_VERSION              0x00010006 // v1.2 - 添加device_water默认值为1
+#define PARAMS_VERSION              0x0001000B // v1.5 - 强制重置为默认参数(上传1440分钟)
 
 #endif // SHARED_PARAMS_H
+

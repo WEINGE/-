@@ -6,7 +6,7 @@
 .\objects\user_periph_setup.o: ..\Src\config\custom_config.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\core_cm4.h
-.\objects\user_periph_setup.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\user_periph_setup.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_version.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
@@ -15,7 +15,7 @@
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
-.\objects\user_periph_setup.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\user_periph_setup.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -77,7 +77,7 @@
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_sleep_timer.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_bod.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_bod.h
-.\objects\user_periph_setup.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\user_periph_setup.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_delay.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\at_cmd\at_cmd.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\at_cmd\at_cmd_utils.h
@@ -92,9 +92,9 @@
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\user_periph_setup.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\user_periph_setup.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\user_periph_setup.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\user_periph_setup.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -102,7 +102,7 @@
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\user_periph_setup.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\user_periph_setup.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\user_periph_setup.o: ..\Src\user\transport_scheduler.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\platform\boards\board_SK.h
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\app_key\app_key.h
@@ -122,5 +122,7 @@
 .\objects\user_periph_setup.o: ..\..\..\..\..\components\libraries\app_assert\app_assert.h
 .\objects\user_periph_setup.o: ..\Src\user\sensor_data_parser.h
 .\objects\user_periph_setup.o: ..\Src\user\ble_protocol.h
+.\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\app_aon_wdt.h
+.\objects\user_periph_setup.o: ..\..\..\..\..\drivers\inc\app_pwr_mgmt.h
 .\objects\user_periph_setup.o: ..\Src\user\at_cmd_handler.h
 .\objects\user_periph_setup.o: ..\Src\user\bm8563_rtc.h

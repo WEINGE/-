@@ -6,7 +6,7 @@
 .\objects\app_dma.o: ..\Src\config\custom_config.h
 .\objects\app_dma.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
 .\objects\app_dma.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\core_cm4.h
-.\objects\app_dma.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\app_dma.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\app_dma.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_version.h
 .\objects\app_dma.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\app_dma.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
@@ -15,7 +15,7 @@
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
-.\objects\app_dma.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\app_dma.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -77,7 +77,7 @@
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_sleep_timer.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_bod.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_bod.h
-.\objects\app_dma.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\app_dma.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_delay.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
 .\objects\app_dma.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
@@ -93,9 +93,9 @@
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\app_dma.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\app_dma.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\app_dma.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\app_dma.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -103,5 +103,5 @@
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\app_dma.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\app_dma.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\app_dma.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\app_dma.o: ..\..\..\..\..\platform\include\gr_soc.h

@@ -1,7 +1,7 @@
 .\objects\ring_buffer.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.c
 .\objects\ring_buffer.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
-.\objects\ring_buffer.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\ring_buffer.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\ring_buffer.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\ring_buffer.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h
 .\objects\ring_buffer.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
@@ -16,7 +16,7 @@
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
-.\objects\ring_buffer.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\ring_buffer.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -80,4 +80,4 @@
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_bod.h
 .\objects\ring_buffer.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_delay.h
 .\objects\ring_buffer.o: ..\..\..\..\..\components\libraries\utility\utility.h
-.\objects\ring_buffer.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\ring_buffer.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h

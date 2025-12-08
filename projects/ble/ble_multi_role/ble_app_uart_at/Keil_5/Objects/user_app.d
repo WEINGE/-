@@ -2,7 +2,7 @@
 .\objects\user_app.o: ..\Src\user\user_app.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\gr_includes.h
 .\objects\user_app.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
-.\objects\user_app.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\user_app.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\user_app.o: ..\Src\config\custom_config.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_att.h
@@ -11,10 +11,10 @@
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\user_app.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\user_app.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
-.\objects\user_app.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
-.\objects\user_app.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\user_app.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\user_app.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\user_app.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\user_app.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -22,7 +22,7 @@
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\user_app.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\user_app.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\user_app.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\user_app.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
 .\objects\user_app.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
@@ -102,7 +102,7 @@
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\user_app.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
 .\objects\user_app.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
-.\objects\user_app.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\user_app.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\user_app.o: ..\..\..\..\..\components\profiles\gus\gus.h
 .\objects\user_app.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h
 .\objects\user_app.o: ..\..\..\..\..\components\profiles\common\ble_prf_types.h

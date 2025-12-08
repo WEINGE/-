@@ -1,7 +1,7 @@
 .\objects\battery_voltage_reader.o: ..\Src\user\battery_voltage_reader.c
 .\objects\battery_voltage_reader.o: ..\Src\user\battery_voltage_reader.h
-.\objects\battery_voltage_reader.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\battery_voltage_reader.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\battery_voltage_reader.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\battery_voltage_reader.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\app_io.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
@@ -24,7 +24,7 @@
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
-.\objects\battery_voltage_reader.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\battery_voltage_reader.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -101,9 +101,9 @@
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\battery_voltage_reader.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\battery_voltage_reader.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\battery_voltage_reader.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\battery_voltage_reader.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -111,6 +111,6 @@
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\battery_voltage_reader.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\battery_voltage_reader.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\app_adc.h
 .\objects\battery_voltage_reader.o: ..\..\..\..\..\drivers\inc\app_adc_dma.h

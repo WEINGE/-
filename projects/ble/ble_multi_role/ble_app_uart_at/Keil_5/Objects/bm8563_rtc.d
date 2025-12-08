@@ -1,7 +1,7 @@
 .\objects\bm8563_rtc.o: ..\Src\user\bm8563_rtc.c
 .\objects\bm8563_rtc.o: ..\Src\user\bm8563_rtc.h
-.\objects\bm8563_rtc.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\bm8563_rtc.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\bm8563_rtc.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\bm8563_rtc.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\drivers\inc\app_io.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\drivers\inc\app_drv_error.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\drivers\inc\app_drv_config.h
@@ -20,16 +20,16 @@
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
-.\objects\bm8563_rtc.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\bm8563_rtc.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\bm8563_rtc.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\bm8563_rtc.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\bm8563_rtc.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\bm8563_rtc.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -37,7 +37,7 @@
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\bm8563_rtc.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\bm8563_rtc.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h
 .\objects\bm8563_rtc.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h

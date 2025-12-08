@@ -1,6 +1,6 @@
 .\objects\uart0_init.o: ..\Src\user\uart0_init.c
-.\objects\uart0_init.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
-.\objects\uart0_init.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\uart0_init.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\uart0_init.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\uart0_init.o: ..\Src\user\uart0_init.h
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\app_uart.h
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
@@ -9,7 +9,7 @@
 .\objects\uart0_init.o: ..\Src\config\custom_config.h
 .\objects\uart0_init.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
 .\objects\uart0_init.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\core_cm4.h
-.\objects\uart0_init.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\uart0_init.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\uart0_init.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_version.h
 .\objects\uart0_init.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\uart0_init.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
@@ -79,7 +79,7 @@
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_sleep_timer.h
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_bod.h
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_bod.h
-.\objects\uart0_init.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\uart0_init.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_delay.h
 .\objects\uart0_init.o: ..\..\..\..\..\components\libraries\ring_buffer\ring_buffer.h
 .\objects\uart0_init.o: ..\..\..\..\..\drivers\inc\app_io.h

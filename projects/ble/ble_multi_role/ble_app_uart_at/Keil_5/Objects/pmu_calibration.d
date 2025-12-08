@@ -1,9 +1,9 @@
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\libraries\pmu_calibration\pmu_calibration.c
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\libraries\pmu_calibration\pmu_calibration.h
-.\objects\pmu_calibration.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
-.\objects\pmu_calibration.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\pmu_calibration.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\pmu_calibration.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\platform_sdk.h
-.\objects\pmu_calibration.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\pmu_calibration.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\platform\soc\include\system_gr55xx.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
@@ -24,9 +24,9 @@
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\pmu_calibration.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\pmu_calibration.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\pmu_calibration.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\pmu_calibration.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -34,6 +34,6 @@
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\pmu_calibration.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\pmu_calibration.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
 .\objects\pmu_calibration.o: ..\..\..\..\..\components\sdk\grx_sys.h

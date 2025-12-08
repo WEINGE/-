@@ -1,7 +1,7 @@
 .\objects\app_error.o: ..\..\..\..\..\components\libraries\app_error\app_error.c
 .\objects\app_error.o: ..\..\..\..\..\components\libraries\app_error\app_error.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_error.h
-.\objects\app_error.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\app_error.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\app_error.o: ..\..\..\..\..\components\libraries\app_error\app_error_cfg.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\grx_sys.h
 .\objects\app_error.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
@@ -16,17 +16,17 @@
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\gr55xx_sys.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
-.\objects\app_error.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\app_error.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
-.\objects\app_error.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\app_error.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\app_error.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
 .\objects\app_error.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\app_error.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\app_error.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\app_error.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\app_error.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -34,7 +34,7 @@
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\app_error.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\app_error.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\app_error.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\app_error.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\app_error.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
 .\objects\app_error.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h

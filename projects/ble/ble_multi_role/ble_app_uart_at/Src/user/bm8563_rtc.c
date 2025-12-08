@@ -420,26 +420,27 @@ bool bm8563_set_time_from_network(const char *network_time)
     
     APP_LOG_INFO("%s Parsing network time: %s", TAG, network_time);
     
+    // 跳过前导空格和双引号（DTU返回格式: +CCLK: "25/12/03,16:30:00+32"）
+    const char *time_str = network_time;
+    while (*time_str == ' ' || *time_str == '"') {
+        time_str++;
+    }
+    
+    APP_LOG_DEBUG("%s Time string after trim: %s", TAG, time_str);
+    
     rtc_time_t time = {0};
     int year, month, day, hour, minute, second;
     
-    // 尝试解析完整年份格式: "2024/11/14,16:42:35"
-    if (sscanf(network_time, "%d/%d/%d,%d:%d:%d", 
+    // 尝试解析完整年份格式: "2024/11/14,16:42:35" 或带时区 "25/12/03,16:30:00+32"
+    if (sscanf(time_str, "%d/%d/%d,%d:%d:%d", 
                &year, &month, &day, &hour, &minute, &second) == 6) {
         // 完整年份格式
         if (year < 100) {
             year += 2000;  // 如果是两位数年份，加上2000
         }
     }
-    // 尝试解析两位数年份格式: "24/11/14,16:42:35"
-    else if (sscanf(network_time, "%d/%d/%d,%d:%d:%d", 
-                    &year, &month, &day, &hour, &minute, &second) == 6) {
-        if (year < 100) {
-            year += 2000;
-        }
-    }
     // 尝试不带秒的格式: "2024/11/14,16:42"
-    else if (sscanf(network_time, "%d/%d/%d,%d:%d", 
+    else if (sscanf(time_str, "%d/%d/%d,%d:%d", 
                     &year, &month, &day, &hour, &minute) == 5) {
         second = 0;  // 秒数默认为0
         if (year < 100) {

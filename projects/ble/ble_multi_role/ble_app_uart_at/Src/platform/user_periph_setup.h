@@ -122,5 +122,9 @@ void fourg_uart_close(void);
  * @return 发送结果
  */
 
+// 看门狗函数
+bool watchdog_init(void);         // 初始化看门狗（30秒超时）
+void watchdog_feed(void);         // 喂狗（必须在超时前调用）
+bool watchdog_is_initialized(void);
 
 #endif

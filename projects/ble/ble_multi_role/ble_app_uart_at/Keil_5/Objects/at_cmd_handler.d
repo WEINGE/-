@@ -2,8 +2,8 @@
 .\objects\at_cmd_handler.o: ..\Src\user\at_cmd_handler.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\libraries\at_cmd\at_cmd_utils.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\libraries\at_cmd\at_cmd.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
@@ -18,7 +18,7 @@
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_conf.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_cortex.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_def.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_adc.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_ll_adc.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal_dma.h
@@ -92,9 +92,9 @@
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -102,7 +102,7 @@
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\at_cmd_handler.o: ..\Src\platform\user_periph_setup.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\sdk\gr_includes.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
@@ -113,7 +113,7 @@
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\profiles\gus_c\gus_c.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\profiles\common\ble_prf_types.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
-.\objects\at_cmd_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\at_cmd_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdlib.h
 .\objects\at_cmd_handler.o: ..\Src\user\uart0_init.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\app_uart.h
 .\objects\at_cmd_handler.o: ..\..\..\..\..\drivers\inc\app_io.h

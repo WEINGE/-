@@ -1,8 +1,8 @@
 .\objects\ble_4g_param_handler.o: ..\Src\user\ble_4g_param_handler.c
 .\objects\ble_4g_param_handler.o: ..\Src\user\ble_4g_param_handler.h
 .\objects\ble_4g_param_handler.o: ..\Src\user\ble_4g_protocol.h
-.\objects\ble_4g_param_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\ble_4g_param_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\ble_4g_param_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\ble_4g_param_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\gr_includes.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\soc\include\ble_cfg.h
 .\objects\ble_4g_param_handler.o: ..\Src\config\custom_config.h
@@ -13,9 +13,9 @@
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
-.\objects\ble_4g_param_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\ble_4g_param_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\ble_4g_param_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\ble_4g_param_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -23,7 +23,7 @@
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\ble_4g_param_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\ble_4g_param_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\soc\include\gr55xx.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
@@ -103,7 +103,7 @@
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
-.\objects\ble_4g_param_handler.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\ble_4g_param_handler.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\ble_4g_param_handler.o: ..\Src\user\sensor_data_parser.h
 .\objects\ble_4g_param_handler.o: ..\..\..\..\..\components\libraries\app_timer\app_timer.h
 .\objects\ble_4g_param_handler.o: ..\Src\platform\cJSON.h

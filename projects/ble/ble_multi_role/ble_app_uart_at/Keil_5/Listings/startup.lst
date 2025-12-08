@@ -170,11 +170,13 @@ ARM Macro Assembler    Page 3
   160 00000008                 END
               00000000 
               00000000 
-Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp.sp --apcs=
-interwork --depend=.\objects\startup.d -o.\objects\startup.o -ID:\kile5\ARM\CMS
-IS\5.9.0\Device\ARM\ARMCM4\Include --predefine="__MICROLIB SETA 1" --predefine=
-"__UVISION_VERSION SETA 537" --predefine="ARMCM4_FP SETA 1" --list=.\listings\s
-tartup.lst ..\..\..\..\..\platform\arch\arm\cortex-m\keil\Startup.S
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\startup.d -o.\objects\startup.o -I.\RTE\_GRxx_Soc -I"
+E:\Graduation project\keil5\ARM\PARK\ARM\CMSIS\5.5.1\Device\ARM\ARMCM4\Include"
+ -I"E:\Graduation project\keil5\ARM\CMSIS\Include" --predefine="__MICROLIB SETA
+ 1" --predefine="__UVISION_VERSION SETA 527" --predefine="ARMCM4_FP SETA 1" --l
+ist=.\listings\startup.lst ..\..\..\..\..\platform\arch\arm\cortex-m\keil\Start
+up.S
 
 
 

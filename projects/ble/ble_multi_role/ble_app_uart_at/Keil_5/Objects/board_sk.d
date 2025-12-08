@@ -4,7 +4,7 @@
 .\objects\board_sk.o: ..\Src\config\custom_config.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\soc\include\gr551xx.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\core_cm4.h
-.\objects\board_sk.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\board_sk.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_version.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
@@ -13,18 +13,18 @@
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\gr55xx_sys.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\gr55xx_nvds.h
-.\objects\board_sk.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\board_sk.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\gr55xx_pwr.h
-.\objects\board_sk.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\board_sk.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\include\gr5xx_fpb.h
 .\objects\board_sk.o: ..\..\..\..\..\platform\soc\include\grx_soc_reg.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_error.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_gapc.h
-.\objects\board_sk.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\board_sk.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\board_sk.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\board_sk.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -32,7 +32,7 @@
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\board_sk.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\board_sk.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\board_sk.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\board_sk.o: ..\..\..\..\..\components\libraries\app_log\app_log.h
 .\objects\board_sk.o: ..\..\..\..\..\drivers\inc\hal\grx_hal.h
 .\objects\board_sk.o: ..\..\..\..\..\drivers\inc\hal\gr55xx_hal.h

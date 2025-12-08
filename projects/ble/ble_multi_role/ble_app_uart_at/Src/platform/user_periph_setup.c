@@ -53,6 +53,8 @@
 #include "app_assert.h"
 #include "sensor_data_parser.h"
 #include "ble_protocol.h"
+#include "app_aon_wdt.h"  // 看门狗
+#include "app_pwr_mgmt.h" // 电源管理回调（用于低功耗看门狗处理）
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -69,6 +71,12 @@
 // UART1 for 4G module
 #define UART1_TX_BUFFER_SIZE     0x1000
 #define UART1_RX_BUFFER_SIZE     512
+
+// 看门狗配置（32kHz时钟）
+// counter = 32768 * 超时秒数，这里设置120秒超时
+#define WDT_TIMEOUT_SECONDS      120
+#define WDT_COUNTER_VALUE        (32768 * WDT_TIMEOUT_SECONDS)
+#define WDT_ALARM_VALUE          20  // 复位前20个时钟周期触发中断
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -98,8 +106,9 @@ static uint16_t s_uart1_rx_len = 0;
 static bool s_sensor_uart_opened = false;
 static bool s_fourg_uart_opened  = false;
 
-
-
+// 看门狗参数
+static app_aon_wdt_params_t s_wdt_params;
+static bool s_wdt_initialized = false;
 
 
 /*
@@ -107,6 +116,13 @@ static bool s_fourg_uart_opened  = false;
  *****************************************************************************************
  */
 
+/**
+ * @brief 看门狗超时回调（即将复位前触发）
+ */
+static void wdt_timeout_callback(void)
+{
+    APP_LOG_ERROR("!!! WATCHDOG TIMEOUT - System will reset !!!");
+}
 
 /*
  * GLOBAL FUNCTION DEFINITIONS
@@ -136,62 +152,30 @@ void app_uart_evt_handler(app_uart_evt_t *p_evt)
                     s_uart_rx_line[s_uart_rx_len - 2] == 0x0D &&
                     s_uart_rx_line[s_uart_rx_len - 1] == 0x0A)
                 {
-                    // 完整一帧到达，判断是否为传感器固定长度数据
-                    if (s_uart_rx_len == 29)
+                    // 完整一帧到达，处理AT指令或回显
+                    // 注：水位传感器使用I2C接口，不再通过UART接收传感器数据
+                    bool is_at_cmd = false;
+                    if (s_uart_rx_len >= 3 && strncmp((char*)s_uart_rx_line, "AT:", 3) == 0)
                     {
-                        sensor_data_t sensor_data;
-                        sensor_parse_result_t parse_result = sensor_data_parse(s_uart_rx_line, s_uart_rx_len, &sensor_data);
-                        if (parse_result == SENSOR_PARSE_SUCCESS)
+                        is_at_cmd = true;
+                    }
+                    else if (s_uart_rx_len >= 8 && strncmp((char*)s_uart_rx_line, "adminAT+", 8) == 0)
+                    {
+                        is_at_cmd = true;
+                    }
+
+                    if (is_at_cmd)
+                    {
+                        // 进入指令模式/+++等预处理；返回false表示需继续解析
+                        if (!uart_at_preprocess_command(AT_CMD_SRC_UART, s_uart_rx_line, s_uart_rx_len))
                         {
-                            char resp[128];
-                            int n = snprintf(resp, sizeof(resp),
-                                             "Concentration: %.2f %%vol\r\nTemperature: %.1f C\r\nReserved: %lu\r\nStatus: %02X\r\nChecksum: %02X\r\n",
-                                             sensor_data.concentration,
-                                             sensor_data.temperature,
-                                             (unsigned long)sensor_data.reserved_field,
-                                             sensor_data.status_code,
-                                             sensor_data.checksum);
-                            if (n > 0)
-                            {
-                                uart_tx_data_send((uint8_t *)resp, (uint16_t)n);
-                            }
-                        }
-                        else
-                        {
-                            char err[64];
-                            int n = snprintf(err, sizeof(err), "Parse failed, error: %d\r\n", parse_result);
-                            if (n > 0)
-                            {
-                                uart_tx_data_send((uint8_t *)err, (uint16_t)n);
-                            }
+                            at_cmd_parse(AT_CMD_SRC_UART, s_uart_rx_line, s_uart_rx_len);
                         }
                     }
                     else
                     {
-                        // 非固定长度数据：优先检测并处理AT指令，其次原样回显
-                        bool is_at_cmd = false;
-                        if (s_uart_rx_len >= 3 && strncmp((char*)s_uart_rx_line, "AT:", 3) == 0)
-                        {
-                            is_at_cmd = true;
-                        }
-                        else if (s_uart_rx_len >= 8 && strncmp((char*)s_uart_rx_line, "adminAT+", 8) == 0)
-                        {
-                            is_at_cmd = true;
-                        }
-
-                        if (is_at_cmd)
-                        {
-                            // 进入指令模式/+++等预处理；返回false表示需继续解析
-                            if (!uart_at_preprocess_command(AT_CMD_SRC_UART, s_uart_rx_line, s_uart_rx_len))
-                            {
-                                at_cmd_parse(AT_CMD_SRC_UART, s_uart_rx_line, s_uart_rx_len);
-                            }
-                        }
-                        else
-                        {
-                            // 原样回显给上位机
-                            uart_tx_data_send(s_uart_rx_line, s_uart_rx_len);
-                        }
+                        // 原样回显给上位机
+                        uart_tx_data_send(s_uart_rx_line, s_uart_rx_len);
                     }
 
                     // 重置行缓冲
@@ -476,6 +460,9 @@ void app_periph_init(void)
 {
     SYS_SET_BD_ADDR(s_bd_addr);
     app_assert_init();
+    uart_init(APP_UART_BAUDRATE);
+    uart1_init(APP_UART1_BAUDRATE); // 参考2.0：启动时初始化UART1，上传后关闭省电
+    s_fourg_uart_opened = true;    // 同步状态标志
 
     // Configure GPIO25 (S_EN) as output, initial state OFF (low)
     {
@@ -588,4 +575,99 @@ bool gpio_4g_power_en_get(void)
     return (app_io_read_pin(APP_IO_TYPE_AON, AON_GPIO_PIN_2) == APP_IO_PIN_SET);
 }
 
+/*
+ * WATCHDOG FUNCTIONS
+ *****************************************************************************************
+ */
+
+/**
+ * @brief 低功耗睡眠前回调 - 禁用看门狗
+ * 
+ * AON_WDT在睡眠期间也会继续计数，但CPU不执行代码无法喂狗。
+ * 因此在进入睡眠前需要禁用看门狗，避免睡眠期间看门狗超时导致复位。
+ * 
+ * @return true 允许进入睡眠
+ */
+static bool wdt_prepare_for_sleep(void)
+{
+    if (s_wdt_initialized) {
+        // 禁用看门狗，防止睡眠期间超时
+        app_aon_wdt_deinit();
+        APP_LOG_DEBUG("Watchdog disabled before sleep");
+    }
+    return true;  // 允许进入睡眠
+}
+
+/**
+ * @brief 唤醒后回调 - 重新启用看门狗
+ * 
+ * 系统从低功耗模式唤醒后，重新初始化看门狗以恢复保护功能。
+ */
+static void wdt_wake_up_ind(void)
+{
+    if (s_wdt_initialized) {
+        // 重新初始化看门狗
+        uint16_t ret = app_aon_wdt_init(&s_wdt_params, wdt_timeout_callback);
+        if (ret == APP_DRV_SUCCESS) {
+            APP_LOG_DEBUG("Watchdog re-enabled after wakeup");
+        } else {
+            APP_LOG_ERROR("Failed to re-enable watchdog: 0x%04X", ret);
+        }
+    }
+}
+
+// 看门狗睡眠回调结构体
+static const app_sleep_callbacks_t s_wdt_sleep_cb = {
+    .app_prepare_for_sleep = wdt_prepare_for_sleep,
+    .app_wake_up_ind = wdt_wake_up_ind,
+};
+
+/**
+ * @brief 初始化看门狗（30秒超时）
+ * @return true 初始化成功，false 初始化失败
+ */
+bool watchdog_init(void)
+{
+    if (s_wdt_initialized) {
+        return true;
+    }
+    
+    // 配置看门狗参数
+    memset(&s_wdt_params, 0, sizeof(s_wdt_params));
+    s_wdt_params.init.counter = WDT_COUNTER_VALUE;       // 30秒超时
+    s_wdt_params.init.alarm_counter = WDT_ALARM_VALUE;   // 复位前预警
+    
+    uint16_t ret = app_aon_wdt_init(&s_wdt_params, wdt_timeout_callback);
+    if (ret != APP_DRV_SUCCESS) {
+        APP_LOG_ERROR("Watchdog init failed: 0x%04X", ret);
+        return false;
+    }
+    
+    // 注册睡眠回调：进入睡眠前禁用看门狗，唤醒后重新启用
+    // 使用 PWR_ID_MAX 表示自定义ID（不与系统外设冲突）
+    pwr_register_sleep_cb(&s_wdt_sleep_cb, WAKEUP_PRIORITY_LOW, PWR_ID_MAX);
+    
+    s_wdt_initialized = true;
+    APP_LOG_INFO("Watchdog initialized: %d seconds timeout (with sleep callback)", WDT_TIMEOUT_SECONDS);
+    return true;
+}
+
+/**
+ * @brief 喂狗（刷新看门狗计数器）
+ * @note 必须在超时前调用，否则系统会复位
+ */
+void watchdog_feed(void)
+{
+    if (s_wdt_initialized) {
+        app_aon_wdt_refresh();
+    }
+}
+
+/**
+ * @brief 检查看门狗是否已初始化
+ */
+bool watchdog_is_initialized(void)
+{
+    return s_wdt_initialized;
+}
 

@@ -3,15 +3,15 @@
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_att.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_error.h
-.\objects\ble.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\ble.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_gapc.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\gr55xx_sys_cfg.h
 .\objects\ble.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_compiler.h
 .\objects\ble.o: ..\..\..\..\..\platform\arch\arm\cortex-m\cmsis\core\include\cmsis_armcc.h
-.\objects\ble.o: D:\kile5\ARM\ARMCC\Bin\..\include\string.h
-.\objects\ble.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\ble.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\ble.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_gapm.h
-.\objects\ble.o: D:\kile5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\ble.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_gatt.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_gattc.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_gatts.h
@@ -19,5 +19,5 @@
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_prf.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_event.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\ble_sec.h
-.\objects\ble.o: D:\kile5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\ble.o: E:\Graduation project\keil5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\ble.o: ..\..\..\..\..\components\sdk\patch_tab.h

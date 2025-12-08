@@ -1,4 +1,4 @@
-#include "shared_params.h"
+﻿#include "shared_params.h"
 #include "app_log.h"
 #include "hal_flash.h"
 #include <string.h>
@@ -15,40 +15,40 @@ shared_device_params_t g_shared_params = {0};
 // 参数变更回调函数指针
 static param_change_callback_t s_param_callback = NULL;
 
-// 默认参数值
+// 默认参数�?
 static const shared_device_params_t default_params = {
-    .device_collect_time = 60,          // 默认60分钟采集
-    .device_updata_time = 300,         // 默认300分钟上报
-    .methane_threshold = 5.0f,          // 默认5%vol甲烷阈值
-    .temp_high_threshold = 50,          // 默认50℃高温阈值
-    .temp_low_threshold = -20,          // 默认-20℃低温阈值
-    .water_threshold = 1,               // 默认水浸阈值
+    .device_collect_time = 60,              // 默认60分钟采集
+    .device_updata_time = 1440,              // 默认1440分钟(24小时)上报
+    .water_depth_threshold_cm = 10.0f,      // 默认10cm水深报警阈�?
+    .temp_high_threshold = 50,              // 默认50℃高温阈�?
+    .temp_low_threshold = -20,              // 默认-20℃低温阈�?
+    .water_threshold = 0,                   // 兼容字段
     .location_lat = 0.0f,
     .location_lon = 0.0f,
     .install_lat = 0.0f,
     .install_lon = 0.0f,
-    // 服务器默认配置（MQTT）
-    .server_address = "101.200.34.226", // 默认服务器地址
-    .server_port    = 1883,             // 默认服务器端口
-    .username       = "admin",          // 默认用户名
-    .password       = "Admin123",   // 默认密码
-    .server_type    = 1,                // 默认MQTT
-    .pub_topic      = "/methane_sensor/test/report",
-    .sub_topic      = "/methane_sensor/test/command",
+    // 服务器默认配置（MQTT�?
+    .server_address = "101.200.34.226",     // 默认服务器地址
+    .server_port    = 1883,                 // 默认服务器端�?
+    .username       = "admin",              // 默认用户�?
+    .password       = "Admin123",           // 默认密码
+    .server_type    = 1,                    // 默认MQTT
+    .pub_topic      = "/water_sensor/test/report",
+    .sub_topic      = "/water_sensor/test/command",
     
-    // 实时状态信息默认值
-    .sensor_status = 0,                 // 默认传感器正常
-    .device_water = 1,                  // 默认水浸状态为1（浸水）
-    .device_move = 0,                   // 默认未移动
-    .device_GPS_status = 0,             // 默认GPS正常
+    // 实时状态信息默认�?
+    .sensor_status = 0,                     // 默认传感器正�?
+    .device_water = 0,                      // 默认无水�?
+    .device_move = 0,                       // 默认未移�?
+    .device_GPS_status = 0,                 // 默认GPS正常
     
-    .params_version = PARAMS_VERSION,   // 参数版本号
+    .params_version = PARAMS_VERSION,       // 参数版本�?
     .params_initialized = true,
     .params_checksum = 0
 };
 
 /**
- * @brief 计算参数校验和
+ * @brief 计算参数校验�?
  */
 uint32_t shared_params_calculate_checksum(void)
 {
@@ -63,35 +63,32 @@ uint32_t shared_params_calculate_checksum(void)
     return checksum;
 }
 
-/** @brief 验证参数有效性 */
+/** @brief 验证参数有效�?*/
 bool shared_params_validate(void)
 {
-    // 校验和验证
+    // 校验和验�?
     if (g_shared_params.params_checksum != shared_params_calculate_checksum()) return false;
     // 参数范围验证
     if (g_shared_params.device_collect_time < 1 || g_shared_params.device_collect_time > 1440) return false;
     if (g_shared_params.device_updata_time < 1 || g_shared_params.device_updata_time > 1440) return false;
-    if (g_shared_params.methane_threshold < 0.0f || g_shared_params.methane_threshold > 100.0f) return false;
+    // 水深阈值范围：0-500 cm
+    if (g_shared_params.water_depth_threshold_cm < 0.0f || g_shared_params.water_depth_threshold_cm > 500.0f) return false;
     return true;
 }
 
-/** @brief 初始化共享参数 */
+/** @brief 初始化共享参�?*/
 bool shared_params_init(void)
 {
     // 尝试从Flash加载参数
     if (shared_params_load_from_flash() && 
         g_shared_params.params_version == PARAMS_VERSION && 
         shared_params_validate()) {
-        // 规范化water_threshold
-        uint16_t nwt = (g_shared_params.water_threshold != 0) ? 1 : 0;
-        if (g_shared_params.water_threshold != nwt) {
-            g_shared_params.water_threshold = nwt;
-            shared_params_save_to_flash();
-        }
+        APP_LOG_INFO("Shared params loaded from flash, version=0x%08X", g_shared_params.params_version);
         return true;
     }
     
-    // 使用默认参数
+    // 使用默认参数（水位检测配置）
+    APP_LOG_INFO("Using default params for water level detection");
     memcpy(&g_shared_params, &default_params, sizeof(shared_device_params_t));
     g_shared_params.params_checksum = shared_params_calculate_checksum();
     shared_params_save_to_flash();
@@ -143,16 +140,16 @@ bool shared_params_set_update_time(uint16_t time_minutes)
     return shared_params_save_to_flash();
 }
 
-/** @brief 设置甲烷阈值(0-100) */
-bool shared_params_set_methane_threshold(float threshold)
+/** @brief 设置水深报警阈�?cm�?-500) */
+bool shared_params_set_water_depth_threshold(float threshold_cm)
 {
-    if (threshold < 0.0f || threshold > 100.0f) return false;
-    g_shared_params.methane_threshold = threshold;
-    notify_param_change(PARAM_TYPE_METHANE_THRESH, &threshold);
+    if (threshold_cm < 0.0f || threshold_cm > 500.0f) return false;
+    g_shared_params.water_depth_threshold_cm = threshold_cm;
+    notify_param_change(PARAM_TYPE_WATER_DEPTH_THRESH, &threshold_cm);
     return shared_params_save_to_flash();
 }
 
-/** @brief 设置温度阈值(high>low) */
+/** @brief 设置温度阈�?high>low) */
 bool shared_params_set_temp_thresholds(int16_t high, int16_t low)
 {
     if (high <= low) return false;
@@ -163,12 +160,11 @@ bool shared_params_set_temp_thresholds(int16_t high, int16_t low)
     return shared_params_save_to_flash();
 }
 
-/** @brief 设置水浸阈值(0或1) */
+/** @brief 设置水浸报警阈�?兼容字段) */
 bool shared_params_set_water_threshold(uint16_t threshold)
 {
-    uint16_t nv = (threshold != 0) ? 1 : 0;
-    g_shared_params.water_threshold = nv;
-    notify_param_change(PARAM_TYPE_WATER_THRESH, &nv);
+    g_shared_params.water_threshold = threshold;
+    notify_param_change(PARAM_TYPE_WATER_THRESH, &threshold);
     return shared_params_save_to_flash();
 }
 
@@ -195,12 +191,12 @@ bool shared_params_set_install_location(float lat, float lon)
 /* 参数获取函数 */
 uint16_t shared_params_get_collect_time(void) { return g_shared_params.device_collect_time; }
 uint16_t shared_params_get_update_time(void) { return g_shared_params.device_updata_time; }
-float shared_params_get_methane_threshold(void) { return g_shared_params.methane_threshold; }
+float shared_params_get_water_depth_threshold(void) { return g_shared_params.water_depth_threshold_cm; }
 int16_t shared_params_get_temp_high_threshold(void) { return g_shared_params.temp_high_threshold; }
 int16_t shared_params_get_temp_low_threshold(void) { return g_shared_params.temp_low_threshold; }
 uint16_t shared_params_get_water_threshold(void) { return g_shared_params.water_threshold; }
 
-/* 状态设置函数(不保存Flash) */
+/* 状态设置函�?不保存Flash) */
 void shared_params_set_sensor_status(uint8_t s) {
     if (g_shared_params.sensor_status != s) { g_shared_params.sensor_status = s; notify_param_change(PARAM_TYPE_SENSOR_STATUS, &s); }
 }
@@ -213,3 +209,5 @@ void shared_params_set_device_move(uint8_t s) {
 void shared_params_set_device_gps_status(uint8_t s) {
     if (g_shared_params.device_GPS_status != s) { g_shared_params.device_GPS_status = s; notify_param_change(PARAM_TYPE_DEVICE_GPS_STATUS, &s); }
 }
+
+

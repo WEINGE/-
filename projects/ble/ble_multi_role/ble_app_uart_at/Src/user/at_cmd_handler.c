@@ -3,13 +3,13 @@
  *
  * @file at_cmd_handler.c
  *
- * @brief AT命令处理器实现 - 串口AT命令解析和执行模块
+ * @brief AT命令处理器实�?- 串口AT命令解析和执行模�?
  *        
- * @details 功能概述：
- *          - 解析和执行各种AT命令（连接、扫描、广播等）
+ * @details 功能概述�?
+ *          - 解析和执行各种AT命令（连接、扫描、广播等�?
  *          - 管理BLE GAP参数配置
  *          - 处理传感器数据查询和清除
- *          - 实现BLE协议查询和数据上报
+ *          - 实现BLE协议查询和数据上�?
  *          - 提供AT命令响应格式化和错误处理
  *
  *****************************************************************************************
@@ -105,7 +105,7 @@ static dev_state_t                 s_curr_dev_state;
 static bool                        s_is_target_found;
 
 // 指令模式管理
-static bool                        s_cmd_mode_enabled = false;   /**< 指令模式状态 */
+static bool                        s_cmd_mode_enabled = false;   /**< 指令模式状�?*/
 
 
 static at_cmd_attr_t s_at_cmd_attr_table[] =
@@ -853,13 +853,12 @@ void uart_at_sensor_rx_get(at_cmd_parse_t *p_cmd_param)
 
     if (has_data)
     {
+        // 水位检测传感器数据格式（WF5803F气压传感器）
         cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
-            "SENSOR_DATA:CONC=%.2f,TEMP=%.1f,RESERVED=%lu,STATUS=%02X,CHECKSUM=%02X", 
-            sensor_data.concentration, 
-            sensor_data.temperature, 
-            sensor_data.reserved_field,
-            sensor_data.status_code,
-            sensor_data.checksum);
+            "SENSOR_DATA:PRESSURE=%.2fhPa,TEMP=%.1fC,ALT=%.1fm", 
+            sensor_data.pressure_hpa, 
+            sensor_data.temperature_c, 
+            sensor_data.altitude_m);
     }
     else
     {
@@ -912,10 +911,10 @@ void uart_at_ble_report(at_cmd_parse_t *p_cmd_param)
     {
         ble_protocol_send_data_report(&ble_sensor_data);
         cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
-            "BLE_REPORT:SENT,METHANE=%.2f%%vol/%.1f%%LEL,TEMP=%.1f°C", 
-            ble_sensor_data.methane_vol, 
-            ble_sensor_data.methane_lel, 
-            ble_sensor_data.temperature);
+            "BLE_REPORT:SENT,P=%.2fhPa,WATER=%.1fcm,TEMP=%.1fC", 
+            ble_sensor_data.pressure_hpa, 
+            ble_sensor_data.water_depth_cm, 
+            ble_sensor_data.temperature_c);
     }
     else
     {
@@ -932,14 +931,14 @@ void uart_at_ble_report(at_cmd_parse_t *p_cmd_param)
 // ========================================================================
 
 /**
- * 获取IMEI号
+ * 获取IMEI�?
  * AT:IMEI?
  */
 void uart_at_imei_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
-    // TODO: 从4G模块获取真实IMEI，这里先使用模拟数据
+    // TODO: �?G模块获取真实IMEI，这里先使用模拟数据
     const char* imei = "860123456789012";
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+IMEI:%s", imei);
@@ -954,7 +953,7 @@ void uart_at_iccid_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
-    // TODO: 从4G模块获取真实ICCID，这里先使用模拟数据
+    // TODO: �?G模块获取真实ICCID，这里先使用模拟数据
     const char* iccid = "89860123456789012345";
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+ICCID:%s", iccid);
@@ -964,17 +963,17 @@ void uart_at_iccid_get(at_cmd_parse_t *p_cmd_param)
 /**
  * 获取4G信号质量
  * AT:CSQ?
- * 返回格式：+CSQ:<rssi>,<ber>
+ * 返回格式�?CSQ:<rssi>,<ber>
  * rssi: 0-31 (99表示未知)
- * ber: 比特错误率 0-7 (99表示未知)
+ * ber: 比特错误�?0-7 (99表示未知)
  */
 void uart_at_csq_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
-    // TODO: 从4G模块获取真实信号质量，这里使用模拟数据
+    // TODO: �?G模块获取真实信号质量，这里使用模拟数�?
     uint8_t rssi = 25;  // 信号强度 (0-31)
-    uint8_t ber = 0;    // 比特错误率 (0-7)
+    uint8_t ber = 0;    // 比特错误�?(0-7)
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+CSQ:%d,%d", rssi, ber);
     at_cmd_execute_cplt(&cmd_rsp);
@@ -983,19 +982,19 @@ void uart_at_csq_get(at_cmd_parse_t *p_cmd_param)
 /**
  * 获取GPS状态和坐标
  * AT:GPS?
- * 返回格式：+GPS:<status>,<lat>,<lon>,<alt>,<speed>,<course>
+ * 返回格式�?GPS:<status>,<lat>,<lon>,<alt>,<speed>,<course>
  */
 void uart_at_gps_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
-    // TODO: 从GPS模块获取真实数据，这里使用模拟数据
-    uint8_t gps_status = 1;  // 0=未定位, 1=已定位
+    // TODO: 从GPS模块获取真实数据，这里使用模拟数�?
+    uint8_t gps_status = 1;  // 0=未定�? 1=已定�?
     float latitude = 39.9042;   // 纬度
     float longitude = 116.4074; // 经度
-    float altitude = 50.0;      // 海拔(米)
+    float altitude = 50.0;      // 海拔(�?
     float speed = 0.0;          // 速度(km/h)
-    float course = 0.0;         // 航向(度)
+    float course = 0.0;         // 航向(�?
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
         "+GPS:%d,%.6f,%.6f,%.1f,%.1f,%.1f", 
@@ -1004,19 +1003,19 @@ void uart_at_gps_get(at_cmd_parse_t *p_cmd_param)
 }
 
 /**
- * 获取网络注册状态
+ * 获取网络注册状�?
  * AT:CREG?
- * 返回格式：+CREG:<n>,<stat>[,<lac>,<ci>]
- * stat: 0=未搜索, 1=本地网络, 2=搜索中, 3=注册被拒, 5=漫游
+ * 返回格式�?CREG:<n>,<stat>[,<lac>,<ci>]
+ * stat: 0=未搜�? 1=本地网络, 2=搜索�? 3=注册被拒, 5=漫游
  */
 void uart_at_creg_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
-    // TODO: 从4G模块获取真实网络状态，这里使用模拟数据
-    uint8_t n = 0;      // 网络注册结果码显示模式
+    // TODO: �?G模块获取真实网络状态，这里使用模拟数据
+    uint8_t n = 0;      // 网络注册结果码显示模�?
     uint8_t stat = 1;   // 网络注册状态：1=本地网络
-    uint16_t lac = 0x1234;  // 位置区域码
+    uint16_t lac = 0x1234;  // 位置区域�?
     uint32_t ci = 0x12345678; // 小区ID
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
@@ -1027,13 +1026,13 @@ void uart_at_creg_get(at_cmd_parse_t *p_cmd_param)
 /**
  * 获取系统时钟
  * AT:CCLK?
- * 返回格式：+CCLK:"yy/MM/dd,hh:mm:ss±zz"
+ * 返回格式�?CCLK:"yy/MM/dd,hh:mm:ss±zz"
  */
 void uart_at_cclk_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
-    // TODO: 从RTC获取真实时间，这里使用模拟数据
+    // TODO: 从RTC获取真实时间，这里使用模拟数�?
     const char* datetime = "24/09/24,10:30:25+32";
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+CCLK:\"%s\"", datetime);
@@ -1056,23 +1055,23 @@ void uart_at_build_get(at_cmd_parse_t *p_cmd_param)
 /**
  * 获取运行时间
  * AT:RUNST?
- * 返回格式：+RUNST:<uptime_seconds>
+ * 返回格式�?RUNST:<uptime_seconds>
  */
 void uart_at_runst_get(at_cmd_parse_t *p_cmd_param)
 {
     AT_CMD_RSP_DEF(cmd_rsp);
     
     // TODO: 获取真实的系统运行时间，这里使用模拟数据
-    uint32_t uptime_seconds = 3600; // 假设运行了1小时
+    uint32_t uptime_seconds = 3600; // 假设运行�?小时
     
     cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, "+RUNST:%u", uptime_seconds);
     at_cmd_execute_cplt(&cmd_rsp);
 }
 
 /**
- * 获取传感器原始数据 (基于ES100格式)
+ * 获取传感器原始数�?(基于ES100格式)
  * AT:SENSOR?
- * 返回29字节ASCII格式："+1008.37 +12.5 0000000 00 3A<CR><LF>"
+ * 返回29字节ASCII格式�?+1008.37 +12.5 0000000 00 3A<CR><LF>"
  */
 void uart_at_sensor_get(at_cmd_parse_t *p_cmd_param)
 {
@@ -1080,28 +1079,22 @@ void uart_at_sensor_get(at_cmd_parse_t *p_cmd_param)
     
     sensor_data_t sensor_data;
     
-    // 获取最新的传感器数据
+    // 获取最新的传感器数据（水位检测）
     if (sensor_data_get_latest(&sensor_data) && sensor_data.data_valid)
     {
-        // 计算校验码 (简化版本，实际应按文档规则计算)
-        uint8_t checksum = (uint8_t)((int)(sensor_data.concentration * 100) + 
-                                    (int)(sensor_data.temperature * 10) + 
-                                    sensor_data.status_code) & 0xFF;
-        
-        // 按ES100格式输出29字节数据
+        // 输出水位检测传感器数据（气压、温度、海拔）
         cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data,
-            "+SENSOR:+%07.2f +%04.1f %07d %02d %02X",
-            sensor_data.concentration,
-            sensor_data.temperature, 
-            sensor_data.reserved_field,
-            sensor_data.status_code,
-            checksum);
+            "+SENSOR:P=%.2fhPa,T=%.1fC,A=%.1fm,WATER=%.1fcm",
+            sensor_data.pressure_hpa,
+            sensor_data.temperature_c, 
+            sensor_data.altitude_m,
+            sensor_data_get_water_depth());
     }
     else
     {
-        // 传感器数据无效时返回默认值
+        // 传感器数据无效时返回错误
         cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data,
-            "+SENSOR:+0000.00 +00.0 0000000 56 00");  // 状态码56表示软件异常
+            "+SENSOR:ERROR,NO_DATA");
     }
     
     at_cmd_execute_cplt(&cmd_rsp);
@@ -1110,7 +1103,7 @@ void uart_at_sensor_get(at_cmd_parse_t *p_cmd_param)
 /**
  * 获取设备状态码
  * AT:STATUS?
- * 返回各种设备状态的汇总
+ * 返回各种设备状态的汇�?
  */
 void uart_at_status_get(at_cmd_parse_t *p_cmd_param)
 {
@@ -1121,18 +1114,11 @@ void uart_at_status_get(at_cmd_parse_t *p_cmd_param)
     uint8_t sensor_status = 0;  // 0=正常
     uint8_t comm_status = 1;    // 1=4G正常
     
-    // 检查传感器状态
+    // 检查传感器状�?
     if (sensor_data_get_latest(&sensor_data) && sensor_data.data_valid)
     {
-        // 根据文档状态码表判断传感器状态
-        if (sensor_data.status_code == 0)
-        {
-            sensor_status = 0;  // 正常
-        }
-        else
-        {
-            sensor_status = 1;  // 异常
-        }
+        // 根据文档状态码表判断传感器状�?
+        sensor_status = 0;  // ������Ч������������
     }
     else
     {
@@ -1161,14 +1147,14 @@ void uart_at_admin_cmd(at_cmd_parse_t *p_cmd_param)
         return;
     }
     
-    // 获取adminAT+后面的命令部分
+    // 获取adminAT+后面的命令部�?
     uint8_t *cmd_str = &p_cmd_param->p_buff[p_cmd_param->arg_idx[0]];
     
     // 解析并执行对应的指令
     if (strncmp((char*)cmd_str, "CSQ?", 4) == 0)
     {
         uart_at_csq_get(p_cmd_param);
-        return;  // 处理函数已调用at_cmd_execute_cplt，直接返回
+        return;  // 处理函数已调用at_cmd_execute_cplt，直接返�?
     }
     else if (strncmp((char*)cmd_str, "GPS?", 4) == 0)
     {
@@ -1217,7 +1203,7 @@ void uart_at_admin_cmd(at_cmd_parse_t *p_cmd_param)
     }
     else
     {
-        // 未知的超级指令
+        // 未知的超级指�?
         cmd_rsp.length = at_cmd_printf_bush(cmd_rsp.data, 
             "ERROR:Unsupported admin command");
         cmd_rsp.error_code = AT_CMD_ERR_UNSUPPORTED_CMD;
@@ -1230,7 +1216,7 @@ void uart_at_admin_cmd(at_cmd_parse_t *p_cmd_param)
 // ========================================================================
 
 /**
- * 进入指令模式处理 (接收到"+++")
+ * 进入指令模式处理 (接收�?+++")
  */
 void uart_at_enter_cmd_mode(void)
 {
@@ -1244,7 +1230,7 @@ void uart_at_enter_cmd_mode(void)
 }
 
 /**
- * 退出指令模式处理 (AT+ENTM指令)
+ * 退出指令模式处�?(AT+ENTM指令)
  */
 void uart_at_exit_cmd_mode(at_cmd_parse_t *p_cmd_param)
 {
@@ -1257,7 +1243,7 @@ void uart_at_exit_cmd_mode(at_cmd_parse_t *p_cmd_param)
 }
 
 /**
- * 检查是否处于指令模式
+ * 检查是否处于指令模�?
  */
 bool uart_at_is_cmd_mode_enabled(void)
 {
@@ -1265,7 +1251,7 @@ bool uart_at_is_cmd_mode_enabled(void)
 }
 
 /**
- * 检查输入是否为进入指令模式的命令 ("+++")
+ * 检查输入是否为进入指令模式的命�?("+++")
  */
 bool uart_at_check_enter_cmd_mode(const uint8_t *p_data, uint16_t length)
 {
@@ -1273,7 +1259,7 @@ bool uart_at_check_enter_cmd_mode(const uint8_t *p_data, uint16_t length)
     if (length >= 3 && 
         p_data[0] == '+' && p_data[1] == '+' && p_data[2] == '+')
     {
-        // 根据文档，在发送"+++"之前的1秒内不可发送任何数据
+        // 根据文档，在发�?+++"之前�?秒内不可发送任何数�?
         // 这里简化处理，直接进入指令模式
         uart_at_enter_cmd_mode();
         return true;
@@ -1282,34 +1268,36 @@ bool uart_at_check_enter_cmd_mode(const uint8_t *p_data, uint16_t length)
 }
 
 /**
- * 处理AT指令前的预处理
+ * 处理AT指令前的预处�?
  * 检查指令模式状态和超级指令
  */
 bool uart_at_preprocess_command(at_cmd_src_t cmd_src, const uint8_t *p_data, uint16_t length)
 {
-    // 1. 检查是否为进入指令模式的命令
+    // 1. 检查是否为进入指令模式的命�?
     if (uart_at_check_enter_cmd_mode(p_data, length))
     {
-        return true; // 已处理
+        return true; // 已处�?
     }
     
     // 2. 检查是否为超级指令 (adminAT+)
     if (length >= 8 && strncmp((char*)p_data, "adminAT+", 8) == 0)
     {
-        // 超级指令无需指令模式，直接处理
+        // 超级指令无需指令模式，直接处�?
         return false; // 继续正常AT指令处理流程
     }
     
-    // 3. 检查普通AT指令是否需要指令模式
+    // 3. 检查普通AT指令是否需要指令模�?
     if (length >= 3 && strncmp((char*)p_data, "AT:", 3) == 0)
     {
         if (!s_cmd_mode_enabled)
         {
             // 未进入指令模式，不响应普通AT指令
-            return true; // 已处理(忽略)
+            return true; // 已处�?忽略)
         }
     }
     
     return false; // 继续正常处理
 }
  
+
+
