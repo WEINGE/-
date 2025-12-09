@@ -423,6 +423,26 @@ static char* ble_protocol_create_json_report(const ble_sensor_data_t *p_data)
     snprintf(time_str, sizeof(time_str), "202411141642");
     cJSON_AddStringToObject(body, "collect_time", time_str);
     
+    // 水位传感器数据 (MER-MCP1081-22-150 电子水尺)
+    // water_level: "档位,水位高度cm,温度" 格式
+    if (p_data->water_level_grade != 0xFF) {
+        char water_level_str[48];
+        snprintf(water_level_str, sizeof(water_level_str), "%d,%.1f,%.1f", 
+                 p_data->water_level_grade,
+                 p_data->water_level_height_cm,
+                 p_data->water_level_temp_c);
+        cJSON_AddStringToObject(body, "water_level", water_level_str);
+        
+        // water_level_cap: "C0,C1,C2,C3,C4,C5,C6" 电容值(pF)
+        char cap_str[128];
+        snprintf(cap_str, sizeof(cap_str), "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+                 p_data->water_level_cap[0], p_data->water_level_cap[1],
+                 p_data->water_level_cap[2], p_data->water_level_cap[3],
+                 p_data->water_level_cap[4], p_data->water_level_cap[5],
+                 p_data->water_level_cap[6]);
+        cJSON_AddStringToObject(body, "water_level_cap", cap_str);
+    }
+    
     cJSON_AddItemToObject(json, "body", body);
     
     // 添加result字段 - 符合BLE协议格式
