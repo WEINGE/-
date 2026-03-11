@@ -109,7 +109,7 @@ void shared_params_register_callback(param_change_callback_t callback);
 // 参数版本号定义
 // 每次修改 shared_device_params_t 结构体时，请递增此版本号
 // 这样可以确保Flash中的旧数据不会被错误加载
-#define PARAMS_VERSION              0x0001000B // v1.5 - 强制重置为默认参数(上传1440分钟)
+#define PARAMS_VERSION              0x0001000C // v1.6 - 修复水浸模式退出后间隔无法恢复的bug
 
 #endif // SHARED_PARAMS_H
 

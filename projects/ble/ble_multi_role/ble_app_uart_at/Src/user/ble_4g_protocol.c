@@ -1,4 +1,4 @@
-﻿/**
+/**
  *****************************************************************************************
  *
  * @file ble_4g_protocol.c
@@ -38,6 +38,8 @@
 #include "battery_voltage_reader.h"  // 为了使用电池电压读取功能
 #include "user_periph_setup.h"       // 为了使用看门狗喂狗功能
 #include "water_level_sensor.h"      // MER-MCP1081-22-150 电子水尺液位传感模组
+// #include "enhanced_flood_detection.h"  // 已移除：误判严重
+#include "smart_baseline_calibration.h"  // 智能基准压力标定系统
 
 /*
  * EXTERNAL FUNCTION DECLARATIONS
@@ -104,6 +106,8 @@ static char s_device_id[DEVICE_ID_SIZE] = {0};
 static app_timer_id_t m_sensor_collect_timer;
 static app_timer_id_t m_data_report_timer;
 static app_timer_id_t m_delayed_send_timer;  // 延时发送定时器
+static app_timer_id_t m_water_monitor_timer;  // 水位监测定时器（独立于采集定时器，更高频率检测阈值）
+static app_timer_id_t m_calibration_check_timer;  // 基准标定检查定时器（每小时检查）
 
 // 数据累积机制
 // 优化：增大缓冲区以支持更长的上传周期（如采集1分钟，上传30分钟）
@@ -123,8 +127,19 @@ static bool s_flood_mode_active = false;         // 是否处于水浸报警模�
 static uint16_t s_normal_collect_interval = 60;  // 正常采集间隔（分钟），保存以便恢复
 static uint16_t s_normal_upload_interval = 1440; // 正常上传间隔（分钟），保存以便恢复
 static bool s_baseline_initialized = false;      // 基准压力是否已初始化
+static bool s_sensor_busy = false;               // 传感器访问互斥标志（防止定时器冲突）
+
+// 时间戳计数器（用于增强型检测和智能标定，与water_level_sensor.c模式一致）
+// 时间戳计数器已删除（增强型检测已移除）
+
+// 定时器触发标志（避免在定时器回调中阻塞执行，防止时间累积延迟）
+static volatile bool s_collect_timer_triggered = false;  // 采集定时器触发标志
+static volatile bool s_report_timer_triggered = false;   // 上报定时器触发标志
+
 #define FLOOD_MODE_COLLECT_INTERVAL 3  // 水浸模式采集间隔（3分钟）
 #define FLOOD_MODE_UPLOAD_INTERVAL 3   // 水浸模式上传间隔（3分钟）
+#define WATER_MONITOR_INTERVAL_MS  (1 * 60 * 1000)  // 水位监测间隔（1分钟），独立于采集周期
+// 注意：CALIBRATION_CHECK_INTERVAL_MS 定义在 smart_baseline_calibration.h 中
 // 水深阈值现在从共享参数获取，单位cm，默认5cm
 
 /*
@@ -542,14 +557,17 @@ static char* ble_4g_protocol_create_data_report_json(const ble_4g_sensor_data_t 
     // sensor_pressure: 气压和水深 "pressure,water_depth" (hPa,cm)
     // 直接使用结构体中已计算好的水深值
     char pressure_str[32];
-    snprintf(pressure_str, sizeof(pressure_str), "%.2f,%.1f", 
+    snprintf(pressure_str, sizeof(pressure_str), "%.2f,%.2f", 
              p_data->pressure_hpa, p_data->water_depth_cm);
     cJSON_AddStringToObject(body, "sensor_pressure", pressure_str);
     
-    cJSON_AddNumberToObject(body, "sensor_TEMP", p_data->temperature_c);
+    // sensor_TEMP: 保留1位小数
+    char temp_str[16];
+    snprintf(temp_str, sizeof(temp_str), "%.1f", p_data->temperature_c);
+    cJSON_AddStringToObject(body, "sensor_TEMP", temp_str);
     
     char battery_str[32];
-    snprintf(battery_str, sizeof(battery_str), "%.3f,%d", 
+    snprintf(battery_str, sizeof(battery_str), "%.2f,%d", 
              p_data->battery_voltage, p_data->battery_percent);
     cJSON_AddStringToObject(body, "sensor_battery", battery_str);
     
@@ -559,7 +577,7 @@ static char* ble_4g_protocol_create_data_report_json(const ble_4g_sensor_data_t 
     // water_level: "档位,水位高度cm,温度" 格式
     if (p_data->water_level_grade != 0xFF) {
         char water_level_str[48];
-        snprintf(water_level_str, sizeof(water_level_str), "%d,%.1f,%.1f", 
+        snprintf(water_level_str, sizeof(water_level_str), "%d,%.2f,%.1f", 
                  p_data->water_level_grade, 
                  p_data->water_level_height_cm,
                  p_data->water_level_temp_c);
@@ -806,7 +824,19 @@ static char* ble_4g_protocol_create_settings_query_json(void)
  */
 static void sensor_collect_timer_handler(void *p_context)
 {
-    APP_LOG_INFO("%s Sensor collect timer triggered - collecting data with power management", DEBUG_TAG);
+    // 只设置标志，不在回调中阻塞执行（防止时间累积延迟）
+    s_collect_timer_triggered = true;
+    APP_LOG_INFO("%s Sensor collect timer triggered - flag set", DEBUG_TAG);
+}
+
+/**
+ *****************************************************************************************
+ * @brief 实际执行采集任务（在主循环中调用）
+ *****************************************************************************************
+ */
+static void sensor_collect_task_execute(void)
+{
+    APP_LOG_INFO("%s Executing sensor collect task", DEBUG_TAG);
     
     // 使用电源管理读取传感器数据
     ble_4g_sensor_data_t sensor_data;
@@ -839,23 +869,29 @@ static void sensor_collect_timer_handler(void *p_context)
             }
         }
         
-        // 3. ✨ 水浸检测和模式切换（混合策略）
+        // 3. ✨ 水浸检测和模式切换（使用压力差检测，与水位监测定时器一致）
         // 从共享参数获取水深阈值(cm)，转换为压力阈值(hPa)
         float water_depth_cm = shared_params_get_water_depth_threshold();
         float pressure_threshold_hpa = wf5803f_water_depth_to_pressure(water_depth_cm);
         
+        // 获取基准压力和当前压力用于诊断
+        float baseline_pressure = wf5803f_get_baseline_pressure();
+        float current_pressure = s_current_sensor_data_4g.pressure_hpa;
+        float pressure_delta = current_pressure - baseline_pressure;
+        
+        APP_LOG_INFO("%s [COLLECT_TASK] baseline=%.2f hPa, current=%.2f hPa, delta=%.2f hPa, threshold_cm=%.1f (%.2f hPa)",
+                    DEBUG_TAG, (double)baseline_pressure, (double)current_pressure, 
+                    (double)pressure_delta, (double)water_depth_cm, (double)pressure_threshold_hpa);
+        
         bool flood_detected_single = wf5803f_detect_flood(pressure_threshold_hpa);
         
-        // ✅ 简化水浸检测：直接使用滤波后的缓存数据判断，不再进行多次采样确认
-        // （因为传感器已经deinit省电，无法进行多次采样）
         if (flood_detected_single && !s_flood_mode_active) {
-            // 检测到水浸，进入报警模式
-            APP_LOG_WARNING("%s ⚠️ FLOOD DETECTED! Water depth exceeds threshold. Entering flood mode...", DEBUG_TAG);
+            APP_LOG_WARNING("%s [COLLECT_TASK] ⚠️ FLOOD DETECTED! Entering flood mode (delta=%.2f hPa > %.2f hPa)",
+                          DEBUG_TAG, (double)pressure_delta, (double)pressure_threshold_hpa);
             ble_4g_protocol_enter_flood_mode();
             shared_params_set_device_water(1);
         } else if (!flood_detected_single && s_flood_mode_active) {
-            // 水浸消除，退出报警模式
-            APP_LOG_INFO("%s [OK] Flood cleared. Exiting flood mode...", DEBUG_TAG);
+            APP_LOG_INFO("%s [COLLECT_TASK] [OK] Flood cleared. Exiting flood mode...", DEBUG_TAG);
             ble_4g_protocol_exit_flood_mode();
             shared_params_set_device_water(0);
         }
@@ -1018,7 +1054,19 @@ static void start_delayed_send_process(void)
  */
 static void data_report_timer_handler(void *p_context)
 {
-    APP_LOG_INFO("%s Data report timer triggered - uploading with DTU power management", DEBUG_TAG);
+    // 只设置标志，不在回调中阻塞执行（防止时间累积延迟）
+    s_report_timer_triggered = true;
+    APP_LOG_INFO("%s Data report timer triggered - flag set", DEBUG_TAG);
+}
+
+/**
+ *****************************************************************************************
+ * @brief 实际执行上报任务（在主循环中调用）
+ *****************************************************************************************
+ */
+static void data_report_task_execute(void)
+{
+    APP_LOG_INFO("%s Executing data report task", DEBUG_TAG);
     
     // 更新状态信息
     update_status_info_from_sources();
@@ -1046,6 +1094,130 @@ static void data_report_timer_handler(void *p_context)
         
         // 使用DTU电源管理上传所有累积数据（不在这里清空，在上传函数内部处理）
         ble_4g_protocol_upload_with_power_mgmt();
+    }
+}
+
+/**
+ *****************************************************************************************
+ * @brief 水位监测定时器回调函数（独立于采集定时器）
+ * 
+ * 以更高频率（1分钟）检测水位是否超过阈值，实现快速响应。
+ * 只进行轻量级的水位读取和阈值判断，不存储数据，不写Flash。
+ *****************************************************************************************
+ */
+static void water_monitor_timer_handler(void *p_context)
+{
+    // 如果已经在水浸模式，跳过监测（采集定时器会处理）
+    if (s_flood_mode_active) {
+        return;
+    }
+    
+    // 如果基准压力未初始化，跳过
+    if (!s_baseline_initialized) {
+        APP_LOG_DEBUG("%s Water monitor: baseline not initialized, skip", DEBUG_TAG);
+        return;
+    }
+    
+    // 互斥检查：如果传感器正在被其他定时器使用，跳过本次监测
+    if (s_sensor_busy) {
+        APP_LOG_DEBUG("%s Water monitor: sensor busy, skip this cycle", DEBUG_TAG);
+        return;
+    }
+    
+    APP_LOG_DEBUG("%s Water monitor timer triggered - quick threshold check", DEBUG_TAG);
+    
+    // 设置互斥标志
+    s_sensor_busy = true;
+    
+    // 1. 开启传感器电源
+    ble_4g_protocol_sensor_power_control(true);
+    delay_with_watchdog_feed(500);  // 等待传感器稳定
+    
+    // 2. 初始化并读取气压传感器
+    bool read_success = false;
+    if (sensor_data_init()) {
+        sensor_data_t sensor_reading;
+        if (sensor_data_read(&sensor_reading) && sensor_reading.data_valid) {
+            read_success = true;
+            
+            // ✅ 数据同步：将采样数据提供给智能标定系统（用于环境稳定性检查）
+            static uint32_t sample_timestamp_ms = 0;
+            smart_calibration_add_sample(
+                sensor_reading.pressure_hpa,
+                sensor_reading.temperature_c,
+                sample_timestamp_ms
+            );
+            sample_timestamp_ms += 60000;  // 每次+1分钟
+            
+            // 使用原有阈值检测，并增加详细诊断日志
+            float water_depth_cm = shared_params_get_water_depth_threshold();
+            float pressure_threshold_hpa = wf5803f_water_depth_to_pressure(water_depth_cm);
+            
+            // 获取基准压力用于诊断
+            float baseline_pressure = wf5803f_get_baseline_pressure();
+            float current_pressure = sensor_reading.pressure_filtered;
+            float pressure_delta = current_pressure - baseline_pressure;
+            
+            APP_LOG_INFO("%s [WATER_MONITOR] baseline=%.2f hPa, current=%.2f hPa, delta=%.2f hPa, threshold_cm=%.1f (%.2f hPa)",
+                        DEBUG_TAG, (double)baseline_pressure, (double)current_pressure, 
+                        (double)pressure_delta, (double)water_depth_cm, (double)pressure_threshold_hpa);
+            
+            bool flood_detected = wf5803f_detect_flood(pressure_threshold_hpa);
+            
+            if (flood_detected) {
+                APP_LOG_WARNING("%s [WATER_MONITOR] ⚠️ FLOOD DETECTED! Entering flood mode (delta=%.2f hPa > %.2f hPa)",
+                              DEBUG_TAG, (double)pressure_delta, (double)pressure_threshold_hpa);
+                ble_4g_protocol_enter_flood_mode();
+                shared_params_set_device_water(1);
+            }
+        }
+        sensor_data_deinit();
+    }
+    
+    // 4. 关闭传感器电源
+    ble_4g_protocol_sensor_power_control(false);
+    
+    // 释放互斥标志
+    s_sensor_busy = false;
+    
+    if (!read_success) {
+        APP_LOG_DEBUG("%s Water monitor: sensor read failed, will retry next cycle", DEBUG_TAG);
+    }
+}
+
+/**
+ *****************************************************************************************
+ * @brief 基准标定检查定时器回调函数
+ * 
+ * 每小时检查一次是否需要进行基准压力标定
+ * 与增强型水浸检测系统协同工作
+ *****************************************************************************************
+ */
+static void calibration_check_timer_handler(void *p_context)
+{
+    static uint32_t calibration_time_ms = 0;  // 标定时间累加器（每小时+3600000）
+    
+    rtc_time_t rtc_time;
+    
+    // 获取当前RTC小时（用于时间窗口检查），失败则跳过本次检查
+    if (!bm8563_read_time(&rtc_time)) {
+        APP_LOG_WARNING("%s Calibration check: RTC read failed, skip this check", DEBUG_TAG);
+        return;  // RTC失败时跳过，不执行标定检查
+    }
+    
+    // 每次调用增加1小时（3600000毫秒）
+    calibration_time_ms += 3600000;
+    
+    // 调度智能标定检查（传入累积时间戳）
+    bool calibration_attempted = smart_calibration_schedule(
+        calibration_time_ms,  // 累积毫秒时间戳（用于计算时间间隔）
+        rtc_time.hour         // 当前小时（用于时间窗口检查）
+    );
+    
+    if (calibration_attempted) {
+        // 标定成功，获取新基准
+        float new_baseline = wf5803f_get_baseline_pressure();
+        APP_LOG_INFO("%s Baseline updated: %.2f hPa", DEBUG_TAG, new_baseline);
     }
 }
 
@@ -1099,6 +1271,18 @@ void ble_4g_protocol_init(void)
                                delayed_send_timer_handler);
     APP_ERROR_CHECK(err_code);
     
+    // 创建水位监测定时器（独立于采集定时器，更高频率检测阈值）
+    err_code = app_timer_create(&m_water_monitor_timer, 
+                               ATIMER_REPEAT, 
+                               water_monitor_timer_handler);
+    APP_ERROR_CHECK(err_code);
+    
+    // 创建基准标定检查定时器（每小时检查一次是否需要标定）
+    err_code = app_timer_create(&m_calibration_check_timer, 
+                               ATIMER_REPEAT, 
+                               calibration_check_timer_handler);
+    APP_ERROR_CHECK(err_code);
+    
     s_protocol_initialized = true;
     APP_LOG_INFO("%s 4G protocol initialized successfully", DEBUG_TAG);
     
@@ -1132,6 +1316,11 @@ void ble_4g_protocol_init(void)
             s_baseline_initialized = true;
             float baseline = wf5803f_get_baseline_pressure();
             APP_LOG_INFO("%s Baseline pressure initialized at boot: %.2f hPa", DEBUG_TAG, baseline);
+            
+            
+            // ✅ 1.7. 初始化智能基准标定系统（自动维护基准，防止漂移）
+            smart_calibration_init(baseline);
+            APP_LOG_INFO("%s Smart baseline calibration system initialized with baseline: %.2f hPa", DEBUG_TAG, baseline);
         } else {
             APP_LOG_ERROR("%s Failed to initialize baseline pressure at boot", DEBUG_TAG);
         }
@@ -1675,6 +1864,75 @@ void ble_4g_protocol_restart_report_timer(void)
 
 /**
  *****************************************************************************************
+ * @brief 启动水位监测定时器（1分钟间隔，独立于采集定时器）
+ *****************************************************************************************
+ */
+void ble_4g_protocol_start_water_monitor_timer(void)
+{
+    sdk_err_t err_code;
+    
+    if (!s_protocol_initialized)
+    {
+        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
+        return;
+    }
+    
+    // 使用固定的1分钟间隔
+    err_code = app_timer_start(m_water_monitor_timer, WATER_MONITOR_INTERVAL_MS, NULL);
+    APP_ERROR_CHECK(err_code);
+    
+    APP_LOG_INFO("%s Started water monitor timer: 1 minute interval", DEBUG_TAG);
+    
+    // 启动基准标定检查定时器（1小时间隔）
+    err_code = app_timer_start(m_calibration_check_timer, CALIBRATION_CHECK_INTERVAL_MS, NULL);
+    APP_ERROR_CHECK(err_code);
+    
+    APP_LOG_INFO("%s Started calibration check timer: 1 hour interval", DEBUG_TAG);
+}
+
+/**
+ *****************************************************************************************
+ * @brief 停止水位监测定时器
+ *****************************************************************************************
+ */
+void ble_4g_protocol_stop_water_monitor_timer(void)
+{
+    if (!s_protocol_initialized)
+    {
+        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
+        return;
+    }
+    
+    app_timer_stop(m_water_monitor_timer);
+    
+    APP_LOG_INFO("%s Stopped water monitor timer", DEBUG_TAG);
+}
+
+/**
+ *****************************************************************************************
+ * @brief 4G协议调度函数（在主循环中调用）
+ * 
+ * 处理定时器触发的标志，执行实际的采集和上报任务。
+ * 这样设计可以避免在定时器回调中阻塞执行，防止时间累积延迟。
+ *****************************************************************************************
+ */
+void ble_4g_protocol_schedule(void)
+{
+    // 处理采集定时器触发
+    if (s_collect_timer_triggered) {
+        s_collect_timer_triggered = false;
+        sensor_collect_task_execute();
+    }
+    
+    // 处理上报定时器触发
+    if (s_report_timer_triggered) {
+        s_report_timer_triggered = false;
+        data_report_task_execute();
+    }
+}
+
+/**
+ *****************************************************************************************
  * @brief Update sensor data from external source.
  *
  * @param[in] p_sensor_data: Pointer to sensor data to update.
@@ -1778,6 +2036,9 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         APP_LOG_ERROR("%s Invalid sensor data pointer", DEBUG_TAG);
         return false;
     }
+    
+    // 设置互斥标志（防止与水位监测定时器冲突）
+    s_sensor_busy = true;
 
     APP_LOG_INFO("%s Reading sensor with power management", DEBUG_TAG);
     
@@ -1792,6 +2053,7 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
     if (!wf5803f_init()) {
         APP_LOG_ERROR("%s Failed to initialize WF5803F sensor", DEBUG_TAG);
         ble_4g_protocol_sensor_power_control(false);
+        s_sensor_busy = false;  // 释放互斥标志
         return false;
     }
     
@@ -1847,9 +2109,12 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
         p_sensor_data->battery_percent = 0;     // 电池百分比将在后续填充
         p_sensor_data->is_valid = true;
         
-        // ✅ 修复：使用统一的水深计算函数（与蓝牙保持一致，使用滤波后的压力值）
-        p_sensor_data->water_depth_cm = sensor_data_get_water_depth();
-        APP_LOG_INFO("%s Water depth (filtered): %.1f cm", DEBUG_TAG, p_sensor_data->water_depth_cm);
+        // 修复：使用统一的水深计算函数
+        float raw_water_depth_cm = sensor_data_get_water_depth();
+        
+        // 直接上报实际值（增强型检测已移除）
+        p_sensor_data->water_depth_cm = raw_water_depth_cm;
+        APP_LOG_INFO("%s Water depth: %.1f cm", DEBUG_TAG, raw_water_depth_cm);
         
         // 更新传感器状态为正常
         shared_params_set_sensor_status(0);
@@ -1922,6 +2187,9 @@ bool ble_4g_protocol_read_sensor_with_power_mgmt(ble_4g_sensor_data_t *p_sensor_
     wf5803f_deinit();
     // 注：water_level_sensor已在读取后立即反初始化
     ble_4g_protocol_sensor_power_control(false);
+    
+    // 释放互斥标志
+    s_sensor_busy = false;
     
     if (result) {
         APP_LOG_INFO("%s Fresh sensor data read successfully with timestamp", DEBUG_TAG);
@@ -2119,11 +2387,18 @@ static void ble_4g_protocol_enter_flood_mode(void)
     APP_LOG_WARNING("%s ====== ENTERING FLOOD ALARM MODE ======", DEBUG_TAG);
     
     // 1. 保存当前正常间隔
-    s_normal_collect_interval = g_shared_params.device_collect_time;
-    s_normal_upload_interval = g_shared_params.device_updata_time;
-    
-    APP_LOG_INFO("%s Saved normal intervals: collect=%d min, upload=%d min",
-                 DEBUG_TAG, s_normal_collect_interval, s_normal_upload_interval);
+    // 【关键】检查当前值是否已经是水浸模式的3分钟，如果是则不覆盖保存的正常值
+    // 这可以防止设备在水浸模式期间重启后，把3分钟当作"正常"值保存
+    if (g_shared_params.device_collect_time != FLOOD_MODE_COLLECT_INTERVAL ||
+        g_shared_params.device_updata_time != FLOOD_MODE_UPLOAD_INTERVAL) {
+        s_normal_collect_interval = g_shared_params.device_collect_time;
+        s_normal_upload_interval = g_shared_params.device_updata_time;
+        APP_LOG_INFO("%s Saved normal intervals: collect=%d min, upload=%d min",
+                     DEBUG_TAG, s_normal_collect_interval, s_normal_upload_interval);
+    } else {
+        APP_LOG_WARNING("%s Current intervals are already flood mode (3/3), keeping saved normal: collect=%d min, upload=%d min",
+                        DEBUG_TAG, s_normal_collect_interval, s_normal_upload_interval);
+    }
     
     // 2. 切换到水浸模式间隔（3分钟）
     g_shared_params.device_collect_time = FLOOD_MODE_COLLECT_INTERVAL;
@@ -2132,15 +2407,9 @@ static void ble_4g_protocol_enter_flood_mode(void)
     APP_LOG_WARNING("%s Flood mode intervals: collect=%d min, upload=%d min",
                     DEBUG_TAG, FLOOD_MODE_COLLECT_INTERVAL, FLOOD_MODE_UPLOAD_INTERVAL);
     
-    // 3. 保存参数到Flash（确保蓝牙和4G查询时获取正确值）
-    extern bool shared_params_save_to_flash(void);
-    if (shared_params_save_to_flash()) {
-        APP_LOG_INFO("%s Flood mode intervals saved to Flash", DEBUG_TAG);
-    } else {
-        APP_LOG_ERROR("%s Failed to save flood mode intervals to Flash", DEBUG_TAG);
-    }
-    
-    // 4. 重启定时器以应用新间隔
+    // 3. 重启定时器以应用新间隔
+    // 注意：不写入Flash，避免Flash寿命问题（水位在阈值边缘波动可能导致频繁切换）
+    // 设备重启后会从正常模式开始，重新检测水位
     ble_4g_protocol_restart_collect_timer();
     ble_4g_protocol_restart_report_timer();
     
@@ -2164,27 +2433,20 @@ static void ble_4g_protocol_exit_flood_mode(void)
     
     APP_LOG_INFO("%s ====== EXITING FLOOD ALARM MODE ======", DEBUG_TAG);
     
-    // 1. 恢复正常间隔
+    // 1. 【关键】先清除水浸模式标志，避免定时器handler中的"额外保护"代码把间隔改回3分钟
+    s_flood_mode_active = false;
+    
+    // 2. 恢复正常间隔
     g_shared_params.device_collect_time = s_normal_collect_interval;
     g_shared_params.device_updata_time = s_normal_upload_interval;
     
     APP_LOG_INFO("%s Restored normal intervals: collect=%d min, upload=%d min",
                  DEBUG_TAG, s_normal_collect_interval, s_normal_upload_interval);
     
-    // 2. 保存参数到Flash（关键：确保蓝牙和4G查询时获取正确值）
-    extern bool shared_params_save_to_flash(void);
-    if (shared_params_save_to_flash()) {
-        APP_LOG_INFO("%s Normal intervals saved to Flash", DEBUG_TAG);
-    } else {
-        APP_LOG_ERROR("%s Failed to save normal intervals to Flash", DEBUG_TAG);
-    }
-    
     // 3. 重启定时器以应用恢复的间隔
+    // 注意：不写入Flash，避免Flash寿命问题
     ble_4g_protocol_restart_collect_timer();
     ble_4g_protocol_restart_report_timer();
-    
-    // 3. 清除水浸模式标志
-    s_flood_mode_active = false;
     
     APP_LOG_INFO("%s ====== NORMAL MODE RESTORED ======", DEBUG_TAG);
 }
