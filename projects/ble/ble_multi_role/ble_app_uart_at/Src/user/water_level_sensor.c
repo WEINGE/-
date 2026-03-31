@@ -80,7 +80,6 @@ static app_uart_params_t s_wls_uart_params = {
  */
 static void wls_uart_callback(app_uart_evt_t *p_evt);
 static bool wls_send_request(const uint8_t *p_data, uint16_t len);
-static bool wls_receive_response(uint8_t *p_data, uint16_t *p_len, uint32_t timeout_ms);
 static bool wls_read_registers(uint16_t start_addr, uint16_t num_regs, uint8_t *p_data, uint16_t *p_len);
 static bool wls_write_register(uint16_t reg_addr, uint16_t value);
 static bool wls_verify_crc(const uint8_t *p_data, uint16_t len);
@@ -214,51 +213,6 @@ static bool wls_send_request(const uint8_t *p_data, uint16_t len)
     }
     
     return s_tx_done;
-}
-
-/**
- *****************************************************************************************
- * @brief 接收Modbus响应
- *****************************************************************************************
- */
-static bool wls_receive_response(uint8_t *p_data, uint16_t *p_len, uint32_t timeout_ms)
-{
-    if (!s_wls_initialized || p_data == NULL || p_len == NULL)
-    {
-        return false;
-    }
-    
-    s_rx_done = false;
-    s_rx_len = 0;
-    
-    // 启动异步接收（必须在等待响应延时之前启动，否则会丢失数据）
-    uint16_t ret = app_uart_receive_async(WLS_UART_ID, s_rx_buffer, WLS_RX_BUFFER_SIZE);
-    if (ret != APP_DRV_SUCCESS)
-    {
-        return false;
-    }
-    
-    // 等待传感器响应延时（至少300ms）
-    sys_delay_ms(WLS_RESPONSE_DELAY_MS);
-    
-    // 等待接收完成（传感器响应后还需要一些时间接收完整帧）
-    uint32_t wait_time = timeout_ms;
-    while (!s_rx_done && wait_time > 0)
-    {
-        sys_delay_ms(1);
-        wait_time--;
-    }
-    
-    if (!s_rx_done || s_rx_len == 0)
-    {
-        return false;
-    }
-    
-    // 复制接收数据
-    memcpy(p_data, s_rx_buffer, s_rx_len);
-    *p_len = s_rx_len;
-    
-    return true;
 }
 
 /**

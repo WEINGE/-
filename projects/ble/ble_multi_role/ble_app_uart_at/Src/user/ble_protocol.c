@@ -1,4 +1,4 @@
-﻿/**
+ /**
  *****************************************************************************************
  *
  * @file ble_protocol.c
@@ -302,11 +302,16 @@ static void parse_at_command_response(const char* response, uint16_t length)
             if (g_at_collector.gps_status == 0) shared_params_set_location(lat, lon);
         }
     }
+    // 解析网络注册状态 (返回格式: +CREG:0/1)
     else if (strncmp(response, "+CREG:", 6) == 0) {
-        int reg_status = 0;
-        if (sscanf(response + 6, "%d", &reg_status) == 1)
+        int reg_status = -1;
+        if (sscanf(response + 6, "%d", &reg_status) == 1) {
             g_at_collector.network_reg_status = reg_status;
+            APP_LOG_INFO("%s Network registration status: %s", TAG, reg_status == 1 ? "Registered" : "Not registered");
+        }
     }
+    // YunDTU没有直接的MQTT状态查询，使用网络注册状态作为MQTT连接的前提条件
+    // 当网络已注册时，MQTT通常也已经建立连接
     else if (length < sizeof(g_4g_response_buffer)) {
         memcpy(g_4g_response_buffer, response, length);
         g_4g_response_buffer[length] = '\0';
@@ -763,25 +768,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             uint8_t data[2] = {(uint8_t)(interval >> 8), (uint8_t)(interval & 0xFF)};
             ble_protocol_handle_param_set(cmd_code, data, 2);
             
-            // 按照协议文档3.6格式发送成功回文
-            cJSON *response = cJSON_CreateObject();
-            cJSON *header = cJSON_CreateObject();
-            cJSON *body = cJSON_CreateObject();
-            
-            cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_COLLECT_TIME_SET);
-            cJSON_AddNumberToObject(body, "collect_time_set", interval);
-            cJSON_AddNumberToObject(response, "result", 0); // 0:设置成功
-            
-            cJSON_AddItemToObject(response, "header", header);
-            cJSON_AddItemToObject(response, "body", body);
-            
-            char *json_string = cJSON_Print(response);
-            if (json_string) {
-                ble_protocol_send_json_response(json_string);
-                APP_LOG_INFO("%s Collect time set response sent", TAG);
-                free(json_string);
-            }
-            cJSON_Delete(response);
+            // 注意：响应由 ble_protocol_handle_param_set() 末尾统一发送，这里不再重复发送
             break;
         }
         
@@ -814,25 +801,7 @@ static void ble_protocol_parse_json_command(const char* json_str)
             uint8_t data[2] = {(uint8_t)(interval >> 8), (uint8_t)(interval & 0xFF)};
             ble_protocol_handle_param_set(cmd_code, data, 2);
             
-            // 按照协议文档3.7格式发送成功回文
-            cJSON *response = cJSON_CreateObject();
-            cJSON *header = cJSON_CreateObject();
-            cJSON *body = cJSON_CreateObject();
-            
-            cJSON_AddNumberToObject(header, "code", PROTOCOL_CMD_UPDATE_TIME_SET);
-            cJSON_AddNumberToObject(body, "updata_time_set", interval);
-            cJSON_AddNumberToObject(response, "result", 0); // 0:设置成功
-            
-            cJSON_AddItemToObject(response, "header", header);
-            cJSON_AddItemToObject(response, "body", body);
-            
-            char *json_string = cJSON_Print(response);
-            if (json_string) {
-                ble_protocol_send_json_response(json_string);
-                APP_LOG_INFO("%s Update time set response sent", TAG);
-                free(json_string);
-            }
-            cJSON_Delete(response);
+            // 注意：响应由 ble_protocol_handle_param_set() 末尾统一发送，这里不再重复发送
             break;
         }
         

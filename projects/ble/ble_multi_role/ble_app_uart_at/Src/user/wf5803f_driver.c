@@ -43,6 +43,10 @@
 #define WF5803F_REG_DATA        0x06  // 数据寄存器起始地址
 #define WF5803F_CMD_CONVERT     0x0A  // 组合转换命令（温度+压力）
 
+// 初始化重试配置
+#define WF5803F_INIT_RETRY_MAX   3    // 最大初始化重试次数
+#define WF5803F_INIT_RETRY_DELAY_MS 100 // 初始化重试间隔（ms）
+
 /*
  * LOCAL VARIABLES
  *****************************************************************************************
@@ -244,22 +248,38 @@ bool wf5803f_init(void)
         return true;
     }
     
-    // 初始化软件I2C
-    soft_i2c_init();
-    delay_ms(50);  // 等待传感器启动
-    
-    // 验证I2C通信（读取状态寄存器）
-    uint8_t status;
-    if (!soft_i2c_read_reg(WF5803F_ADDR, WF5803F_REG_STATUS, &status, 1)) {
-        APP_LOG_ERROR("WF5803F: I2C communication failed");
-        return false;  // I2C通信失败
+    // 增加初始化重试机制，提高通信稳定性
+    for (uint8_t retry = 0; retry < WF5803F_INIT_RETRY_MAX; retry++) {
+        if (retry > 0) {
+            APP_LOG_WARNING("WF5803F: Init retry %d/%d, resetting I2C bus...",
+                           retry, WF5803F_INIT_RETRY_MAX - 1);
+            // 重试前先复位I2C总线
+            soft_i2c_bus_reset();
+            delay_ms(WF5803F_INIT_RETRY_DELAY_MS);
+        }
+        
+        // 初始化软件I2C
+        soft_i2c_init();
+        delay_ms(50);  // 等待传感器启动
+        
+        // 验证I2C通信（读取状态寄存器）
+        uint8_t status;
+        if (!soft_i2c_read_reg(WF5803F_ADDR, WF5803F_REG_STATUS, &status, 1)) {
+            APP_LOG_ERROR("WF5803F: I2C communication failed on attempt %d", retry + 1);
+            soft_i2c_deinit();
+            continue;  // 进入下一次重试
+        }
+        
+        // 初始化成功
+        s_initialized = true;
+        memset(&s_latest_data, 0, sizeof(wf5803f_data_t));
+        
+        APP_LOG_INFO("WF5803F sensor initialized successfully (attempt %d)", retry + 1);
+        return true;
     }
     
-    s_initialized = true;
-    memset(&s_latest_data, 0, sizeof(wf5803f_data_t));
-    
-    APP_LOG_INFO("WF5803F sensor initialized successfully");
-    return true;
+    APP_LOG_ERROR("WF5803F: All %d initialization attempts failed", WF5803F_INIT_RETRY_MAX);
+    return false;
 }
 
 bool wf5803f_deinit(void)
@@ -342,106 +362,109 @@ bool wf5803f_read_data(wf5803f_data_t *data)
         APP_LOG_ERROR("WF5803F: Not initialized or invalid data pointer");
         return false;
     }
-    
-    // 官方驱动流程：
-    // 1. WFSensor_indicateGroupConvert() - 触发转换
-    // 2. WFSensor_WaitFinish() - 等待完成
-    // 3. WFSensor_getTPData() - 读取数据
-    // 4. calculatePress() - 计算压力和温度
-    
-    // Step 1: 触发组合转换（温度+压力）
-    if (!wf5803f_trigger_conversion()) {
-        APP_LOG_ERROR("WF5803F: Failed to trigger conversion");
-        return false;
-    }
-    
-    // Step 2: 等待转换完成（超时保护）
-    uint8_t status;
-    uint32_t timeout = 100;  // 最多等待100次，每次2ms
-    while (timeout--) {
-        status = wf5803f_wait_finish();
-        if (status == 0x01) {
-            break;  // 转换完成
+
+    const uint8_t WF5803F_READ_RETRY_MAX = 3;
+    for (uint8_t retry = 0; retry < WF5803F_READ_RETRY_MAX; retry++) {
+        if (retry > 0) {
+            APP_LOG_WARNING("WF5803F: Read retry %d/%d, resetting I2C bus...",
+                            retry, WF5803F_READ_RETRY_MAX - 1);
+            // 重试前先复位I2C总线，释放可能卡住的SDA线
+            soft_i2c_bus_reset();
+            delay_ms(50);
         }
-        if (status == 0xFF) {
-            APP_LOG_ERROR("WF5803F: Failed to read status");
-            return false;
+
+        // Step 1: 触发组合转换（温度+压力）
+        if (!wf5803f_trigger_conversion()) {
+            APP_LOG_ERROR("WF5803F: Failed to trigger conversion");
+            continue;
         }
-        delay_ms(2);  // 官方驱动使用2ms间隔
+
+        // Step 2: 等待转换完成（超时保护）
+        uint8_t status;
+        uint32_t timeout = 100;
+        while (timeout--) {
+            status = wf5803f_wait_finish();
+            if (status == 0x01) {
+                break;  // 转换完成
+            }
+            if (status == 0xFF) {
+                APP_LOG_ERROR("WF5803F: Failed to read status");
+                // 状态读取失败，本次尝试直接失败，进入下一次重试
+                timeout = 0;
+                break;
+            }
+            delay_ms(2);
+        }
+
+        // 只有 status==0x01 才允许继续读取数据
+        if (status != 0x01) {
+            APP_LOG_ERROR("WF5803F: Conversion not ready (status=0x%02X)", status);
+            continue;
+        }
+
+        // Step 3: 读取5字节原始数据
+        uint8_t QT[5] = {0};
+        if (!wf5803f_read_tp_data(QT)) {
+            APP_LOG_ERROR("WF5803F: Failed to read T/P data");
+            continue;
+        }
+
+        // 保存原始数据用于调试
+        data->raw_pressure = ((uint32_t)QT[0] << 16) | ((uint32_t)QT[1] << 8) | QT[2];
+        data->raw_temperature = ((uint16_t)QT[3] << 8) | QT[4];
+
+        // Step 4: 检查ADC原始值是否饱和（溢出检测）
+        if (data->raw_pressure == WF5803F_ADC_POSITIVE_SAT ||
+            data->raw_pressure == WF5803F_ADC_NEGATIVE_SAT) {
+            APP_LOG_WARNING("WF5803F: ADC saturation detected");
+        }
+
+        // Step 5: 计算压力和温度（使用官方算法）
+        float raw_pressure_hpa, raw_temp_c;
+        wf5803f_compensate_data(QT, &raw_pressure_hpa, &raw_temp_c);
+
+        data->pressure_hpa = raw_pressure_hpa;
+        data->temperature_c = raw_temp_c;
+
+        // Step 5.5: 应用卡尔曼滤波（如果启用）
+        if (s_kalman_enabled) {
+            data->pressure_filtered = kalman_filter_update(&s_kf_pressure, raw_pressure_hpa);
+        } else {
+            data->pressure_filtered = raw_pressure_hpa;
+        }
+
+        // 计算压力变化率（用于水浸检测）
+        if (s_prev_pressure != 0.0f) {
+            s_pressure_change_rate = data->pressure_filtered - s_prev_pressure;
+        }
+        s_prev_pressure = data->pressure_filtered;
+
+        // Step 6: 数据有效性检查
+        if (data->pressure_hpa < WF5803F_PRESSURE_MIN_HPA ||
+            data->pressure_hpa > WF5803F_PRESSURE_MAX_HPA) {
+            APP_LOG_WARNING("WF5803F: Pressure out of range: %.2f hPa", data->pressure_hpa);
+            data->data_valid = false;
+            continue;
+        }
+
+        if (data->temperature_c < WF5803F_TEMP_MIN_C ||
+            data->temperature_c > WF5803F_TEMP_MAX_C) {
+            APP_LOG_WARNING("WF5803F: Temperature out of range: %.1f C", data->temperature_c);
+            data->data_valid = false;
+            continue;
+        }
+
+        // 所有步骤成功，直接返回
+        data->altitude_m = wf5803f_calculate_altitude(data->pressure_filtered, 1013.25f);
+        data->data_valid = true;
+        data->timestamp = 0;
+        memcpy(&s_latest_data, data, sizeof(wf5803f_data_t));
+        return true;
     }
-    
-    if (timeout == 0) {
-        APP_LOG_ERROR("WF5803F: Conversion timeout");
-        return false;
-    }
-    
-    // Step 3: 读取5字节原始数据
-    uint8_t QT[5] = {0};
-    if (!wf5803f_read_tp_data(QT)) {
-        APP_LOG_ERROR("WF5803F: Failed to read T/P data");
-        return false;
-    }
-    
-    // 保存原始数据用于调试
-    data->raw_pressure = ((uint32_t)QT[0] << 16) | ((uint32_t)QT[1] << 8) | QT[2];
-    data->raw_temperature = ((uint16_t)QT[3] << 8) | QT[4];
-    
-    // Step 4: 检查ADC原始值是否饱和（溢出检测）
-    if (data->raw_pressure == WF5803F_ADC_POSITIVE_SAT || 
-        data->raw_pressure == WF5803F_ADC_NEGATIVE_SAT) {
-        APP_LOG_WARNING("WF5803F: ADC saturation detected");
-        // ADC饱和，继续计算但数据可疑
-    }
-    
-    // Step 5: 计算压力和温度（使用官方算法）
-    float raw_pressure_hpa, raw_temp_c;
-    wf5803f_compensate_data(QT, &raw_pressure_hpa, &raw_temp_c);
-    
-    // 保存原始测量值
-    data->pressure_hpa = raw_pressure_hpa;
-    data->temperature_c = raw_temp_c;
-    
-    // Step 5.5: 应用卡尔曼滤波（如果启用）
-    if (s_kalman_enabled) {
-        data->pressure_filtered = kalman_filter_update(&s_kf_pressure, raw_pressure_hpa);
-    } else {
-        data->pressure_filtered = raw_pressure_hpa;
-    }
-    
-    // 计算压力变化率（用于水浸检测）
-    if (s_prev_pressure != 0.0f) {
-        s_pressure_change_rate = data->pressure_filtered - s_prev_pressure;
-    }
-    s_prev_pressure = data->pressure_filtered;
-    
-    // Step 6: 数据有效性检查
-    // 正常大气压范围：300-1100 hPa（覆盖海平面到珠峰）
-    // 扩展范围：250-1500 hPa（支持特殊应用场景）
-    if (data->pressure_hpa < WF5803F_PRESSURE_MIN_HPA || 
-        data->pressure_hpa > WF5803F_PRESSURE_MAX_HPA) {
-        APP_LOG_WARNING("WF5803F: Pressure out of range: %.2f hPa", data->pressure_hpa);
-        data->data_valid = false;
-        return false;
-    }
-    
-    // 温度有效性检查（WF5803F工作范围：-40°C ~ 85°C）
-    if (data->temperature_c < WF5803F_TEMP_MIN_C || 
-        data->temperature_c > WF5803F_TEMP_MAX_C) {
-        APP_LOG_WARNING("WF5803F: Temperature out of range: %.1f C", data->temperature_c);
-        data->data_valid = false;
-        return false;
-    }
-    
-    // 计算海拔高度（使用滤波后的压力值）
-    data->altitude_m = wf5803f_calculate_altitude(data->pressure_filtered, 1013.25f);
-    
-    data->data_valid = true;
-    data->timestamp = 0;  // 可以添加时间戳
-    
-    // 更新全局缓存
-    memcpy(&s_latest_data, data, sizeof(wf5803f_data_t));
-    
-    return true;
+
+    APP_LOG_ERROR("WF5803F: All %d read attempts failed", WF5803F_READ_RETRY_MAX);
+    data->data_valid = false;
+    return false;
 }
 
 wf5803f_data_t* wf5803f_get_latest(void)
@@ -657,13 +680,12 @@ bool wf5803f_detect_flood(float threshold_hpa)
     }
     
     if (!s_baseline_set) {
-        APP_LOG_WARNING("WF5803F: Baseline not set (%.2f hPa), attempting to set from current reading...", s_baseline_pressure);
-        if (wf5803f_set_baseline_pressure(0.0f)) {  // 使用当前值作为基准
-            APP_LOG_INFO("WF5803F: Baseline set successfully (%.2f hPa), will detect on next reading", s_baseline_pressure);
-        } else {
-            APP_LOG_ERROR("WF5803F: Failed to set baseline, flood detection disabled");
-        }
-        return false;  // 本次返回false，但下次如果设置成功则可检测
+        // ✅ 修复：检测函数不应该自动设置基准压力
+        // 基准压力应该在上电时由 ble_4g_protocol_init() 或首次采集时设置
+        // 如果基准未设置，说明初始化有问题，只报错不自动设置
+        APP_LOG_ERROR("WF5803F: Baseline not set! Flood detection disabled.");
+        APP_LOG_ERROR("WF5803F: Baseline should be initialized at boot or first collection.");
+        return false;
     }
     
     // 使用最新的滤波后压力值

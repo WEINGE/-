@@ -697,6 +697,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\user\water_level_sensor.c</FilePath>
             </File>
+            <File>
+              <FileName>smart_baseline_calibration.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\user\smart_baseline_calibration.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

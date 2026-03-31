@@ -296,6 +296,7 @@ int main(void)
     // 启动定时器 
      ble_4g_protocol_start_collect_timer();  // 启动采集定时器
      ble_4g_protocol_start_report_timer();   // 启动上报定时器
+     ble_4g_protocol_start_water_monitor_timer();  // 启动水位监测定时器（1分钟间隔，提升灵敏度）
 
     // 第四步：进入主循环 - 系统核心调度循环
     // 这是一个无限循环，系统将在这里处理所有的任务调度
@@ -310,7 +311,11 @@ int main(void)
         // 支持的AT命令包括：连接控制、参数设置、状态查询等
         at_cmd_schedule();
         
-        // 任务3：传输调度管理
+        // 任务3：4G协议调度（处理采集和上报定时器触发）
+        // 在主循环中处理，避免定时器回调阻塞导致时间累积延迟
+        ble_4g_protocol_schedule();
+        
+        // 任务4：传输调度管理
         // 管理BLE数据传输的时序，处理发送队列和重传机制
         // 确保数据传输的可靠性和效率
         transport_schedule();

@@ -66,8 +66,11 @@ bool sensor_data_init(void)
     s_sensor_initialized = true;
     APP_LOG_INFO("WF5803F sensor initialized successfully");
     
-    // 设置基准压力（使用当前读数）
-    wf5803f_set_baseline_pressure(0.0f);
+    // ✅ 修复：不在这里设置基准压力！
+    // 原因：sensor_data_init() 会被水位监测定时器频繁调用（每1分钟）
+    // 每次调用都会重新设置基准压力，导致基准压力被错误更新
+    // 基准压力应该由 ble_4g_protocol_init() 或首次采集时设置
+    // 已移除：wf5803f_set_baseline_pressure(0.0f);
     
     return true;
 }

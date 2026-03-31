@@ -61,7 +61,7 @@
 // <6=> GR5513BEND
 // <7=> GR5513BENDU
 #ifndef CHIP_TYPE
-#define CHIP_TYPE  4
+#define CHIP_TYPE  0
 #endif
 
 // <o> Enable encrypt chip

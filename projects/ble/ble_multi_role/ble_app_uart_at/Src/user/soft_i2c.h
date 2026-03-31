@@ -101,4 +101,14 @@ bool soft_i2c_write_reg(uint8_t dev_addr, uint8_t reg_addr, uint8_t value);
  */
 bool soft_i2c_read_reg(uint8_t dev_addr, uint8_t reg_addr, uint8_t *buffer, uint16_t len);
 
+/**
+ *****************************************************************************************
+ * @brief Reset I2C bus by sending 9 clock pulses to release SDA line.
+ *
+ * When I2C communication fails and the slave holds SDA low, the master can
+ * send extra clock pulses to release SDA, then send STOP to restore bus.
+ *****************************************************************************************
+ */
+void soft_i2c_bus_reset(void);
+
 #endif // SOFT_I2C_H

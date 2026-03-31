@@ -28,7 +28,7 @@
  */
 #define SCL_PIN     APP_IO_PIN_9   // I2C时钟线
 #define SDA_PIN     APP_IO_PIN_10  // I2C数据线
-#define I2C_DELAY_US    5  // 5us delay for ~100kHz I2C clock
+#define I2C_DELAY_US    5  // 5us delay for ~100kHz I2C clock，太短已改为5ms。
 
 // GPIO控制宏
 #define SCL_HIGH()  app_io_write_pin(APP_IO_TYPE_NORMAL, SCL_PIN, APP_IO_PIN_SET)
@@ -106,7 +106,7 @@ void soft_i2c_init(void)
     // 初始化为高电平（I2C空闲状态）
     SCL_HIGH();
     SDA_HIGH();
-    delay_us(I2C_DELAY_US);
+    delay_ms(5);  // 等待GPIO稳定，避免I2C通信失败（从5us改为5ms）
     
     s_i2c_initialized = true;
     APP_LOG_INFO("Soft I2C initialized on GPIO9(SCL), GPIO10(SDA)");
@@ -132,6 +132,33 @@ void soft_i2c_deinit(void)
     
     s_i2c_initialized = false;
     APP_LOG_DEBUG("Soft I2C deinitialized for low-power mode");
+}
+
+/**
+ * @brief I2C总线复位 - 发送9个时钟脉冲释放被拉低的SDA线
+ * 
+ * 当I2C通信失败且从设备拉低SDA线时，主设备可通过发送额外时钟脉冲
+ * 释放SDA线，然后发送STOP信号恢复总线正常状态。
+ */
+void soft_i2c_bus_reset(void)
+{
+    // 确保SDA为输出模式
+    sda_output_mode();
+    
+    // 发送9个时钟脉冲，让从设备释放SDA线
+    for (uint8_t i = 0; i < 9; i++) {
+        SCL_LOW();
+        delay_us(I2C_DELAY_US);
+        SCL_HIGH();
+        delay_us(I2C_DELAY_US);
+    }
+    
+    // 发送STOP信号
+    SDA_LOW();
+    delay_us(I2C_DELAY_US);
+    SDA_HIGH();
+    
+    APP_LOG_DEBUG("Soft I2C bus reset completed");
 }
 
 bool soft_i2c_start(void)

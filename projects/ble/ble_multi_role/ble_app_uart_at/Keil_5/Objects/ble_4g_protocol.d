@@ -131,3 +131,4 @@
 .\objects\ble_4g_protocol.o: ..\Src\user\battery_voltage_reader.h
 .\objects\ble_4g_protocol.o: ..\Src\platform\user_periph_setup.h
 .\objects\ble_4g_protocol.o: ..\Src\user\water_level_sensor.h
+.\objects\ble_4g_protocol.o: ..\Src\user\smart_baseline_calibration.h

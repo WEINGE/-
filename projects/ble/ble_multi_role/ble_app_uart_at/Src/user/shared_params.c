@@ -18,8 +18,8 @@ static param_change_callback_t s_param_callback = NULL;
 // 默认参数�?
 static const shared_device_params_t default_params = {
     .device_collect_time = 60,              // 默认60分钟采集
-    .device_updata_time = 1440,              // 默认1440分钟(24小时)上报
-    .water_depth_threshold_cm = 10.0f,      // 默认10cm水深报警阈�?
+    .device_updata_time = 60,              // 默认60分钟上报
+    .water_depth_threshold_cm = 5.0f,      // 默认5cm水深报警阈�?
     .temp_high_threshold = 50,              // 默认50℃高温阈�?
     .temp_low_threshold = -20,              // 默认-20℃低温阈�?
     .water_threshold = 0,                   // 兼容字段

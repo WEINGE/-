@@ -124,10 +124,50 @@ static bool s_is_sending = false;  // 是否正在发送数据
 
 // 水浸模式管理
 static bool s_flood_mode_active = false;         // 是否处于水浸报警模式
+static uint8_t s_flood_consecutive_count = 0;    // 连续水浸检测次数（进入需要3次确认）
+#define FLOOD_ENTER_THRESHOLD 3  // 进入水浸模式需要连续检测到水浸的次数
 static uint16_t s_normal_collect_interval = 60;  // 正常采集间隔（分钟），保存以便恢复
 static uint16_t s_normal_upload_interval = 1440; // 正常上传间隔（分钟），保存以便恢复
 static bool s_baseline_initialized = false;      // 基准压力是否已初始化
 static bool s_sensor_busy = false;               // 传感器访问互斥标志（防止定时器冲突）
+
+/**
+ *****************************************************************************************
+ * @brief Align and restart collect/report timers from same start time.
+ *
+ * @param[in] force 置true时即使处于水浸模式也会重启（用于进入/退出水浸或修复水浸间隔）。
+ *****************************************************************************************
+ */
+static void restart_collect_report_timers_aligned(bool force)
+{
+    if (!s_protocol_initialized)
+    {
+        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
+        return;
+    }
+
+    // 水浸模式下，平台/蓝牙修改“正常模式”的采集/上报周期只保存不立即生效，
+    // 避免打乱水浸模式固定3分钟节奏。
+    if (s_flood_mode_active && !force)
+    {
+        APP_LOG_INFO("%s Flood mode active, skip timer restart/align (params saved only)", DEBUG_TAG);
+        return;
+    }
+
+    app_timer_stop(m_sensor_collect_timer);
+    app_timer_stop(m_data_report_timer);
+
+    uint32_t collect_timeout_ms = g_shared_params.device_collect_time * 60 * 1000;
+    uint32_t report_timeout_ms  = g_shared_params.device_updata_time  * 60 * 1000;
+
+    sdk_err_t err_code = app_timer_start(m_sensor_collect_timer, collect_timeout_ms, NULL);
+    APP_ERROR_CHECK(err_code);
+    err_code = app_timer_start(m_data_report_timer, report_timeout_ms, NULL);
+    APP_ERROR_CHECK(err_code);
+
+    APP_LOG_INFO("%s Timers aligned/restarted: collect=%d min, report=%d min",
+                 DEBUG_TAG, g_shared_params.device_collect_time, g_shared_params.device_updata_time);
+}
 
 // 时间戳计数器（用于增强型检测和智能标定，与water_level_sensor.c模式一致）
 // 时间戳计数器已删除（增强型检测已移除）
@@ -869,29 +909,23 @@ static void sensor_collect_task_execute(void)
             }
         }
         
-        // 3. ✨ 水浸检测和模式切换（使用压力差检测，与水位监测定时器一致）
+        // 3. ✨ 水浸检测和模式切换（混合策略）
         // 从共享参数获取水深阈值(cm)，转换为压力阈值(hPa)
         float water_depth_cm = shared_params_get_water_depth_threshold();
         float pressure_threshold_hpa = wf5803f_water_depth_to_pressure(water_depth_cm);
         
-        // 获取基准压力和当前压力用于诊断
-        float baseline_pressure = wf5803f_get_baseline_pressure();
-        float current_pressure = s_current_sensor_data_4g.pressure_hpa;
-        float pressure_delta = current_pressure - baseline_pressure;
-        
-        APP_LOG_INFO("%s [COLLECT_TASK] baseline=%.2f hPa, current=%.2f hPa, delta=%.2f hPa, threshold_cm=%.1f (%.2f hPa)",
-                    DEBUG_TAG, (double)baseline_pressure, (double)current_pressure, 
-                    (double)pressure_delta, (double)water_depth_cm, (double)pressure_threshold_hpa);
-        
         bool flood_detected_single = wf5803f_detect_flood(pressure_threshold_hpa);
         
+        // ✅ 简化水浸检测：直接使用滤波后的缓存数据判断，不再进行多次采样确认
+        // （因为传感器已经deinit省电，无法进行多次采样）
         if (flood_detected_single && !s_flood_mode_active) {
-            APP_LOG_WARNING("%s [COLLECT_TASK] ⚠️ FLOOD DETECTED! Entering flood mode (delta=%.2f hPa > %.2f hPa)",
-                          DEBUG_TAG, (double)pressure_delta, (double)pressure_threshold_hpa);
+            // 检测到水浸，进入报警模式
+            APP_LOG_WARNING("%s ⚠️ FLOOD DETECTED! Water depth exceeds threshold. Entering flood mode...", DEBUG_TAG);
             ble_4g_protocol_enter_flood_mode();
             shared_params_set_device_water(1);
         } else if (!flood_detected_single && s_flood_mode_active) {
-            APP_LOG_INFO("%s [COLLECT_TASK] [OK] Flood cleared. Exiting flood mode...", DEBUG_TAG);
+            // 水浸消除，退出报警模式
+            APP_LOG_INFO("%s [OK] Flood cleared. Exiting flood mode...", DEBUG_TAG);
             ble_4g_protocol_exit_flood_mode();
             shared_params_set_device_water(0);
         }
@@ -913,8 +947,7 @@ static void sensor_collect_task_execute(void)
             }
             if (need_fix) {
                 APP_LOG_INFO("%s Restarting timers with correct flood mode intervals", DEBUG_TAG);
-                ble_4g_protocol_restart_collect_timer();
-                ble_4g_protocol_restart_report_timer();
+                restart_collect_report_timers_aligned(true);
             }
         }
         
@@ -1149,24 +1182,14 @@ static void water_monitor_timer_handler(void *p_context)
             );
             sample_timestamp_ms += 60000;  // 每次+1分钟
             
-            // 使用原有阈值检测，并增加详细诊断日志
+            // 使用原有阈值检测
             float water_depth_cm = shared_params_get_water_depth_threshold();
             float pressure_threshold_hpa = wf5803f_water_depth_to_pressure(water_depth_cm);
-            
-            // 获取基准压力用于诊断
-            float baseline_pressure = wf5803f_get_baseline_pressure();
-            float current_pressure = sensor_reading.pressure_filtered;
-            float pressure_delta = current_pressure - baseline_pressure;
-            
-            APP_LOG_INFO("%s [WATER_MONITOR] baseline=%.2f hPa, current=%.2f hPa, delta=%.2f hPa, threshold_cm=%.1f (%.2f hPa)",
-                        DEBUG_TAG, (double)baseline_pressure, (double)current_pressure, 
-                        (double)pressure_delta, (double)water_depth_cm, (double)pressure_threshold_hpa);
-            
             bool flood_detected = wf5803f_detect_flood(pressure_threshold_hpa);
             
             if (flood_detected) {
-                APP_LOG_WARNING("%s [WATER_MONITOR] ⚠️ FLOOD DETECTED! Entering flood mode (delta=%.2f hPa > %.2f hPa)",
-                              DEBUG_TAG, (double)pressure_delta, (double)pressure_threshold_hpa);
+                // 阈值检测发现水浸
+                APP_LOG_WARNING("%s ⚠️ Flood detected! Entering flood mode", DEBUG_TAG);
                 ble_4g_protocol_enter_flood_mode();
                 shared_params_set_device_water(1);
             }
@@ -1817,23 +1840,9 @@ void ble_4g_protocol_stop_report_timer(void)
  */
 void ble_4g_protocol_restart_collect_timer(void)
 {
-    if (!s_protocol_initialized)
-    {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
-        return;
-    }
-    
-    // 停止当前定时器
-    app_timer_stop(m_sensor_collect_timer);
-    
-    // 计算新的超时时间
-    uint32_t timeout_ms = g_shared_params.device_collect_time * 60 * 1000; // 分钟转换为毫秒
-    
-    // 启动新定时器
-    sdk_err_t err_code = app_timer_start(m_sensor_collect_timer, timeout_ms, NULL);
-    APP_ERROR_CHECK(err_code);
-    
-    APP_LOG_INFO("%s Collect timer restarted: %d minutes", DEBUG_TAG, g_shared_params.device_collect_time);
+    // 为了避免“秒级相位差”导致采集/上报长期错开：
+    // 任意一方重启时，同时对齐重启另一方（以当前配置间隔重新计时）
+    restart_collect_report_timers_aligned(false);
 }
 
 /**
@@ -1843,23 +1852,9 @@ void ble_4g_protocol_restart_collect_timer(void)
  */
 void ble_4g_protocol_restart_report_timer(void)
 {
-    if (!s_protocol_initialized)
-    {
-        APP_LOG_ERROR("%s Protocol not initialized", DEBUG_TAG);
-        return;
-    }
-    
-    // 停止当前定时器
-    app_timer_stop(m_data_report_timer);
-    
-    // 计算新的超时时间
-    uint32_t timeout_ms = g_shared_params.device_updata_time * 60 * 1000; // 分钟转换为毫秒
-    
-    // 启动新定时器
-    sdk_err_t err_code = app_timer_start(m_data_report_timer, timeout_ms, NULL);
-    APP_ERROR_CHECK(err_code);
-    
-    APP_LOG_INFO("%s Report timer restarted: %d minutes", DEBUG_TAG, g_shared_params.device_updata_time);
+    // 为了避免“秒级相位差”导致采集/上报长期错开：
+    // 任意一方重启时，同时对齐重启另一方（以当前配置间隔重新计时）
+    restart_collect_report_timers_aligned(false);
 }
 
 /**
@@ -2274,20 +2269,80 @@ static void ble_4g_protocol_update_dtu_info_cache(void)
     APP_LOG_INFO("%s GPS coordinate query sent.", DEBUG_TAG);
 }
 
+/**
+ *****************************************************************************************
+ * @brief 等待网络注册（MQTT连接的前提条件）
+ * 
+ * 查询网络注册状态，如果未注册则等待重试，直到注册成功或超时。
+ * 由于YunDTU没有直接的MQTT状态查询，使用网络注册状态作为MQTT连接的前提条件。
+ * 
+ * @return true 网络已注册（MQTT应该已建立）
+ * @return false 网络注册超时
+ *****************************************************************************************
+ */
+static bool ble_4g_protocol_wait_for_network_registration(void)
+{
+    const int max_retries = 15;        // 最多重试15次
+    const int retry_interval_ms = 2000; // 每次重试间隔2秒
+    const int total_timeout_ms = max_retries * retry_interval_ms; // 总超时30秒
+    
+    APP_LOG_INFO("%s Waiting for network registration...", DEBUG_TAG);
+    
+    for (int retry = 0; retry < max_retries; retry++) {
+        // 发送网络注册状态查询命令
+        const char* creg_cmd = "adminAT+CREG\r\n";
+        SEND_AT_COMMAND_ASYNC(creg_cmd);
+        sys_delay_ms(1000); // 等待响应
+        
+        // 检查网络注册状态 (1=已注册)
+        if (g_at_collector.network_reg_status == 1) {
+            APP_LOG_INFO("%s Network registered (attempt %d/%d)", DEBUG_TAG, retry + 1, max_retries);
+            
+            // 网络注册后，等待额外的2秒让MQTT连接建立
+            APP_LOG_INFO("%s Waiting extra 2s for MQTT connection establishment...", DEBUG_TAG);
+            sys_delay_ms(2000);
+            
+            return true;
+        }
+        
+        APP_LOG_INFO("%s Network not registered, retry %d/%d (status=%d)", 
+                     DEBUG_TAG, retry + 1, max_retries, g_at_collector.network_reg_status);
+        
+        // 额外等待后再重试
+        if (retry < max_retries - 1) {
+            sys_delay_ms(retry_interval_ms - 1000);
+        }
+        
+        // 定期喂狗，防止超时
+        watchdog_feed();
+    }
+    
+    APP_LOG_WARNING("%s Network registration timeout after %d ms, proceeding anyway...", DEBUG_TAG, total_timeout_ms);
+    return false;
+}
+
 void ble_4g_protocol_upload_with_power_mgmt(void)
 {
     APP_LOG_INFO("%s Starting upload with 4G/DTU power management", DEBUG_TAG);
 
+    // 重置网络注册状态（上次状态可能已过时）
+    g_at_collector.network_reg_status = 0;
+    
     // 1. 打开UART1并上电4G/DTU模块（参考备份版本）
     gpio_p_m_en_set(true);  // 开启外设电源域
     fourg_uart_open();  // 动态打开UART1
     gpio_4g_power_en_set(true);
-    delay_with_watchdog_feed(10000);  // 等待4G模块启动，并定期喂狗
+    
+    // 等待4G模块基本启动（10秒）
+    delay_with_watchdog_feed(10000);
+    
+    // 2. 等待网络注册（最多等待30秒，确保MQTT连接建立）
+    ble_4g_protocol_wait_for_network_registration();
 
-    // 2. 更新并缓存DTU关键信息（IMEI, CSQ）
+    // 3. 更新并缓存DTU关键信息（IMEI, CSQ）
     ble_4g_protocol_update_dtu_info_cache();
 
-    // 3. 批量发送采集数据（先发动态，再发静态与查询）
+    // 4. 批量发送采集数据（先发动态，再发静态与查询）
     if (s_collected_data_count > 0)
     {
         // 从最旧的数据开始上报
@@ -2326,7 +2381,13 @@ void ble_4g_protocol_upload_with_power_mgmt(void)
     // 4. 发送静态信息与参数信息、设置查询
     ble_4g_protocol_send_static_info();
 
-    // 5. 等待平台可能下发的设置指令
+    // 5. 同步RTC时间（在所有数据发送完成后，利用异步回调自动更新RTC）
+    // 这样不影响本次上传的数据时间戳，但保证下次采集时RTC是正确的
+    const char* time_cmd = "adminAT+CCLK?\r\n";
+    uart1_tx_data_send((uint8_t*)time_cmd, strlen(time_cmd));
+    APP_LOG_INFO("%s Time sync command sent to DTU", DEBUG_TAG);
+
+    // 6. 等待平台可能下发的设置指令
     delay_with_watchdog_feed(10000);  // 等待平台下发指令，并定期喂狗
 
     // 6. 断电4G/DTU模块并关闭UART1省电
@@ -2349,17 +2410,24 @@ bool ble_4g_protocol_check_and_handle_flood(void)
     bool flood_detected = wf5803f_detect_flood(pressure_threshold_hpa);
     
     if (flood_detected && !s_flood_mode_active) {
-        // 水浸发生，进入报警模式
-        APP_LOG_WARNING("%s ⚠️ FLOOD DETECTED! Entering flood alarm mode...", DEBUG_TAG);
-        ble_4g_protocol_enter_flood_mode();
+        // 连续检测到水浸，增加计数
+        s_flood_consecutive_count++;
+        APP_LOG_DEBUG("%s Flood detected (count=%d/%d)", DEBUG_TAG, s_flood_consecutive_count, FLOOD_ENTER_THRESHOLD);
         
-        // 更新水浸状态
-        shared_params_set_device_water(1);
-        
-        return true;
+        // 连续3次检测到水浸才进入报警模式
+        if (s_flood_consecutive_count >= FLOOD_ENTER_THRESHOLD) {
+            APP_LOG_WARNING("%s ⚠️ FLOOD DETECTED! (3 consecutive) Entering flood alarm mode...", DEBUG_TAG);
+            ble_4g_protocol_enter_flood_mode();
+            
+            // 更新水浸状态
+            shared_params_set_device_water(1);
+            
+            return true;
+        }
     }
     else if (!flood_detected && s_flood_mode_active) {
-        // 水浸消除，恢复正常模式
+        // 水浸消除，立即退出（保持单次确认，避免死锁）
+        s_flood_consecutive_count = 0;  // 重置计数器
         APP_LOG_INFO("%s [OK] Flood cleared. Exiting flood alarm mode...", DEBUG_TAG);
         ble_4g_protocol_exit_flood_mode();
         
@@ -2367,6 +2435,10 @@ bool ble_4g_protocol_check_and_handle_flood(void)
         shared_params_set_device_water(0);
         
         return false;
+    }
+    else if (!flood_detected && !s_flood_mode_active) {
+        // 未检测到水浸，重置计数器
+        s_flood_consecutive_count = 0;
     }
     
     return flood_detected;
@@ -2410,8 +2482,7 @@ static void ble_4g_protocol_enter_flood_mode(void)
     // 3. 重启定时器以应用新间隔
     // 注意：不写入Flash，避免Flash寿命问题（水位在阈值边缘波动可能导致频繁切换）
     // 设备重启后会从正常模式开始，重新检测水位
-    ble_4g_protocol_restart_collect_timer();
-    ble_4g_protocol_restart_report_timer();
+    restart_collect_report_timers_aligned(true);
     
     // 4. 标记为水浸模式
     s_flood_mode_active = true;
@@ -2445,8 +2516,7 @@ static void ble_4g_protocol_exit_flood_mode(void)
     
     // 3. 重启定时器以应用恢复的间隔
     // 注意：不写入Flash，避免Flash寿命问题
-    ble_4g_protocol_restart_collect_timer();
-    ble_4g_protocol_restart_report_timer();
+    restart_collect_report_timers_aligned(true);
     
     APP_LOG_INFO("%s ====== NORMAL MODE RESTORED ======", DEBUG_TAG);
 }
